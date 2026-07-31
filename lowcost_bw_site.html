@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>低配挂机研讨会 — 官方网站</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000',
+                        'paper': '#ffffff',
+                        'ash': '#888888',
+                        'smoke': '#555555',
+                        'charcoal': '#333333',
+                        'graphite': '#1a1a1a',
+                        'fog': '#0a0a0a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #000000;
+            --fg: #ffffff;
+            --muted: #888888;
+            --line: #222222;
+            --hover-bg: #ffffff;
+            --hover-fg: #000000;
+        }
+
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box;
+            scrollbar-width: thin; scrollbar-color: #333 #000;
+        }
+        *::-webkit-scrollbar { width: 4px; }
+        *::-webkit-scrollbar-track { background: #000; }
+        *::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Noto Sans SC', sans-serif;
+            overflow-x: hidden;
+            cursor: crosshair;
+        }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0.4;
+        }
+
+        /* Selection */
+        ::selection {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Typography */
+        .display {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 0.95;
+        }
+
+        .mono {
+            font-family: 'Space Grotesk', monospace;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+        }
+
+        /* Lines */
+        .rule {
+            height: 1px;
+            background: var(--line);
+        }
+
+        .rule-v {
+            width: 1px;
+            background: var(--line);
+        }
+
+        /* Video Row */
+        .video-row {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .video-row::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--paper);
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 0;
+        }
+
+        .video-row:hover::before {
+            transform: scaleY(1);
+            transform-origin: top;
+        }
+
+        .video-row:hover {
+            border-color: var(--paper);
+        }
+
+        .video-row:hover .row-text {
+            color: var(--hover-fg);
+        }
+
+        .video-row:hover .row-muted {
+            color: var(--smoke);
+        }
+
+        .video-row:hover .row-index {
+            color: var(--hover-fg);
+            -webkit-text-stroke-color: var(--hover-fg);
+        }
+
+        .video-row:hover .row-img {
+            filter: grayscale(0) contrast(1.1);
+        }
+
+        .row-text, .row-muted, .row-index, .row-img {
+            position: relative;
+            z-index: 1;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .row-img {
+            filter: grayscale(1) contrast(0.9);
+        }
+
+        .row-index {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--line);
+            line-height: 1;
+            transition: all 0.4s ease;
+        }
+
+        /* Collection Card */
+        .col-card {
+            position: relative;
+            border: 1px solid var(--line);
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .col-card:hover {
+            border-color: var(--paper);
+            background: var(--paper);
+        }
+
+        .col-card:hover .col-num {
+            color: var(--bg);
+            -webkit-text-stroke-color: var(--bg);
+        }
+
+        .col-card:hover .col-title {
+            color: var(--bg);
+        }
+
+        .col-card:hover .col-meta {
+            color: var(--smoke);
+        }
+
+        .col-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 6rem;
+            font-weight: 700;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--line);
+            line-height: 0.85;
+            transition: all 0.5s ease;
+        }
+
+        /* Marquee */
+        .marquee-track {
+            display: flex;
+            animation: marquee 30s linear infinite;
+            white-space: nowrap;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Reveal animations */
+        .reveal-up {
+            opacity: 0;
+            transform: translateY(60px);
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-line {
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal-line.visible {
+            transform: scaleX(1);
+        }
+
+        .char-reveal {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(100%);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .char-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Grid background */
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+        }
+
+        /* Custom cursor follower */
+        .cursor-dot {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: difference;
+            transition: transform 0.15s ease;
+        }
+
+        .cursor-ring {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transition: all 0.3s ease;
+        }
+
+        /* Filter tabs */
+        .filter-tab {
+            position: relative;
+            padding: 0.5rem 0;
+            color: var(--muted);
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .filter-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--paper);
+            transition: width 0.3s ease;
+        }
+
+        .filter-tab:hover, .filter-tab.active {
+            color: var(--paper);
+        }
+
+        .filter-tab.active::after, .filter-tab:hover::after {
+            width: 100%;
+        }
+
+        /* Search */
+        .search-field {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--line);
+            color: var(--paper);
+            padding: 0.75rem 0;
+            width: 100%;
+            font-size: 0.875rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-field:focus {
+            outline: none;
+            border-color: var(--paper);
+        }
+
+        .search-field::placeholder {
+            color: var(--charcoal);
+        }
+
+        /* Loading screen */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+
+        #loader.done {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            color: var(--muted);
+        }
+
+        .loader-bar {
+            width: 120px;
+            height: 1px;
+            background: var(--line);
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loader-bar::after {
+            content: '';
+            position: absolute;
+            left: -100%;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--paper);
+            animation: loadSlide 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadSlide {
+            0% { left: -100%; }
+            50% { left: 0; }
+            100% { left: 100%; }
+        }
+
+        /* Stat counter */
+        .stat-big {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .row-index { font-size: 2rem; }
+            .col-num { font-size: 3.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loader -->
+    <div id="loader">
+        <div class="text-center">
+            <div class="loader-text">INITIALIZING</div>
+            <div class="loader-bar"></div>
+        </div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor-dot hidden md:block" id="cursorDot"></div>
+    <div class="cursor-ring hidden md:block" id="cursorRing"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="#hero" class="flex items-center gap-3 group">
+                <span class="mono text-xs text-muted group-hover:text-paper transition-colors">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="hidden md:flex items-center gap-10">
+                <a href="#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
+                <a href="#collections" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Collections</a>
+                <a href="#about" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">About</a>
+            </div>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" 
+               class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">
+                BILIBILI
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section id="hero" class="relative min-h-screen flex flex-col justify-end pb-20 md:pb-32 px-6 md:px-10 pt-32 grid-bg">
+        <div class="max-w-[1400px] mx-auto w-full">
+            <div class="reveal-up" style="transition-delay: 0.2s;">
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-8">Arknights Strategy Group / Est. 2023</span>
+            </div>
+
+            <h1 class="display text-[clamp(3rem,12vw,10rem)] text-paper mb-8 leading-[0.9]">
+                <div class="overflow-hidden">
+                    <span class="char-reveal inline-block" style="transition-delay: 0.3s;">低</span><span class="char-reveal inline-block" style="transition-delay: 0.35s;">配</span>
+                </div>
+                <div class="overflow-hidden">
+                    <span class="char-reveal inline-block" style="transition-delay: 0.4s;">挂</span><span class="char-reveal inline-block" style="transition-delay: 0.45s;">机</span>
+                </div>
+                <div class="overflow-hidden">
+                    <span class="char-reveal inline-block text-muted" style="transition-delay: 0.5s;">研</span><span class="char-reveal inline-block text-muted" style="transition-delay: 0.55s;">讨</span><span class="char-reveal inline-block text-muted" style="transition-delay: 0.6s;">会</span>
+                </div>
+            </h1>
+
+            <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-10" style="transition-delay: 0.7s;">
+                <p class="text-sm text-muted max-w-md leading-relaxed">
+                    愿为世界添砖加瓦。旨在制作出更多简单好抄的攻略，<br>
+                    让每一位博士都能轻松通关。
+                </p>
+
+                <div class="flex gap-16">
+                    <div>
+                        <div class="stat-big" data-count="191000">0</div>
+                        <div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div>
+                    </div>
+                    <div>
+                        <div class="stat-big" data-count="244">0</div>
+                        <div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div>
+                    </div>
+                    <div class="hidden sm:block">
+                        <div class="stat-big" data-count="46">0</div>
+                        <div class="mono text-xs text-muted tracking-widest mt-2">PLAYLISTS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-8 left-6 md:left-10 flex items-center gap-4">
+            <div class="w-px h-12 bg-line relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full bg-paper animate-pulse" style="height: 50%; animation: slideDown 2s ease-in-out infinite;"></div>
+            </div>
+            <span class="mono text-[10px] text-muted tracking-widest uppercase [writing-mode:vertical-lr]">Scroll</span>
+        </div>
+
+        <style>
+            @keyframes slideDown {
+                0% { transform: translateY(-100%); }
+                100% { transform: translateY(200%); }
+            }
+        </style>
+    </section>
+
+    <!-- Marquee -->
+    <div class="border-y border-line py-4 overflow-hidden bg-paper">
+        <div class="marquee-track">
+            <span class="mono text-sm text-ink mx-8">LOWCOST STRATEGY GROUP</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">ARKNIGHTS AFK GUIDES</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">SIMPLE & RELIABLE</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">愿为世界添砖加瓦</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">LOWCOST STRATEGY GROUP</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">ARKNIGHTS AFK GUIDES</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">SIMPLE & RELIABLE</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">愿为世界添砖加瓦</span>
+            <span class="text-sm text-ink mx-8">◆</span>
+        </div>
+    </div>
+
+    <!-- Archive Section -->
+    <section id="archive" class="py-32 px-6 md:px-10">
+        <div class="max-w-[1400px] mx-auto">
+            <div class="reveal-up mb-20">
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Video Archive</span>
+                <h2 class="display text-5xl md:text-7xl">攻略档案</h2>
+            </div>
+
+            <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 border-b border-line pb-6">
+                <div class="flex flex-wrap gap-6 md:gap-10" id="filterTabs">
+                    <button class="filter-tab active text-sm" data-category="all">全部</button>
+                    <button class="filter-tab text-sm" data-category="main">主线</button>
+                    <button class="filter-tab text-sm" data-category="event">活动</button>
+                    <button class="filter-tab text-sm" data-category="annihilation">剿灭</button>
+                    <button class="filter-tab text-sm" data-category="cc">合约</button>
+                    <button class="filter-tab text-sm" data-category="guide">新手</button>
+                </div>
+                <div class="w-full md:w-64">
+                    <input type="text" id="searchInput" placeholder="搜索攻略..." class="search-field">
+                </div>
+            </div>
+
+            <div id="videoList">
+                <!-- Injected by JS -->
+            </div>
+
+            <div class="reveal-up mt-16 text-center">
+                <button onclick="loadMore()" id="loadMoreBtn" class="mono text-xs text-muted hover:text-paper tracking-widest uppercase border border-line hover:border-paper px-8 py-4 transition-all">
+                    Load More
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Collections Section -->
+    <section id="collections" class="py-32 px-6 md:px-10 border-t border-line">
+        <div class="max-w-[1400px] mx-auto">
+            <div class="reveal-up mb-20">
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Collections</span>
+                <h2 class="display text-5xl md:text-7xl">合集</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-line" id="collectionsGrid">
+                <!-- Injected by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-32 px-6 md:px-10 border-t border-line grid-bg">
+        <div class="max-w-[1400px] mx-auto">
+            <div class="grid md:grid-cols-2 gap-20 md:gap-32">
+                <div class="reveal-up">
+                    <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">About</span>
+                    <h2 class="display text-4xl md:text-6xl mb-10 leading-tight">
+                        简单好抄<br>
+                        <span class="text-muted">仅此而已</span>
+                    </h2>
+                    <div class="space-y-6 text-sm text-muted leading-relaxed max-w-md">
+                        <p>
+                            低配挂机研讨会成立于2023年，是一个专注于《明日方舟》低配挂机攻略的创作团队。
+                        </p>
+                        <p>
+                            我们不追求极限，不堆砌高配。我们的目标只有一个：让每一位玩家，无论练度高低，都能轻松抄完作业，安心挂机。
+                        </p>
+                        <p>
+                            从主线关卡到Side Story，从剿灭作战到危机合约，我们持续输出最亲民的攻略方案。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="reveal-up space-y-12" style="transition-delay: 0.2s;">
+                    <div class="border-b border-line pb-8">
+                        <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Contact</span>
+                        <p class="text-lg">合作vx：Hayyamizzz</p>
+                    </div>
+                    <div class="border-b border-line pb-8">
+                        <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Platform</span>
+                        <a href="https://space.bilibili.com/3546373951588920" target="_blank" 
+                           class="text-lg hover:text-muted transition-colors flex items-center gap-3 group">
+                            <span>Bilibili Space</span>
+                            <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </a>
+                    </div>
+                    <div>
+                        <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Tags</span>
+                        <div class="flex flex-wrap gap-3">
+                            <span class="mono text-xs border border-line px-3 py-1.5 text-muted">单核挂机</span>
+                            <span class="mono text-xs border border-line px-3 py-1.5 text-muted">摆完挂机</span>
+                            <span class="mono text-xs border border-line px-3 py-1.5 text-muted">新手友好</span>
+                            <span class="mono text-xs border border-line px-3 py-1.5 text-muted">简单好抄</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <span class="mono text-lg font-bold">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-xs text-muted">低配挂机研讨会</span>
+            </div>
+            <div class="mono text-[10px] text-muted tracking-widest">
+                © 2024-2026 LOWCOST STRATEGY GROUP
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ===== Data =====
+        const videos = [
+            { title: "【明日方舟】2025神级开局攻略 16分钟让你少走6年弯路", bvid: "BV1mw4m1r7qM", category: "guide", views: "12.5万", duration: "16:32", date: "2024-11-10", cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg" },
+            { title: "【明日方舟】2025神级主线攻略 单核轻松！摆完挂机！0-8章", bvid: "BV1E2p6zXEcP", category: "main", views: "7.8万", duration: "7:44:44", date: "2025-05-03", cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg" },
+            { title: "【新的时代】从此删除H8-4 单核挂机攻略", bvid: "BV1QFt7zWEs4", category: "main", views: "8.5万", duration: "05:23", date: "2025-08-04", cover: "https://i1.hdslb.com/bfs/archive/e36e3e1c6fa33185eefbf462c3b31b0c1929f05c.jpg" },
+            { title: "【新的时代】从此删除慈悲灯塔第14章低配单核挂机攻略", bvid: "BV1im421H7xH", category: "main", views: "6.2万", duration: "28:15", date: "2024-05-07", cover: "https://i0.hdslb.com/bfs/archive/fab6e990d05dd2b6288d97c718d4027751514419.jpg" },
+            { title: "【明日方舟】挂机干员泛用榜#1 主线范围攻略向", bvid: "BV1iSTaz9Eka", category: "guide", views: "15万", duration: "10:56", date: "2024-06-09", cover: "https://i2.hdslb.com/bfs/archive/7e6f58bde1d9b61ea6c3f78b4e2b78f1136b8b45.jpg" },
+            { title: "【相见欢】OR-S-1-OR-S-4 MO-1 低配挂机攻略合集", bvid: "BV1saP2eGECg", category: "event", views: "4.7万", duration: "32:18", date: "2025-01-30", cover: "https://i0.hdslb.com/bfs/archive/c798ba8892fc62c12bde78a5f936aa8a7c820562.jpg" },
+            { title: "【相见欢】OREX1-OREX8 低配挂机攻略合集", bvid: "BV13rFaeKEpW", category: "event", views: "5.2万", duration: "25:45", date: "2025-01-30", cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg" },
+            { title: "【红丝绒】AD1-AD8 单核挂机攻略合集", bvid: "BV1chTxzCEj9", category: "event", views: "3.8万", duration: "22:10", date: "2024-12-18", cover: "https://i0.hdslb.com/bfs/archive/fab6e990d05dd2b6288d97c718d4027751514419.jpg" },
+            { title: "【我们明日见】SE全关【挂机】+【低配·单核】攻略合集", bvid: "BV1tmKAeFEgv", category: "event", views: "8.9万", duration: "18:42", date: "2025-02-20", cover: "https://i1.hdslb.com/bfs/archive/e36e3e1c6fa33185eefbf462c3b31b0c1929f05c.jpg" },
+            { title: "【明日方舟】净罪作战 单核620 简单好抄 极简镀层", bvid: "BV1sdPsejEKo", category: "cc", views: "21.3万", duration: "08:35", date: "2025-03-15", cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg" },
+            { title: "【明日方舟】净罪作战 五核630摆完半挂机 脱手流", bvid: "BV1oGsCz8ENj", category: "cc", views: "38.8万", duration: "12:18", date: "2025-03-20", cover: "https://i2.hdslb.com/bfs/archive/7e6f58bde1d9b61ea6c3f78b4e2b78f1136b8b45.jpg" },
+            { title: "【明日方舟】净罪作战 双核模组块 简单好抄 极简镀层", bvid: "BV1kT421k7Td", category: "cc", views: "6.7万", duration: "06:45", date: "2025-03-18", cover: "https://i0.hdslb.com/bfs/archive/c798ba8892fc62c12bde78a5f936aa8a7c820562.jpg" },
+            { title: "【新的时代】从此删除暗流巢窟单核挂机攻略", bvid: "BV1oGsCz8ENj", category: "annihilation", views: "5.8万", duration: "16:41", date: "2024-11-27", cover: "https://i1.hdslb.com/bfs/archive/e36e3e1c6fa33185eefbf462c3b31b0c1929f05c.jpg" },
+            { title: "【新的时代】从此删除腐烂荒野 菲亚梅塔单核挂机攻略", bvid: "BV18x4y117xD", category: "annihilation", views: "3.2万", duration: "08:38", date: "2023-10-31", cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg" },
+            { title: "【明日方舟】从此删除潮没海滨 单核挂机攻略", bvid: "BV1E2p6zXEcP", category: "annihilation", views: "4.1万", duration: "03:08", date: "2023-11-11", cover: "https://i0.hdslb.com/bfs/archive/c798ba8892fc62c12bde78a5f936aa8a7c820562.jpg" },
+            { title: "【明日方舟】生息演算终极逃课攻略！再也不用被折磨了！", bvid: "BV1VFpuz9E7q", category: "guide", views: "15.4万", duration: "28:30", date: "2024-08-18", cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg" },
+            { title: "【明日方舟】界园终极逃课攻略！再也不用被折磨了！", bvid: "BV1QFt7zWEs4", category: "guide", views: "9.2万", duration: "09:02", date: "2025-07-17", cover: "https://i0.hdslb.com/bfs/archive/fab6e990d05dd2b6288d97c718d4027751514419.jpg" },
+            { title: "【明日方舟】最强挂机核心T0第一位干员遥实战演示", bvid: "BV1E2p6zXEcP", category: "guide", views: "7.5万", duration: "05:18", date: "2025-07-20", cover: "https://i1.hdslb.com/bfs/archive/e36e3e1c6fa33185eefbf462c3b31b0c1929f05c.jpg" },
+            { title: "【明日方舟】此战之后T0第1！H12-3 遥单核挂机", bvid: "BV1VFpuz9E7q", category: "main", views: "4.3万", duration: "04:31", date: "2025-07-22", cover: "https://i2.hdslb.com/bfs/archive/7e6f58bde1d9b61ea6c3f78b4e2b78f1136b8b45.jpg" },
+            { title: "【明日方舟】你的意思是夏活送了一个闪灵？", bvid: "BV1kT421k7Td", category: "guide", views: "5.8万", duration: "03:10", date: "2024-08-10", cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg" },
+            { title: "一个视频让你理解佩佩的挂机能力", bvid: "BV1mw4m1r7qM", category: "guide", views: "5.8万", duration: "06:35", date: "2024-08-10", cover: "https://i0.hdslb.com/bfs/archive/c798ba8892fc62c12bde78a5f936aa8a7c820562.jpg" },
+            { title: "【明日方舟】未许之地 UR-8 单核挂机", bvid: "BV1QFt7zWEs4", category: "event", views: "2.1万", duration: "03:41", date: "2025-12-05", cover: "https://i1.hdslb.com/bfs/archive/e36e3e1c6fa33185eefbf462c3b31b0c1929f05c.jpg" },
+            { title: "【明日方舟】无忧梦呓 SS-8 单核攻略", bvid: "BV1E2p6zXEcP", category: "event", views: "1.8万", duration: "05:07", date: "2025-09-04", cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg" },
+            { title: "【明日方舟】净罪作战 620最低配置 单核四人", bvid: "BV1sdPsejEKo", category: "cc", views: "3.8万", duration: "09:15", date: "2025-03-16", cover: "https://i0.hdslb.com/bfs/archive/fab6e990d05dd2b6288d97c718d4027751514419.jpg" },
+        ];
+
+        const collections = [
+            { title: "ss活动低配挂机攻略合集2", count: 41, cover: "https://archive.biliimg.com/bfs/archive/6693f0ca2144e5e205a0c88e3dc418d0c777d4d1.jpg", url: "https://space.bilibili.com/3546373951588920/channel/collectiondetail?sid=3035476" },
+            { title: "剿灭作战单核挂机合集", count: 19, cover: "https://archive.biliimg.com/bfs/archive/154bee1162fc6dc6aea28fc122886ed2cc7c3f10.jpg", url: "https://space.bilibili.com/3546373951588920/channel/collectiondetail?sid=3035476" },
+            { title: "新手必看攻略", count: 5, cover: "https://archive.biliimg.com/bfs/archive/f713a117558d094dcc7fb08e23f67491b7c68e7d.jpg", url: "https://space.bilibili.com/3546373951588920/lists" },
+            { title: "挂机干员实战演示", count: 9, cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg", url: "https://space.bilibili.com/3546373951588920/lists" },
+            { title: "SS活动单核挂机攻略", count: 25, cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg", url: "https://space.bilibili.com/3546373951588920/channel/collectiondetail?sid=4166319" },
+            { title: "主线低配挂机合集", count: 21, cover: "https://i1.hdslb.com/bfs/archive/e36e3e1c6fa33185eefbf462c3b31b0c1929f05c.jpg", url: "https://space.bilibili.com/3546373951588920/channel/collectiondetail?sid=4166319" },
+            { title: "危机合约低配挂机合集", count: 48, cover: "https://i0.hdslb.com/bfs/archive/c798ba8892fc62c12bde78a5f936aa8a7c820562.jpg", url: "https://space.bilibili.com/3546373951588920/channel/collectiondetail?sid=4166319" },
+            { title: "ss活动低配挂机攻略合集1", count: 25, cover: "https://i0.hdslb.com/bfs/archive/fab6e990d05dd2b6288d97c718d4027751514419.jpg", url: "https://space.bilibili.com/3546373951588920/channel/collectiondetail?sid=4166319" },
+            { title: "特殊攻略和视频合集", count: 13, cover: "https://i2.hdslb.com/bfs/archive/7e6f58bde1d9b61ea6c3f78b4e2b78f1136b8b45.jpg", url: "https://space.bilibili.com/3546373951588920/lists" },
+        ];
+
+        let currentCategory = 'all';
+        let displayedCount = 10;
+
+        // ===== Render Videos =====
+        function renderVideos(filter = '') {
+            const list = document.getElementById('videoList');
+            const filtered = videos.filter(v => {
+                const matchCat = currentCategory === 'all' || v.category === currentCategory;
+                const matchSearch = v.title.toLowerCase().includes(filter.toLowerCase());
+                return matchCat && matchSearch;
+            });
+
+            const toShow = filtered.slice(0, displayedCount);
+
+            list.innerHTML = toShow.map((v, i) => `
+                <a href="https://www.bilibili.com/video/${v.bvid}" target="_blank" 
+                   class="video-row block py-6 md:py-8 px-4 md:px-6 -mx-4 md:-mx-6">
+                    <div class="flex items-center gap-4 md:gap-8">
+                        <div class="w-12 md:w-20 flex-shrink-0">
+                            <span class="row-index">${String(i + 1).padStart(2, '0')}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="row-text text-base md:text-lg font-medium leading-snug mb-2 truncate">
+                                ${v.title}
+                            </h3>
+                            <div class="row-muted flex items-center gap-4 md:gap-6 text-xs mono">
+                                <span>${v.date}</span>
+                                <span class="hidden sm:inline">${v.views} views</span>
+                                <span class="hidden sm:inline">${v.duration}</span>
+                                <span class="sm:hidden">${v.views}</span>
+                            </div>
+                        </div>
+                        <div class="hidden md:block w-32 h-20 flex-shrink-0 overflow-hidden">
+                            <img src="${v.cover}" alt="" class="row-img w-full h-full object-cover" loading="lazy"
+                                 onerror="this.style.display='none'">
+                        </div>
+                        <div class="hidden md:flex items-center justify-center w-10 h-10 border border-line group-hover:border-ink flex-shrink-0 transition-colors">
+                            <svg class="w-4 h-4 row-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </div>
+                    </div>
+                </a>
+            `).join('');
+
+            document.getElementById('loadMoreBtn').style.display = 
+                displayedCount < filtered.length ? 'inline-block' : 'none';
+        }
+
+        function loadMore() {
+            displayedCount += 10;
+            renderVideos(document.getElementById('searchInput').value);
+        }
+
+        // ===== Render Collections =====
+        function renderCollections() {
+            const grid = document.getElementById('collectionsGrid');
+            grid.innerHTML = collections.map((c, i) => `
+                <a href="${c.url}" target="_blank" class="col-card block p-8 md:p-10 bg-ink group">
+                    <div class="flex items-start justify-between mb-8">
+                        <span class="col-num">${String(i + 1).padStart(2, '0')}</span>
+                        <span class="mono text-xs text-muted group-hover:text-smoke transition-colors">${c.count} EP</span>
+                    </div>
+                    <h3 class="col-title text-lg md:text-xl font-medium leading-snug mb-4">${c.title}</h3>
+                    <div class="col-meta flex items-center gap-2 text-xs mono text-muted">
+                        <span>View Collection</span>
+                        <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        // ===== Filter Tabs =====
+        document.getElementById('filterTabs').addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-tab')) {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                currentCategory = e.target.dataset.category;
+                displayedCount = 10;
+                renderVideos(document.getElementById('searchInput').value);
+            }
+        });
+
+        // ===== Search =====
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            displayedCount = 10;
+            renderVideos(e.target.value);
+        });
+
+        // ===== Counter Animation =====
+        function animateCounters() {
+            document.querySelectorAll('.stat-big[data-count]').forEach(el => {
+                const target = parseInt(el.dataset.count);
+                const duration = 2000;
+                const start = performance.now();
+
+                function update(now) {
+                    const elapsed = now - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.floor(eased * target);
+
+                    if (target >= 10000) {
+                        el.textContent = (current / 10000).toFixed(1) + '万';
+                    } else {
+                        el.textContent = current;
+                    }
+
+                    if (progress < 1) requestAnimationFrame(update);
+                }
+                requestAnimationFrame(update);
+            });
+        }
+
+        // ===== Scroll Reveal =====
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    if (entry.target.querySelector('.stat-big[data-count]')) {
+                        animateCounters();
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal-up').forEach(el => revealObserver.observe(el));
+
+        // Char reveal
+        setTimeout(() => {
+            document.querySelectorAll('.char-reveal').forEach(el => el.classList.add('visible'));
+        }, 500);
+
+        // ===== Custom Cursor =====
+        const dot = document.getElementById('cursorDot');
+        const ring = document.getElementById('cursorRing');
+        let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            dot.style.left = mouseX - 4 + 'px';
+            dot.style.top = mouseY - 4 + 'px';
+        });
+
+        function animateRing() {
+            ringX += (mouseX - ringX) * 0.15;
+            ringY += (mouseY - ringY) * 0.15;
+            ring.style.left = ringX - 20 + 'px';
+            ring.style.top = ringY - 20 + 'px';
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+
+        // Hover effects on links
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                ring.style.transform = 'scale(1.5)';
+                ring.style.borderColor = 'rgba(255,255,255,0.6)';
+            });
+            el.addEventListener('mouseleave', () => {
+                ring.style.transform = 'scale(1)';
+                ring.style.borderColor = 'rgba(255,255,255,0.3)';
+            });
+        });
+
+        // ===== Smooth Scroll =====
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ===== Loader =====
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('done');
+            }, 1200);
+        });
+
+        // ===== Init =====
+        renderVideos();
+        renderCollections();
+    </script>
+</body>
+</html>
