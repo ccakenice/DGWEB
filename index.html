@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="明日方舟攻略聚合站 — 低配挂机研讨会官方站点，自动同步 B 站最新攻略">
+  <title>DGWEB — 明日方舟攻略站</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="loader">
+    <div class="loader-box">
+      <div class="loader-brand">DGWEB</div>
+      <div class="loader-bar"></div>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#top" class="brand">
+        <img src="images/logo.png" alt="DGWEB">
+        <div class="brand-text">
+          <strong>DGWEB</strong>
+          <span>明日方舟攻略研讨会</span>
+        </div>
+      </a>
+
+      <nav class="nav-links" id="navLinks">
+        <a href="#top">首页</a>
+        <a href="#archive">最新攻略</a>
+        <a href="#about">关于</a>
+      </nav>
+
+      <div class="header-actions">
+        <div class="live-status loading" id="liveStatus">
+          <span class="dot"></span>
+          <span>同步中</span>
+        </div>
+        <a class="btn" data-space href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener">Bilibili</a>
+        <button class="nav-toggle" id="navToggle" aria-label="菜单"><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="eyebrow">Arknights Strategy Hub</div>
+          <h1>DG<em>WEB</em></h1>
+          <p class="hero-desc">
+            明日方舟低配挂机攻略聚合站。自动同步 B 站最新投稿，封面、播放量、发布时间一站看完，
+            点击即可跳转观看。
+          </p>
+          <div class="hero-actions">
+            <a class="btn" href="#archive">浏览攻略</a>
+            <a class="btn btn-ghost" data-space href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener">进入 B 站空间</a>
+          </div>
+        </div>
+
+        <aside class="up-card">
+          <div class="up-top">
+            <img id="heroAvatar" src="images/logo.png" alt="UP">
+            <div>
+              <h2 id="heroName">低配挂机研讨会</h2>
+              <p id="heroSign">愿为世界添砖加瓦 · 简单好抄的明日方舟攻略</p>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <b id="statFollowers">—</b>
+              <span>粉丝</span>
+            </div>
+            <div class="stat">
+              <b id="statVideos">—</b>
+              <span>投稿</span>
+            </div>
+            <div class="stat">
+              <b id="statShown">—</b>
+              <span>已载入</span>
+            </div>
+          </div>
+          <div class="sync-line">
+            <span>DATA CHANNEL</span>
+            <span id="syncTime">OFFLINE</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="archive">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Latest Guides</div>
+            <h2>最新攻略</h2>
+            <p>封面直出 · 点击跳转 B 站播放</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="tabs" id="filterTabs">
+            <button class="tab active" data-cat="all">全部</button>
+            <button class="tab" data-cat="newbie">新人入坑</button>
+            <button class="tab" data-cat="afk">低配挂机</button>
+            <button class="tab" data-cat="event">活动攻略</button>
+            <button class="tab" data-cat="review">干员测评</button>
+          </div>
+          <div class="tools-right">
+            <div class="search">
+              <input id="searchInput" type="search" placeholder="搜索攻略标题..." autocomplete="off">
+            </div>
+            <select class="select" id="sortSelect">
+              <option value="new">最新发布</option>
+              <option value="hot">最多播放</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="result-meta" id="resultMeta">加载中...</div>
+        <div class="video-grid" id="videoGrid"></div>
+
+        <div class="empty" id="emptyState" hidden>
+          <div class="empty-title">暂无攻略</div>
+          <p>没有符合条件的内容，试试其他分类或关键词。</p>
+        </div>
+
+        <div class="more-wrap">
+          <button class="btn btn-ghost" id="loadMoreBtn" hidden>加载更多</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="about" id="about">
+      <div class="container">
+        <div class="about-card">
+          <div>
+            <div class="eyebrow">About</div>
+            <h2>简单好抄，仅此而已</h2>
+            <p>低配挂机研讨会专注于《明日方舟》低配、单核、摆完挂机类攻略。不追求极限，不堆砌高配，只做每一位博士都能抄完的作业。</p>
+            <p>本站通过 Cloudflare 自动同步 B 站投稿数据，封面与播放量实时更新，方便快速检索与跳转观看。</p>
+            <div class="chips">
+              <span class="chip">单核挂机</span>
+              <span class="chip">摆完挂机</span>
+              <span class="chip">新手友好</span>
+              <span class="chip">简单好抄</span>
+            </div>
+          </div>
+          <div class="about-side">
+            <div>
+              <h3>Platform</h3>
+              <a data-space href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener">Bilibili Space →</a>
+            </div>
+            <div>
+              <h3>Contact</h3>
+              <p style="color:var(--text)">合作 vx：Hayyamizzz</p>
+            </div>
+            <div>
+              <h3>Deploy</h3>
+              <p style="color:var(--muted);font-size:.9rem">GitHub + Cloudflare Pages<br>数据接口：/api/bilibili</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">DGWEB</div>
+      <div>© 2024-2026 低配挂机研讨会 · 非官方粉丝站数据展示</div>
+      <div>Powered by Cloudflare Pages</div>
+    </div>
+  </footer>
+
+  <script src="js/bilibili.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
