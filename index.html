@@ -261,9 +261,7 @@
         // ===== 图片代理函数（前端统一处理） =====
         function proxyImage(url) {
             if (!url || !url.startsWith('http')) return url;
-            // 如果已经是代理链接，直接返回
             if (url.includes('images.weserv.nl') || url.includes('i3.wp.com')) return url;
-            // 仅对 hdslb.com 的图片进行代理
             if (url.includes('hdslb.com')) {
                 return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&h=225&fit=cover`;
             }
@@ -274,11 +272,8 @@
         const videos = [
             { title: "【明日方舟】2025神级开局攻略 16分钟让你少走6年弯路", bvid: "BV1mw4m1r7qM", category: "guide", views: "12.5万", duration: "16:32", date: "2024-11-10", cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg" },
             { title: "【明日方舟】2025神级主线攻略 单核轻松！摆完挂机！0-8章", bvid: "BV1E2p6zXEcP", category: "main", views: "7.8万", duration: "7:44:44", date: "2025-05-03", cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg" },
-            // ... 此处省略其余视频，您可以直接把原有 videos 数组完整复制过来
+            // 您可以继续添加更多视频...
         ];
-
-        // 为了演示，补全一些示例（建议您保留原来的完整列表）
-        // 实际使用时请用原来的 videos 数组替换上面的占位
 
         let currentCategory = 'all';
         let displayedCount = 10;
@@ -300,7 +295,7 @@
             }
         }
 
-        // ===== 渲染最新投稿（使用 proxyImage） =====
+        // ===== 渲染最新投稿（已修复跳转） =====
         function renderLatest(items) {
             const grid = document.getElementById('latestGrid');
             const errorEl = document.getElementById('latestError');
@@ -313,13 +308,11 @@
             errorEl.classList.add('hidden');
 
             const slice = items.slice(0, 8);
-            grid.innerHTML = slice.map((item, idx) => {
-                const link = item.link || '';
-                const bvidMatch = link.match(/BV[a-zA-Z0-9]+/);
-                const bvid = bvidMatch ? bvidMatch[0] : '';
+            grid.innerHTML = slice.map((item) => {
+                // ★★★ 直接使用 item.link（完整URL） ★★★
+                const videoUrl = item.link || '#';
 
                 let cover = item.media?.thumbnail || item.thumbnail || item.cover || '';
-                // 应用图片代理
                 cover = proxyImage(cover);
 
                 let pubDate = item.pubDate || item.published || item.date || '';
@@ -336,11 +329,11 @@
                 const title = item.title || '无标题';
 
                 return `
-                    <a href="https://www.bilibili.com/video/${bvid}" target="_blank" class="latest-card group block">
+                    <a href="${videoUrl}" target="_blank" class="latest-card group block">
                         <div class="cover-wrap">
                             <img src="${cover}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://images.weserv.nl/?url=https://i0.hdslb.com/bfs/archive/default.jpg&w=400&h=225&fit=cover'" />
                             <div class="absolute bottom-2 right-2 bg-ink/80 text-paper text-[10px] px-2 py-0.5 mono tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                                ${bvid || '观看'}
+                                观看
                             </div>
                         </div>
                         <div class="p-3 md:p-4">
