@@ -30,7 +30,7 @@
         }
     </script>
     <style>
-        /* ===== 所有样式保持不变（略） ===== */
+        /* 所有样式与原版完全一致 */
         :root { --bg: #000000; --fg: #ffffff; --muted: #888888; --line: #222222; --hover-bg: #ffffff; --hover-fg: #000000; }
         * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
         *::-webkit-scrollbar { width:4px; }
@@ -294,7 +294,7 @@
             }
         }
 
-        // ===== 渲染最新投稿（直接使用 item.link） =====
+        // ===== 渲染最新投稿（★关键修复：直接使用 item.link） =====
         function renderLatest(items) {
             const grid = document.getElementById('latestGrid');
             const errorEl = document.getElementById('latestError');
