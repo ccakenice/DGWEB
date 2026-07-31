@@ -5,9 +5,9 @@
  * 返回: { code:0, uinfo:{name,face,follower}, videos:[{bvid,title,cover,play,duration,created,url}], total, updated }
  *
  * 说明:
- *  - B站视频列表接口需要 WBI 签名(MD5) + buvid 指纹, 本文件已完整实现
- *  - 内置 10 分钟缓存 + 风控自动重试, 避免触发 B 站限流(-412/-799)
- *  - 无需任何环境变量, 上传 GitHub 后随 Cloudflare Pages 自动部署
+ *  - 使用新版 WBI 签名接口 (/x/space/wbi/arc/search)
+ *  - 内置 10 分钟缓存 + 风控自动重试
+ *  - 无需任何环境变量
  */
 
 const MIXIN_KEY_ENC_TAB = [
@@ -18,11 +18,10 @@ const MIXIN_KEY_ENC_TAB = [
 ];
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
-const CACHE_TTL = 600; // 秒, 接口级缓存
+const CACHE_TTL = 600; // 秒
 
-//  isolate 内复用, 减少对 B 站的请求次数
-let gBuvid = null; // { b3, b4, ts }
-let gWbi = null;   // { imgKey, subKey, ts }
+let gBuvid = null;
+let gWbi = null;
 
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
@@ -31,15 +30,14 @@ export async function onRequestGet(context) {
     return json({ code: -1, message: 'missing or invalid param: mid' }, 400);
   }
 
-  // 10 分钟内直接命中缓存, 不触碰 B 站
   const cache = caches.default;
   const cacheKey = new Request('https://dgweb.internal/api/bilibili?mid=' + mid);
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
   try {
-    const videos = await getVideos(mid);
     const uinfo = await getUinfo(mid);
+    const videos = await getVideos(mid);
     const res = json({
       code: 0,
       uinfo,
@@ -58,7 +56,7 @@ export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: corsHeaders() });
 }
 
-/* ---------------- B 站数据 ---------------- */
+/* ---------------- B站数据 ---------------- */
 
 async function getUinfo(mid) {
   let follower = null, name = null, face = null;
@@ -77,14 +75,24 @@ async function getUinfo(mid) {
 async function getVideos(mid) {
   const list = [];
   let total = 0;
+  // 只抓前 2 页，够用
   for (let pn = 1; pn <= 2; pn++) {
-    const j = await biliJson(
-      'https://api.bilibili.com/x/space/arc/search?mid=' + mid +
-      '&ps=30&pn=' + pn + '&order=pubdate&platform=web&web_location=1550101' +
-      '&dm_img_list=[]&dm_img_str=V2ViR0wgMS&dm_cover_img_str=V2ViR0wgMS' +
-      '&dm_img_inter={"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
-      true
-    );
+    // 构建参数对象（新版接口需要的参数）
+    const params = {
+      mid: mid,
+      ps: 30,
+      pn: pn,
+      order: 'pubdate',
+      platform: 'web',
+      web_location: '1550101'
+    };
+    // 获取 WBI keys 并签名
+    const buvid = await getBuvid();
+    const keys = await getWbiKeys(buvid);
+    const signedQuery = wbiSign(params, keys.imgKey, keys.subKey);
+    const url = 'https://api.bilibili.com/x/space/wbi/arc/search?' + signedQuery;
+
+    const j = await biliJsonRaw(url, buvid);
     if (j.code !== 0 || !j.data || !j.data.list) {
       if (pn === 1) throw new Error('arc/search rejected, code=' + j.code);
       break;
@@ -96,12 +104,12 @@ async function getVideos(mid) {
         title: v.title,
         cover: fixProto(v.pic),
         play: v.play,
-        duration: v.length,          // B站直接返回 "mm:ss" 字符串
-        created: v.created,          // unix 秒
+        duration: v.length,
+        created: v.created,
         url: 'https://www.bilibili.com/video/' + v.bvid
       });
     }
-    if (pn < 2) await sleep(250);    // 温柔一点, 避免限流
+    if (pn < 2) await sleep(250);
   }
   if (!list.length) throw new Error('empty video list');
   return { list, total };
@@ -109,6 +117,7 @@ async function getVideos(mid) {
 
 /* ---------------- 请求与签名 ---------------- */
 
+// 通用请求（带签名）
 async function biliJson(url, needSign, retryLeft = 1) {
   const buvid = await getBuvid();
   let finalUrl = url;
@@ -119,14 +128,19 @@ async function biliJson(url, needSign, retryLeft = 1) {
     u.searchParams.forEach((v, k) => { params[k] = v; });
     finalUrl = u.origin + u.pathname + '?' + wbiSign(params, keys.imgKey, keys.subKey);
   }
-  const resp = await fetch(finalUrl, { headers: biliHeaders(buvid) });
+  return biliJsonRaw(finalUrl, buvid, retryLeft);
+}
+
+// 原始请求（带重试和风控处理）
+async function biliJsonRaw(url, buvid, retryLeft = 1) {
+  const resp = await fetch(url, { headers: biliHeaders(buvid) });
   if (resp.status === 412 || resp.status === 403) {
-    if (retryLeft > 0) { gBuvid = null; await sleep(800); return biliJson(url, needSign, retryLeft - 1); }
+    if (retryLeft > 0) { gBuvid = null; await sleep(800); return biliJsonRaw(url, buvid, retryLeft - 1); }
     throw new Error('bilibili risk control, HTTP ' + resp.status);
   }
   const data = await resp.json();
   if (data.code === -799 || data.code === -412) {
-    if (retryLeft > 0) { gBuvid = null; await sleep(800); return biliJson(url, needSign, retryLeft - 1); }
+    if (retryLeft > 0) { gBuvid = null; await sleep(800); return biliJsonRaw(url, buvid, retryLeft - 1); }
     throw new Error('bilibili rate limited, code=' + data.code);
   }
   return data;
@@ -214,7 +228,7 @@ function json(obj, ttl) {
   return new Response(JSON.stringify(obj), { status: 200, headers: h });
 }
 
-/* ---------------- MD5 (已用标准向量验证) ---------------- */
+/* ---------------- MD5 ---------------- */
 
 function md5(s) {
   function L(k, d) { return (k << d) | (k >>> (32 - d)); }
