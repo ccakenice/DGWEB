@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DGWEB — 明日方舟攻略研讨会</title>
+  <meta name="description" content="明日方舟低配挂机攻略聚合站，数据自动同步自B站。">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <!-- 顶部导航 -->
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top">
+        <img src="images/logo.png" alt="logo" class="brand-logo">
+        <span class="brand-text">
+          <strong id="brandName">DGWEB</strong>
+          <small id="brandDesc">明日方舟攻略研讨会</small>
+        </span>
+      </a>
+      <nav class="site-nav">
+        <a href="#latest" class="nav-link">最新攻略</a>
+        <a href="#about" class="nav-link">关于</a>
+        <a id="biliLink" class="btn btn-accent btn-sm" href="#" target="_blank" rel="noopener">B站空间 ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero wrap">
+      <div class="hero-left">
+        <p class="hero-kicker">ARKNIGHTS · STRATEGY ARCHIVE</p>
+        <h1 class="hero-title">DGWEB<span class="accent">.</span></h1>
+        <p class="hero-sub" id="heroSub">明日方舟低配挂机攻略聚合站 —— 简单好抄，摆完挂机。</p>
+        <div class="hero-actions">
+          <a href="#latest" class="btn btn-accent">浏览攻略</a>
+          <a id="biliLink2" class="btn btn-ghost" href="#" target="_blank" rel="noopener">关注UP主 ↗</a>
+        </div>
+      </div>
+
+      <!-- UP主卡片 -->
+      <aside class="up-card" id="upCard">
+        <div class="up-head">
+          <img id="upFace" src="images/logo.png" alt="UP主头像" class="up-face" referrerpolicy="no-referrer">
+          <div class="up-info">
+            <span class="up-label">UP主 / OPERATOR</span>
+            <strong id="upName">—</strong>
+            <span class="up-uid" id="upUid">UID —</span>
+          </div>
+        </div>
+        <div class="up-stats">
+          <div class="up-stat"><b id="statFollowers">—</b><span>粉丝</span></div>
+          <div class="up-stat"><b id="statVideos">—</b><span>视频</span></div>
+          <div class="up-stat"><b class="stat-live">LIVE</b><span>自动同步</span></div>
+        </div>
+        <div class="sync-pill is-loading" id="syncPill"><i></i><span id="syncText">正在连接B站接口…</span></div>
+      </aside>
+    </section>
+
+    <!-- 最新攻略 -->
+    <section class="wrap section" id="latest">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title"><span class="accent">//</span> 最新攻略</h2>
+          <p class="section-desc">数据自动同步自B站 · 点击卡片跳转播放</p>
+        </div>
+        <span class="result-info" id="resultInfo"></span>
+      </div>
+
+      <div class="toolbar">
+        <div class="tabs" id="tabs"></div>
+        <div class="tools">
+          <select id="sortSel" class="select" aria-label="排序方式">
+            <option value="new">最新发布</option>
+            <option value="hot">最多播放</option>
+          </select>
+          <input id="searchInput" class="search" type="search" placeholder="搜索攻略标题…">
+        </div>
+      </div>
+
+      <div class="grid" id="videoGrid"></div>
+
+      <div class="more-wrap">
+        <button id="loadMore" class="btn btn-ghost" type="button">加载更多</button>
+      </div>
+    </section>
+
+    <!-- 关于 -->
+    <section class="wrap section about" id="about">
+      <h2 class="section-title"><span class="accent">//</span> 关于本站</h2>
+      <div class="about-grid">
+        <div class="about-card">
+          <h3>数据来源</h3>
+          <p>本站视频与UP主数据通过 Cloudflare Pages Functions 自动同步自B站公开接口，约每 10 分钟更新一次，无需人工维护。</p>
+        </div>
+        <div class="about-card">
+          <h3>内容版权</h3>
+          <p>所有视频内容版权归原作者所有，点击卡片将跳转至B站观看。本站仅作聚合展示，不存储任何视频文件。</p>
+        </div>
+        <div class="about-card">
+          <h3>分类说明</h3>
+          <p>分类由系统根据视频标题关键词自动判断（低配挂机 / 活动攻略 / 新人入坑 / 干员测评），可能存在少量误判。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span id="year"></span> <span id="footName">DGWEB</span> · 攻略内容版权归原UP主所有</span>
+      <a id="biliLink3" class="footer-link" href="#" target="_blank" rel="noopener">Bilibili Space ↗</a>
+    </div>
+  </footer>
+
+  <noscript>
+    <div style="padding:40px;text-align:center;color:#f5a623;">本站需要启用 JavaScript 才能加载B站数据。</div>
+  </noscript>
+
+  <script src="js/bilibili.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
