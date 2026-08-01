@@ -125,8 +125,8 @@
 
         function statBox(label, value, delay) {
             return `
-                <div class="reveal-up border border-line bg-graphite p-4 md:p-5" style="transition-delay:${delay}s">
-                    <div class="display text-3xl md:text-4xl mb-2">${value}</div>
+                <div class="reveal-up border border-line bg-graphite px-4 py-3" style="transition-delay:${delay}s">
+                    <div class="display text-2xl mb-1">${value}</div>
                     <div class="mono text-[10px] text-muted tracking-widest">${label}</div>
                 </div>`;
         }
@@ -192,6 +192,9 @@
                             <span class="w-px h-3 bg-line"></span>
                             <span>${bvid}</span>
                         </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+                            ${statsRows}
+                        </div>
                         <div class="text-sm text-muted leading-relaxed whitespace-pre-line">${desc}</div>
                         ${tags.length ? `
                             <div class="flex flex-wrap gap-3 mt-8">
@@ -201,12 +204,6 @@
 
                     <aside class="space-y-10">
                         ${pagesHtml}
-                        <div class="reveal-up">
-                            <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Data</span>
-                            <div class="grid grid-cols-2 gap-3">
-                                ${statsRows}
-                            </div>
-                        </div>
                         <div class="reveal-up" style="transition-delay:0.5s">
                             <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Watch</span>
                             <a href="${item.link || '#'}" target="_blank" class="block text-center mono text-sm font-bold tracking-widest uppercase bg-paper text-ink px-6 py-4 hover:bg-charcoal hover:text-paper transition-colors">
