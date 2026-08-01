@@ -149,11 +149,14 @@
                 ${duration ? statBox('时长', duration, 0.45) : ''}`;
 
             const pages = Array.isArray(item.pages) ? item.pages : [];
+            const MAX_PAGES_SHOWN = 20;
+            const shownPages = pages.slice(0, MAX_PAGES_SHOWN);
+            const hiddenCount = pages.length > MAX_PAGES_SHOWN ? pages.length - MAX_PAGES_SHOWN : 0;
             const pagesHtml = pages.length > 1 ? `
                 <div class="reveal-up">
-                    <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">分P列表 (${pages.length})</span>
-                    <div class="border border-line divide-y divide-line">
-                        ${pages.map((p, i) => `
+                    <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">分P列表 (${pages.length}${hiddenCount ? ` · 展开${MAX_PAGES_SHOWN}` : ''})</span>
+                    <div class="border border-line divide-y divide-line ${hiddenCount ? 'overflow-y-auto max-h-[400px]' : ''}">
+                        ${shownPages.map((p, i) => `
                             <button data-page="${p.page}" class="page-btn w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${i === 0 ? 'bg-charcoal text-paper' : 'text-muted hover:text-paper hover:bg-graphite'}">
                                 <span class="flex items-center gap-3">
                                     <span class="mono text-[10px] w-6 text-center ${i === 0 ? 'text-paper' : 'text-smoke'}">P${p.page}</span>
