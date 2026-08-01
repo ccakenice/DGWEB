@@ -88,6 +88,13 @@
             return String(n);
         }
 
+        function fmtDuration(sec) {
+            sec = Number(sec) || 0;
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m + ':' + String(s).padStart(2, '0');
+        }
+
         function fmtDate(s) {
             if (!s) return '近期';
             const d = new Date(s);
@@ -141,6 +148,22 @@
                 ${statBox('收藏', fmtCount(st.favorite), 0.4)}
                 ${duration ? statBox('时长', duration, 0.45) : ''}`;
 
+            const pages = Array.isArray(item.pages) ? item.pages : [];
+            const pagesHtml = pages.length > 1 ? `
+                <div class="reveal-up">
+                    <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">分P列表 (${pages.length})</span>
+                    <div class="border border-line divide-y divide-line">
+                        ${pages.map((p, i) => `
+                            <button data-page="${p.page}" class="page-btn w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${i === 0 ? 'bg-charcoal text-paper' : 'text-muted hover:text-paper hover:bg-graphite'}">
+                                <span class="flex items-center gap-3">
+                                    <span class="mono text-[10px] w-6 text-center ${i === 0 ? 'text-paper' : 'text-smoke'}">P${p.page}</span>
+                                    <span class="text-xs line-clamp-1">${p.part || ('P' + p.page)}</span>
+                                </span>
+                                ${p.duration ? `<span class="mono text-[10px] text-smoke shrink-0">${fmtDuration(p.duration)}</span>` : ''}
+                            </button>`).join('')}
+                    </div>
+                </div>` : '';
+
             wrap.innerHTML = `
                 <a href="index.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-8">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
@@ -151,6 +174,7 @@
                 <div class="reveal-up">
                     <div class="relative bg-fog border border-line overflow-hidden mb-8" style="padding-bottom:56.25%">
                         <iframe
+                            id="biliPlayer"
                             src="https://player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1"
                             class="absolute inset-0 w-full h-full"
                             scrolling="no" border="0" frameborder="no" framespacing="0"
@@ -176,6 +200,7 @@
                     </div>
 
                     <aside class="space-y-10">
+                        ${pagesHtml}
                         <div class="reveal-up">
                             <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Data</span>
                             <div class="grid grid-cols-2 gap-3">
@@ -194,6 +219,22 @@
             requestAnimationFrame(() => {
                 document.querySelectorAll('.reveal-up').forEach((el, i) => {
                     setTimeout(() => el.classList.add('visible'), 50 + i * 60);
+                });
+            });
+
+            const player = document.getElementById('biliPlayer');
+            document.querySelectorAll('.page-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const page = btn.dataset.page;
+                    if (player) player.src = `https://player.bilibili.com/player.html?bvid=${bvid}&page=${page}&high_quality=1`;
+                    document.querySelectorAll('.page-btn').forEach(b => {
+                        b.classList.remove('bg-charcoal', 'text-paper');
+                        b.classList.add('text-muted', 'hover:text-paper', 'hover:bg-graphite');
+                        b.querySelector('span.mono') && b.querySelector('span.mono').classList.add('text-smoke');
+                    });
+                    btn.classList.add('bg-charcoal', 'text-paper');
+                    btn.classList.remove('text-muted', 'hover:text-paper', 'hover:bg-graphite');
+                    btn.querySelector('span.mono') && btn.querySelector('span.mono').classList.remove('text-smoke');
                 });
             });
         }
