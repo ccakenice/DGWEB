@@ -228,6 +228,11 @@
         </div>
     </footer>
 
+    <button id="collapseBtn" style="display:none" class="fixed right-4 md:right-8 bottom-8 z-50 items-center gap-2 mono text-xs text-paper hover:text-paper font-bold tracking-widest uppercase border border-paper/60 hover:border-paper bg-black backdrop-blur px-5 py-3">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+        收起
+    </button>
+
     <script>
         const DATA_URLS = [
             '/latest.json',
@@ -236,7 +241,9 @@
         ];
 
         function proxyImage(url) {
-            if (!url || !url.startsWith('http')) return url;
+            if (!url) return url;
+            if (url.startsWith('//')) url = 'https:' + url;
+            if (!url.startsWith('http')) return url;
             if (url.includes('images.weserv.nl') || url.includes('i3.wp.com')) return url;
             if (url.includes('hdslb.com')) {
                 return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&h=225&fit=cover`;
@@ -348,6 +355,8 @@
             const visible = items.slice(0, 8);
             const rest = items.slice(8);
 
+            const collapseBtn = document.getElementById('collapseBtn');
+
             grid.innerHTML = visible.map(card).join('');
             if (rest.length > 0) {
                 moreGrid.innerHTML = rest.map(card).join('');
@@ -358,10 +367,37 @@
                 toggleBtn.classList.add('hidden');
             }
 
+            const collapse = () => {
+                moreGrid.classList.add('hidden');
+                toggleBtn.textContent = '展开全部 (' + items.length + ')';
+                if (collapseBtn) collapseBtn.style.display = 'none';
+                window.removeEventListener('scroll', onScroll);
+            };
+
+            const onScroll = () => {
+                if (!collapseBtn) return;
+                const rect = toggleBtn.getBoundingClientRect();
+                const aVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                collapseBtn.style.display = aVisible ? 'none' : 'inline-flex';
+            };
+
             toggleBtn.onclick = () => {
                 const expanding = moreGrid.classList.contains('hidden');
                 moreGrid.classList.toggle('hidden');
                 toggleBtn.textContent = expanding ? '收起' : '展开全部 (' + items.length + ')';
+                if (expanding) {
+                    collapseBtn.style.display = 'inline-flex';
+                    window.addEventListener('scroll', onScroll, { passive: true });
+                    requestAnimationFrame(onScroll);
+                } else {
+                    collapse();
+                }
+            };
+
+            collapseBtn.onclick = () => {
+                collapse();
+                const top = document.getElementById('latestUpdates').getBoundingClientRect().top + window.scrollY;
+                window.scrollTo({ top: top - 16, behavior: 'smooth' });
             };
         }
 
