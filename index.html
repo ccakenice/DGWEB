@@ -314,7 +314,7 @@
             }
 
             const card = (item) => {
-                const videoUrl = item.link || '#';
+                const videoUrl = 'detail.html?bvid=' + (item.bvid || (item.link ? item.link.split('/').pop() : ''));
                 let cover = item.media?.thumbnail || item.thumbnail || item.cover || '';
                 cover = proxyImage(cover);
                 let pubDate = item.pubDate || item.published || item.date || '';
@@ -331,13 +331,13 @@
                 const staleTag = isStale ? '<div class="stale-badge">缓存</div>' : '';
 
                 return `
-                    <a href="${videoUrl}" target="_blank" class="latest-card group block relative">
+                    <a href="${videoUrl}" class="latest-card group block relative">
                         ${staleTag}
                         <div class="cover-wrap">
                             <img src="${cover}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" 
                                  onerror="this.src='https://images.weserv.nl/?url=https://i0.hdslb.com/bfs/archive/default.jpg&w=400&h=225&fit=cover'" />
                             <div class="absolute bottom-2 right-2 bg-ink/80 text-paper text-[10px] px-2 py-0.5 mono tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                                观看
+                                详情
                             </div>
                         </div>
                         <div class="p-3 md:p-4">
@@ -345,7 +345,7 @@
                             <div class="card-mono text-[10px] text-muted mt-2 flex items-center gap-3">
                                 <span>${dateStr}</span>
                                 <span class="w-px h-3 bg-line"></span>
-                                <span>B站同步</span>
+                                <span>${item.typename || 'B站同步'}</span>
                             </div>
                         </div>
                     </a>
