@@ -126,7 +126,7 @@
                 <div class="flex gap-16">
                     <div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div></div>
                     <div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div></div>
-                    <div class="hidden sm:block"><div class="stat-big" id="statPlaylists" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">PLAYLISTS</div></div>
+                    <div class="hidden sm:block"><div class="stat-big" id="statLikes" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">LIKES</div></div>
                 </div>
             </div>
         </div>
@@ -264,7 +264,7 @@
             const map = {
                 statFollowers: stats.fans,
                 statVideos: stats.videos,
-                statPlaylists: stats.playlists
+                statLikes: stats.likes
             };
             for (const [id, val] of Object.entries(map)) {
                 if (val === undefined || val === null) continue;
