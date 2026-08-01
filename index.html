@@ -172,6 +172,10 @@
                     </div>
                 </div>
                 <div id="latestGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5"></div>
+                <div id="latestMore" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 hidden"></div>
+                <div class="text-center mt-8">
+                    <button id="toggleBtn" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase border border-line hover:border-paper px-8 py-3 hidden">展开全部</button>
+                </div>
                 <div id="latestError" class="hidden text-center py-12 border border-line/50 mt-4">
                     <p class="text-sm text-muted mb-3">暂时无法获取最新投稿</p>
                     <button id="retryBtn" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-2 inline-block">重新尝试</button>
@@ -257,11 +261,15 @@
 
         function renderLatest(items) {
             const grid = document.getElementById('latestGrid');
+            const moreGrid = document.getElementById('latestMore');
+            const toggleBtn = document.getElementById('toggleBtn');
             const errorEl = document.getElementById('latestError');
             const badge = document.getElementById('liveBadge');
 
             if (!items || items.length === 0) {
                 grid.innerHTML = '';
+                moreGrid.innerHTML = '';
+                toggleBtn.classList.add('hidden');
                 errorEl.classList.remove('hidden');
                 return;
             }
@@ -279,8 +287,7 @@
                 }
             }
 
-            const slice = items.slice(0, 8);
-            grid.innerHTML = slice.map((item) => {
+            const card = (item) => {
                 const videoUrl = item.link || '#';
                 let cover = item.media?.thumbnail || item.thumbnail || item.cover || '';
                 cover = proxyImage(cover);
@@ -317,7 +324,26 @@
                         </div>
                     </a>
                 `;
-            }).join('');
+            };
+
+            const visible = items.slice(0, 8);
+            const rest = items.slice(8);
+
+            grid.innerHTML = visible.map(card).join('');
+            if (rest.length > 0) {
+                moreGrid.innerHTML = rest.map(card).join('');
+                toggleBtn.classList.remove('hidden');
+                toggleBtn.textContent = '展开全部 (' + items.length + ')';
+            } else {
+                moreGrid.innerHTML = '';
+                toggleBtn.classList.add('hidden');
+            }
+
+            toggleBtn.onclick = () => {
+                const expanding = moreGrid.classList.contains('hidden');
+                moreGrid.classList.toggle('hidden');
+                toggleBtn.textContent = expanding ? '收起' : '展开全部 (' + items.length + ')';
+            };
         }
 
         async function loadLatest(showLoading = true) {
