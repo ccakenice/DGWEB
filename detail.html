@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>低配挂机研讨会 — 视频详情</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000', 'paper': '#ffffff', 'ash': '#888888', 'smoke': '#555555',
+                        'charcoal': '#333333', 'graphite': '#1a1a1a', 'fog': '#0a0a0a', 'line': '#222222',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
+        .rule { height:1px; background:var(--line); }
+        .rule-v { width:1px; background:var(--line); }
+        .grid-bg { background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:80px 80px; }
+        .reveal-up { opacity:0; transform:translateY(40px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        .skeleton-pulse { animation:skeletonPulse 1.5s ease-in-out infinite; }
+        @keyframes skeletonPulse { 0%,100% { opacity:0.3; } 50% { opacity:0.6; } }
+        .spin { animation:spin 0.8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1200px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <span class="mono text-xs text-muted group-hover:text-paper transition-colors">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="flex items-center gap-6">
+                <a href="index.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回主页
+                </a>
+                <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-16">
+        <div id="detailWrap" class="max-w-[1200px] mx-auto px-6 md:px-10 py-14 md:py-20"></div>
+    </main>
+
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4"><span class="mono text-lg font-bold">LC</span><span class="rule-v h-4"></span><span class="text-xs text-muted">低配挂机研讨会</span></div>
+            <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+        </div>
+    </footer>
+
+    <script>
+        const DATA_URLS = [
+            '/latest.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
+        ];
+
+        function proxyImage(url) {
+            if (!url) return url;
+            if (url.startsWith('//')) url = 'https:' + url;
+            if (!url.startsWith('http')) return url;
+            if (url.includes('images.weserv.nl') || url.includes('i3.wp.com')) return url;
+            if (url.includes('hdslb.com')) {
+                return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=900&h=500&fit=cover`;
+            }
+            return url;
+        }
+
+        function fmtCount(n) {
+            n = Number(n) || 0;
+            if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+            if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+            return String(n);
+        }
+
+        function fmtDate(s) {
+            if (!s) return '近期';
+            const d = new Date(s);
+            if (isNaN(d)) return '近期';
+            return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+
+        async function fetchData() {
+            for (const url of DATA_URLS) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const json = await resp.json();
+                    if (json.code === 0 && json.data) return json.data;
+                } catch (e) {
+                    console.error(`数据源失败 ${url}:`, e.message);
+                }
+            }
+            const cached = localStorage.getItem('bili_latest_cache');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length) return parsed;
+                } catch (_) {}
+            }
+            return null;
+        }
+
+        function statBox(label, value, delay) {
+            return `
+                <div class="reveal-up border border-line bg-graphite p-4 md:p-5" style="transition-delay:${delay}s">
+                    <div class="display text-3xl md:text-4xl mb-2">${value}</div>
+                    <div class="mono text-[10px] text-muted tracking-widest">${label}</div>
+                </div>`;
+        }
+
+        function renderVideo(item) {
+            const wrap = document.getElementById('detailWrap');
+            const title = item.title || '无标题';
+            const cover = proxyImage(item.media?.thumbnail || item.thumbnail || item.cover || '');
+            const desc = item.description || '暂无简介';
+            const st = item.stat || {};
+            const bvid = item.bvid || (item.link ? item.link.split('/').pop() : '');
+            const tags = Array.isArray(item.tags) ? item.tags : [];
+            const duration = item.duration ? String(item.duration) : '';
+
+            const statsRows = `
+                ${statBox('播放', fmtCount(st.play), 0.2)}
+                ${statBox('点赞', fmtCount(st.like), 0.25)}
+                ${statBox('弹幕', fmtCount(st.danmaku), 0.3)}
+                ${statBox('评论', fmtCount(st.review), 0.35)}
+                ${statBox('收藏', fmtCount(st.favorite), 0.4)}
+                ${duration ? statBox('时长', duration, 0.45) : ''}`;
+
+            wrap.innerHTML = `
+                <a href="index.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-8">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回全部投稿
+                </a>
+
+                <div class="grid lg:grid-cols-[1fr_340px] gap-10 md:gap-14">
+                    <div class="reveal-up">
+                        <div class="relative bg-fog border border-line overflow-hidden mb-8" style="padding-bottom:56.25%">
+                            <img src="${cover}" alt="${title}" class="absolute inset-0 w-full h-full object-cover" referrerpolicy="no-referrer"
+                                 onerror="this.src='https://images.weserv.nl/?url=https://i0.hdslb.com/bfs/archive/default.jpg&w=900&h=500&fit=cover'" />
+                            <div class="absolute top-4 left-4 mono text-[10px] text-muted border border-line bg-black/70 px-3 py-1 tracking-widest">${item.typename || 'BILIBILI'}</div>
+                            ${duration ? `<div class="absolute bottom-4 right-4 mono text-[10px] bg-black/80 text-paper px-2 py-1">${duration}</div>` : ''}
+                        </div>
+                        <h1 class="display text-2xl md:text-4xl leading-tight mb-6">${title}</h1>
+                        <div class="rule mb-6"></div>
+                        <div class="flex flex-wrap items-center gap-4 mb-8 text-xs text-muted mono tracking-widest">
+                            <span>${fmtDate(item.pubDate)}</span>
+                            <span class="w-px h-3 bg-line"></span>
+                            <span>B站同步</span>
+                            <span class="w-px h-3 bg-line"></span>
+                            <span>${bvid}</span>
+                        </div>
+                        <div class="text-sm text-muted leading-relaxed whitespace-pre-line">${desc}</div>
+                        ${tags.length ? `
+                            <div class="flex flex-wrap gap-3 mt-8">
+                                ${tags.map(t => `<span class="mono text-xs border border-line px-3 py-1.5 text-muted"># ${t}</span>`).join('')}
+                            </div>` : ''}
+                    </div>
+
+                    <aside class="space-y-10">
+                        <div class="reveal-up">
+                            <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Data</span>
+                            <div class="grid grid-cols-2 gap-3">
+                                ${statsRows}
+                            </div>
+                        </div>
+                        <div class="reveal-up" style="transition-delay:0.5s">
+                            <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">Watch</span>
+                            <a href="${item.link || '#'}" target="_blank" class="block text-center mono text-sm font-bold tracking-widest uppercase bg-paper text-ink px-6 py-4 hover:bg-charcoal hover:text-paper transition-colors">
+                                前往B站观看 ↗
+                            </a>
+                        </div>
+                    </aside>
+                </div>`;
+
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.reveal-up').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('visible'), 50 + i * 60);
+                });
+            });
+        }
+
+        function renderError() {
+            const wrap = document.getElementById('detailWrap');
+            wrap.innerHTML = `
+                <div class="text-center py-24 border border-line/50 grid-bg">
+                    <p class="text-sm text-muted mb-6">未找到该视频，或数据暂时无法加载</p>
+                    <a href="index.html" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-3 inline-block">返回主页</a>
+                </div>`;
+        }
+
+        (async function init() {
+            const params = new URLSearchParams(location.search);
+            const bvid = params.get('bvid');
+            const items = await fetchData();
+            if (!items) { renderError(); return; }
+            const found = bvid
+                ? items.find(it => it.bvid === bvid || (it.link && it.link.includes(bvid)))
+                : items[0];
+            if (found) {
+                renderVideo(found);
+                document.title = found.title + ' — 低配挂机研讨会';
+            } else {
+                renderError();
+            }
+        })();
+    </script>
+</body>
+</html>
