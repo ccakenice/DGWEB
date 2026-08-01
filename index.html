@@ -124,9 +124,9 @@
             <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-10" style="transition-delay:0.7s;">
                 <p class="text-sm text-muted max-w-md leading-relaxed">愿为世界添砖加瓦。旨在制作出更多简单好抄的攻略，<br />让每一位博士都能轻松通关。</p>
                 <div class="flex gap-16">
-                    <div><div class="stat-big" data-count="191000">0</div><div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div></div>
-                    <div><div class="stat-big" data-count="244">0</div><div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div></div>
-                    <div class="hidden sm:block"><div class="stat-big" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">PLAYLISTS</div></div>
+                    <div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div></div>
+                    <div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div></div>
+                    <div class="hidden sm:block"><div class="stat-big" id="statPlaylists" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">PLAYLISTS</div></div>
                 </div>
             </div>
         </div>
@@ -249,13 +249,27 @@
                 const json = await resp.json();
                 if (json.code === 0 && json.data) {
                     isStale = json.stale === true;
-                    return json.data;
+                    return json;
                 } else {
                     throw new Error(json.message || '接口返回错误');
                 }
             } catch (error) {
                 console.error('请求 Worker 失败:', error.message);
                 return null;
+            }
+        }
+
+        function applyStats(stats) {
+            if (!stats) return;
+            const map = {
+                statFollowers: stats.fans,
+                statVideos: stats.videos,
+                statPlaylists: stats.playlists
+            };
+            for (const [id, val] of Object.entries(map)) {
+                if (val === undefined || val === null) continue;
+                const el = document.getElementById(id);
+                if (el) el.dataset.count = String(val);
             }
         }
 
@@ -366,8 +380,10 @@
             }
 
             try {
-                const items = await fetchBilibiliLatest();
+                const json = await fetchBilibiliLatest();
+                const items = json ? json.data : null;
                 if (items && items.length > 0) {
+                    if (json && json.stats) applyStats(json.stats);
                     renderLatest(items);
                     localStorage.setItem('bili_latest_cache', JSON.stringify(items));
                     localStorage.setItem('bili_latest_time', Date.now().toString());
