@@ -67,8 +67,8 @@
                 <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
             </a>
             <div class="hidden md:flex items-center gap-10">
-                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">模式 · Modes</a>
-                <a href="index.html#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">归档 · Archive</a>
+                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Modes</a>
+                <a href="index.html#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
             </div>
             <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
         </div>
@@ -116,7 +116,7 @@
         const THUMBS = {
             'event-stages': 'images/modes/活动名称_直到大地变成一颗酸橙.png',
             'story-set': 'images/modes/活动名称_丛林症结.png',
-            'main-stages': 'images/modes/章节名称_第十七章.png',
+            'main-stages': 'images/modes/章节横幅_第十七章.jpg',
             'crisis-contract': 'images/modes/活动名称_涤墨作战.png',
             'resource': 'images/modes/活动名称_训练场.png',
             'other-events': 'images/modes/活动名称_引航者试炼_06.png',
@@ -165,8 +165,10 @@
                 const totalStages = m.groups.reduce((s, g) => s + g.items.reduce((x, it) => x + (it.stages ? it.stages.length : 0), 0), 0);
                 const thumb = THUMBS[m.key];
                 const isCh = thumb && thumb.includes('章节名称');
-                const ratio = isCh ? '1 / 1' : '2.05 / 1';
-                const img = thumb ? `<img src="${thumb}" alt="${m.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" />` : '';
+                const isBanner = thumb && thumb.includes('章节横幅');
+                const ratio = isBanner ? '3.12 / 1' : (isCh ? '1 / 1' : '2.05 / 1');
+                const fit = isBanner ? 'object-fit:contain;width:100%;height:100%' : '';
+                const img = thumb ? `<img src="${thumb}" alt="${m.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" style="${fit}" />` : '';
                 return `
                     <a href="mode-${m.key}.html" class="mode-card group block relative reveal-up" style="transition-delay:${i * 0.08}s">
                         <div class="flex items-start justify-between p-5 border-b border-line">
