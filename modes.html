@@ -46,6 +46,11 @@
         .mode-card:hover .thumb img { filter:grayscale(0) contrast(1.05); }
         .mode-index { font-family:'Space Grotesk',sans-serif; font-size:2.5rem; font-weight:700; color:transparent; -webkit-text-stroke:1px var(--line); line-height:1; transition:all 0.4s ease; }
         .mode-card:hover .mode-index { color:var(--paper); -webkit-text-stroke-color:var(--paper); }
+        .featured { position:relative; background:var(--graphite); border:1px solid var(--line); overflow:hidden; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .featured:hover { border-color:var(--paper); }
+        .featured .thumb { position:relative; background:var(--fog); overflow:hidden; }
+        .featured .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(0.4) contrast(0.95); transition:transform 0.6s ease, filter 0.6s ease; }
+        .featured:hover .thumb img { transform:scale(1.03); filter:grayscale(0) contrast(1.05); }
         .cursor-dot { position:fixed; width:8px; height:8px; background:#fff; border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; transition:transform 0.15s ease; }
         .cursor-ring { position:fixed; width:40px; height:40px; border:1px solid rgba(255,255,255,0.3); border-radius:50%; pointer-events:none; z-index:9999; transition:all 0.3s ease; }
     </style>
@@ -76,6 +81,7 @@
                 <h1 class="display text-[clamp(2.5rem,7vw,6rem)] text-paper mb-6 leading-[0.95]">游戏模式</h1>
                 <p class="text-sm text-muted max-w-xl leading-relaxed">覆盖明日方舟全模式关卡攻略，从活动关卡到剿灭作战，每个关卡收录低配挂机研讨会的全部分P解法方案。</p>
             </div>
+            <div id="featuredZone" class="mb-10 md:mb-14"></div>
             <div id="modesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
         </section>
     </main>
@@ -119,12 +125,41 @@
         };
         const ORDER = ['current-event', 'event-stages', 'other-events', 'main-stages', 'annihilation', 'crisis-contract', 'paradox-sim', 'resource'];
 
+        function renderFeatured(ce) {
+            const zone = document.getElementById('featuredZone');
+            const g = ce.groups[0];
+            const it = g && g.items[0];
+            if (!it) return;
+            const total = (it.stages || []).length;
+            const thumb = THUMBS['current-event'];
+            const img = thumb ? `<img src="${thumb}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" />` : '';
+            zone.innerHTML = `
+                <a href="mode-current-event.html" class="featured group block relative reveal-up">
+                    <div class="thumb" style="aspect-ratio:2.05 / 1">${img || '<div class="h-40 bg-fog flex items-center justify-center"><span class="mono text-[10px] text-muted tracking-widest">NO IMAGE</span></div>'}</div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent pointer-events-none"></div>
+                    <div class="absolute inset-0 flex flex-col justify-center p-8 md:p-14">
+                        <span class="mono text-[10px] text-paper/60 tracking-[0.3em] uppercase block mb-4">Mode ${String(ORDER.indexOf('current-event') + 1).padStart(2, '0')} · Now Playing</span>
+                        <h2 class="display text-4xl md:text-6xl text-paper mb-4">${it.name}</h2>
+                        <p class="text-sm text-paper/60 leading-relaxed max-w-lg mb-6">${ce.desc}</p>
+                        <div class="flex items-center gap-8">
+                            <span class="mono text-xs text-paper tracking-widest">${total} 关卡</span>
+                            <span class="mono text-xs text-paper tracking-widest border border-paper/40 hover:border-paper px-5 py-2.5 transition-colors">进入当前活动 →</span>
+                        </div>
+                    </div>
+                </a>`;
+            requestAnimationFrame(() => {
+                zone.querySelectorAll('.reveal-up').forEach(el => el.classList.add('visible'));
+            });
+        }
+
         function renderModes(modes) {
             const grid = document.getElementById('modesGrid');
             const byKey = {};
             modes.forEach(m => byKey[m.key] = m);
-            const ordered = ORDER.map(k => byKey[k]).filter(Boolean);
-            grid.innerHTML = ordered.map((m, i) => {
+            const ce = byKey['current-event'];
+            if (ce) renderFeatured(ce);
+            const rest = ORDER.filter(k => k !== 'current-event').map(k => byKey[k]).filter(Boolean);
+            grid.innerHTML = rest.map((m, i) => {
                 const totalStages = m.groups.reduce((s, g) => s + g.items.reduce((x, it) => x + (it.stages ? it.stages.length : 0), 0), 0);
                 const thumb = THUMBS[m.key];
                 const isCh = thumb && thumb.includes('章节名称');
@@ -134,10 +169,10 @@
                     <a href="mode-${m.key}.html" class="mode-card group block relative reveal-up" style="transition-delay:${i * 0.08}s">
                         <div class="flex items-start justify-between p-5 border-b border-line">
                             <div>
-                                <span class="mono text-[10px] text-muted tracking-[0.3em] uppercase block mb-2">Mode ${String(i + 1).padStart(2, '0')}</span>
+                                <span class="mono text-[10px] text-muted tracking-[0.3em] uppercase block mb-2">Mode ${String(ORDER.indexOf(m.key) + 1).padStart(2, '0')}</span>
                                 <div class="display text-2xl md:text-3xl text-paper">${m.name}</div>
                             </div>
-                            <div class="mode-index">${String(i + 1).padStart(2, '0')}</div>
+                            <div class="mode-index">${String(ORDER.indexOf(m.key) + 1).padStart(2, '0')}</div>
                         </div>
                         ${thumb ? `<div class="thumb" style="aspect-ratio:${ratio}">${img}</div>` : `<div class="h-24 bg-fog flex items-center justify-center"><span class="mono text-[10px] text-muted tracking-widest">NO IMAGE</span></div>`}
                         <div class="p-5">
