@@ -121,7 +121,7 @@
             'other-events': 'images/modes/活动名称_引航者试炼_06.png',
             'annihilation': 'images/modes/活动名称_危机合约.png',
             'paradox-sim': null,
-            'current-event': 'images/modes/活动名称_直到大地变成一颗酸橙.png'
+            'current-event': 'images/modes/活动横幅_夏活2026.jpg'
         };
         const ORDER = ['current-event', 'event-stages', 'other-events', 'main-stages', 'annihilation', 'crisis-contract', 'paradox-sim', 'resource'];
 
@@ -135,7 +135,7 @@
             const img = thumb ? `<img src="${thumb}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" />` : '';
             zone.innerHTML = `
                 <a href="mode-current-event.html" class="featured group block relative reveal-up">
-                    <div class="thumb" style="aspect-ratio:2.05 / 1">${img || '<div class="h-40 bg-fog flex items-center justify-center"><span class="mono text-[10px] text-muted tracking-widest">NO IMAGE</span></div>'}</div>
+                    <div class="thumb" style="aspect-ratio:3.12 / 1">${img || '<div class="h-40 bg-fog flex items-center justify-center"><span class="mono text-[10px] text-muted tracking-widest">NO IMAGE</span></div>'}</div>
                     <div class="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent pointer-events-none"></div>
                     <div class="absolute inset-0 flex flex-col justify-center p-8 md:p-14">
                         <span class="mono text-[10px] text-paper/60 tracking-[0.3em] uppercase block mb-4">Mode ${String(ORDER.indexOf('current-event') + 1).padStart(2, '0')} · Now Playing</span>
