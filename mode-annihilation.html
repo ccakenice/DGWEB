@@ -41,14 +41,26 @@
         .reveal-up.visible { opacity:1; transform:translateY(0); }
         .mode-section-title { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
         .mode-section-title::before { content:''; width:8px; height:8px; background:var(--paper); transform:rotate(45deg); flex-shrink:0; }
-        .zone-card { position:relative; background:var(--graphite); border:1px solid var(--line); padding:20px 24px; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; }
+        .zone-card { position:relative; background:var(--graphite); border:1px solid var(--line); padding:18px 22px; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; display:block; }
         .zone-card::before { content:''; position:absolute; inset:0; background:var(--paper); transform:scaleX(0); transform-origin:left; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); z-index:0; }
         .zone-card:hover::before { transform:scaleX(1); }
-        .zone-card:hover .zone-code, .zone-card:hover .zone-name { color:var(--ink); z-index:1; position:relative; }
+        .zone-card:hover .zone-code, .zone-card:hover .zone-name, .zone-card:hover .zone-tag { color:var(--ink); z-index:1; position:relative; }
         .zone-code { font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:0.1em; color:var(--muted); display:block; margin-bottom:6px; transition:color 0.3s; }
         .zone-name { font-size:15px; color:var(--paper); transition:color 0.3s; }
+        .zone-tag { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--muted); display:block; margin-top:6px; transition:color 0.3s; }
+        .act-card { position:relative; background:var(--graphite); border:1px solid var(--line); transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; }
+        .act-card:hover { border-color:var(--paper); transform:translateY(-3px); background:var(--charcoal); }
+        .act-card .thumb { position:relative; background:var(--fog); overflow:hidden; }
+        .act-card .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:grayscale(0.4) contrast(0.95); transition:transform 0.5s ease, filter 0.5s ease; }
+        .act-card:hover .thumb img { filter:grayscale(0) contrast(1.05); }
+        .stage-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:0.05em; padding:6px 10px; transition:all 0.3s; }
+        .stage-chip:hover { border-color:var(--paper); color:var(--paper); background:rgba(255,255,255,0.05); }
+        .stage-chip .sol { color:var(--ash); }
+        .stage-chip:hover .sol { color:var(--ink); }
         .cursor-dot { position:fixed; width:8px; height:8px; background:#fff; border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; transition:transform 0.15s ease; }
         .cursor-ring { position:fixed; width:40px; height:40px; border:1px solid rgba(255,255,255,0.3); border-radius:50%; pointer-events:none; z-index:9999; transition:all 0.3s ease; }
+        .panel { max-height:0; overflow:hidden; transition:max-height 0.6s cubic-bezier(0.16,1,0.3,1); }
+        .panel.open { max-height:1200px; }
     </style>
 </head>
 <body>
@@ -79,9 +91,9 @@
                 </a>
                 <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Annihilation</span>
                 <h1 class="display text-[clamp(2.5rem,6vw,5.5rem)] text-paper mb-6">剿灭作战</h1>
-                <p class="text-sm text-muted max-w-xl leading-relaxed">长期委托与轮换委托剿灭关卡攻略，全部收录分P解法。</p>
+                <p class="text-sm text-muted max-w-xl leading-relaxed">长期委托与轮换委托剿灭关卡。</p>
             </div>
-            <div id="annihWrap" class="space-y-16"></div>
+            <div id="modeWrap" class="space-y-16"></div>
         </div>
     </main>
 
@@ -103,6 +115,7 @@
             'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
             'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
         ];
+        const MODE_KEY = 'annihilation';
 
         async function fetchJSON(urls) {
             for (const url of urls) {
@@ -117,79 +130,77 @@
             return null;
         }
 
-        // 剿灭地图 -> 关卡代码（B站标题关键词匹配）
-        const ANNIH_CODES = {
-            '切尔诺伯格': 'ANN-CHELNOBORG',
-            '龙门外环': 'ANN-LUNGMEN-1',
-            '龙门市区': 'ANN-LUNGMEN-2',
-            '大骑士领郊外': 'ANN-KAZIMIEREZ',
-            '北原冰封废城': 'ANN-NORTH-1',
-            '废弃矿区': 'ANN-NORTH-2',
-            '潮没海滨': 'ANN-SWIRE',
-            '积水潮窟': 'ANN-IBERIA-1',
-            '长泉镇郊野': 'ANN-SARGO-1',
-            '多索雷斯换水口': 'ANN-BOLIVAR',
-            '南方监狱': 'ANN-COLUMBIA-1',
-            '小丘郡郊野': 'ANN-VICTORIA-1',
-            '黑夜锦标秀': 'ANN-NIGHT',
-            '盘桓蜀道': 'ANN-SHUDLE',
-            '巧克力大街': 'ANN-CHOCO',
-            '昏黑造船厂': 'ANN-SHIPYARD',
-            '实验基地机库': 'ANN-HANGAR',
-            '龙门商业街': 'ANN-LUNGMEN-3',
-            '休止符街道': 'ANN-LEITANIA-1',
-            '灰暗泥沼': 'ANN-VICTORIA-2',
-            '"特制小水坑"': 'ANN-PUDDLE',
-            '腐烂荒野': 'ANN-VICTORIA-3',
-            '千嶂边城': 'ANN-SHAN',
-            '新旅店大道': 'ANN-HOTEL',
-            '"离心率"实验室': 'ANN-LAB',
-            '燃烧街区': 'ANN-VICTORIA-4',
-            '冰封雪谷': 'ANN-KJERAG',
-            '66号航道': 'ANN-66',
-            '壬午号水稻田': 'ANN-RENWU',
-            '选帝侯广场': 'ANN-LEITANIA-2',
-            '大巴扎': 'ANN-BAZAAR',
-            '鳞骸盐漠': 'ANN-SALT',
-            '暗流巢窟': 'ANN-ABYSS',
-            '炽灼车间': 'ANN-KAZDEL',
-            '朱墙食府': 'ANN-ZHUK'
-        };
-
-        function findVideosFor(mapName, items) {
-            // 在视频标题/分P中查找该剿灭地图
-            return items.filter(it => {
-                const title = it.title + ' ' + (it.pages || []).map(p => p.part).join(' ');
-                return title.includes(mapName) || title.includes(ANNIH_CODES[mapName]);
+        // 视频匹配：活动关卡按代码(TO-1)，其余按名称包含
+        function findVideosFor(it, items) {
+            const allText = it.name;
+            if (it.stages && it.stages.length) return {}; // 活动类：由关卡 chip 直接链 stage.html
+            const names = [it.name, it.name.replace(/^#\d+\s*/, '')];
+            return items.filter(v => {
+                const txt = v.title + ' ' + (v.pages || []).map(p => p.part).join(' ');
+                return names.some(n => txt.includes(n));
             });
         }
 
-        function renderAnnihilation(data, items) {
-            const wrap = document.getElementById('annihWrap');
-            const mode = data.modes.find(m => m.key === 'annihilation');
+        function renderMode(data, items) {
+            const wrap = document.getElementById('modeWrap');
+            const mode = data.modes.find(m => m.key === MODE_KEY);
             if (!mode) { wrap.innerHTML = '<p class="text-sm text-muted">数据加载失败</p>'; return; }
+            const hasStages = mode.groups.some(g => g.items.some(it => it.stages && it.stages.length > 0));
             let html = '';
             mode.groups.forEach((g, gi) => {
                 html += `
                     <div class="reveal-up" style="transition-delay:${gi * 0.06}s">
                         <div class="mode-section-title">
                             <span class="display text-2xl md:text-3xl">${g.name}</span>
-                            <span class="text-xs text-muted mono tracking-widest">${g.items.length} 张图</span>
+                            <span class="text-xs text-muted mono tracking-widest">${g.items.length} 项</span>
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                            ${g.items.map(it => {
-                                const vids = findVideosFor(it.name, items);
-                                const count = vids.length;
-                                return `
-                                    <a href="stage.html?name=${encodeURIComponent(it.name)}" class="zone-card block">
-                                        <span class="zone-code">${count > 0 ? count + ' 个视频' : '暂无攻略'}</span>
-                                        <span class="zone-name">${it.name}</span>
-                                    </a>`;
-                            }).join('')}
-                        </div>
-                    </div>`;
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">`;
+                if (hasStages) {
+                    // 活动/主线类：图片卡片，点击展开关卡列表
+                    g.items.forEach((it, ii) => {
+                        const isCh = it.img && it.img.includes('章节名称');
+                        const ratio = isCh ? '1 / 1' : '2.05 / 1';
+                        const img = it.img ? `<div class="thumb" style="aspect-ratio:${ratio}" data-fit><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" onload="const p=this.parentElement;if(this.naturalWidth&&this.naturalHeight){p.style.aspectRatio=(this.naturalWidth/this.naturalHeight).toFixed(3)+' / 1'}" /></div>` : '';
+                        const stageCount = (it.stages || []).length;
+                        html += `
+                            <div class="act-card reveal-up">
+                                ${img}
+                                <div class="p-4 border-b border-line">
+                                    <span class="zone-code block mb-1">${stageCount} 个关卡</span>
+                                    <span class="zone-name">${it.name}</span>
+                                </div>
+                                <div class="panel" data-panel="${gi}-${ii}">
+                                    <div class="p-4 flex flex-wrap gap-2">${(it.stages || []).map(s => `
+                                        <a class="stage-chip" href="stage.html?code=${encodeURIComponent(s.code)}">${s.code}<span class="sol">·${s.solutions}解</span></a>`).join('') || '<span class="zone-tag">暂无收录关卡</span>'}
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+                } else {
+                    // 名称类：直接卡片链接
+                    g.items.forEach(it => {
+                        const vids = findVideosFor(it, items);
+                        const count = vids.length;
+                        const href = count > 0 ? `stage.html?name=${encodeURIComponent(it.name)}` : 'javascript:void(0)';
+                        const img = it.img ? `<div class="thumb"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
+                        html += `
+                            <a href="${href}" class="zone-card block ${count > 0 ? '' : 'opacity-50'}">
+                                <span class="zone-code">${count > 0 ? count + ' 个视频' : '暂无攻略'}</span>
+                                <span class="zone-name">${it.name}</span>
+                            </a>`;
+                    });
+                }
+                html += `</div></div>`;
             });
             wrap.innerHTML = html;
+            // 活动类点击展开
+            document.querySelectorAll('.act-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.stage-chip')) return;
+                    const panel = card.querySelector('.panel');
+                    panel.classList.toggle('open');
+                });
+            });
             requestAnimationFrame(() => {
                 document.querySelectorAll('.reveal-up').forEach((el, i) => {
                     setTimeout(() => el.classList.add('visible'), 50 + i * 60);
@@ -199,10 +210,10 @@
 
         (async function init() {
             const [modeData, latest] = await Promise.all([fetchJSON(MODES_URLS), fetchJSON(DATA_URLS)]);
-            if (modeData && modeData.modes && latest && latest.data) {
-                renderAnnihilation(modeData, latest.data);
+            if (modeData && modeData.modes) {
+                renderMode(modeData, latest && latest.data || []);
             } else {
-                document.getElementById('annihWrap').innerHTML = '<div class="text-center py-20 border border-line/50"><p class="text-sm text-muted">数据加载失败</p></div>';
+                document.getElementById('modeWrap').innerHTML = '<div class="text-center py-20 border border-line/50"><p class="text-sm text-muted">数据加载失败</p></div>';
             }
         })();
 
