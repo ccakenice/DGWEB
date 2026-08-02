@@ -1,0 +1,62 @@
+name: Daily Build & Deploy
+
+on:
+  schedule:
+    # UTC 20:00 = 北京时间 04:00（每天）
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Fetch full bilibili data
+        run: python fetch_bili.py
+        env:
+          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+          GH_TOKEN: ''
+          GITHUB_REPO_SYNC: '0'
+
+      - name: Build modes.json
+        run: python _build_modes.py
+        env:
+          DGWEB_DIR: ${{ github.workspace }}
+
+      - name: Build mode pages
+        run: python _gen_mode_pages.py
+        env:
+          DGWEB_DIR: ${{ github.workspace }}
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git commit -m "chore: daily auto-build ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          git push
