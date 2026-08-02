@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>低配挂机研讨会 — 关卡详情</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000', 'paper': '#ffffff', 'ash': '#888888', 'smoke': '#555555',
+                        'charcoal': '#333333', 'graphite': '#1a1a1a', 'fog': '#0a0a0a', 'line': '#222222',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
+        .rule { height:1px; background:var(--line); }
+        .rule-v { width:1px; background:var(--line); }
+        .grid-bg { background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:80px 80px; }
+        .reveal-up { opacity:0; transform:translateY(40px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        .skeleton-pulse { animation:skeletonPulse 1.5s ease-in-out infinite; }
+        @keyframes skeletonPulse { 0%,100% { opacity:0.3; } 50% { opacity:0.6; } }
+        .sol-card { border:1px solid var(--line); background:var(--graphite); transition:all 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .sol-card:hover { border-color:var(--paper); }
+    </style>
+</head>
+<body>
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1200px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <span class="mono text-xs text-muted group-hover:text-paper transition-colors">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="flex items-center gap-6">
+                <a href="javascript:history.back()" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回
+                </a>
+                <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-16">
+        <div id="stageWrap" class="max-w-[1200px] mx-auto px-6 md:px-10 py-14 md:py-20"></div>
+    </main>
+
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4"><span class="mono text-lg font-bold">LC</span><span class="rule-v h-4"></span><span class="text-xs text-muted">低配挂机研讨会</span></div>
+            <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+        </div>
+    </footer>
+
+    <script>
+        const DATA_URLS = [
+            '/latest.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
+        ];
+        const MODES_URLS = [
+            '/modes.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/modes.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/modes.json'
+        ];
+
+        function fmtDuration(sec) {
+            sec = Number(sec) || 0;
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m + ':' + String(s).padStart(2, '0');
+        }
+
+        function fmtCount(n) {
+            n = Number(n) || 0;
+            if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+            if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+            return String(n);
+        }
+
+        async function fetchJSON(urls) {
+            for (const url of urls) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return await resp.json();
+                } catch (e) {
+                    console.error('数据源失败 ' + url + ':', e.message);
+                }
+            }
+            return null;
+        }
+
+        function isObsolete(part) {
+            return /旧版|不用看|参考版/.test(part);
+        }
+
+        function normCode(c) {
+            return c.toUpperCase().replace(/^([A-Z]+)-?0+(\d)/, '$1-$2');
+        }
+
+        function matchCode(part) {
+            const m = part.trim().match(/^([A-Za-z]+\d+-\d+[A-Za-z]?|[A-Za-z]{1,4}-?\d+[A-Za-z]?|[A-Za-z]{1,4}|\d{1,2}-\d{1,2}[A-Za-z]?)/);
+            return m ? m[1].toUpperCase() : '';
+        }
+
+        function solCard(sol, idx) {
+            const cn = ['一解', '二解', '三解', '四解', '五解', '六解', '七解', '八解', '九解', '十解'];
+            const label = cn[idx] || ('方案' + (idx + 1));
+            return `
+                <div class="sol-card p-5 md:p-6">
+                    <div class="flex items-center justify-between gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="mono text-[10px] border border-line px-2.5 py-1 text-paper tracking-widest">${label}</span>
+                            <span class="mono text-[10px] text-muted">P${sol.page}</span>
+                        </div>
+                        <span class="mono text-[10px] text-smoke">${fmtDuration(sol.duration)}</span>
+                    </div>
+                    <div class="relative bg-fog border border-line overflow-hidden mb-4" style="padding-bottom:56.25%">
+                        <iframe src="https://player.bilibili.com/player.html?bvid=${sol.bvid}&page=${sol.page}&high_quality=1"
+                            class="absolute inset-0 w-full h-full" scrolling="no" border="0" frameborder="no"
+                            allowfullscreen="true" allow="fullscreen; picture-in-picture" referrerpolicy="no-referrer"></iframe>
+                    </div>
+                    <div class="text-sm text-paper leading-relaxed mb-2">${sol.part}</div>
+                    <div class="text-xs text-muted leading-snug line-clamp-2 mb-3">${sol.vtitle}</div>
+                    <div class="flex items-center justify-between">
+                        <a href="detail.html?bvid=${sol.bvid}" class="mono text-[10px] text-muted hover:text-paper transition-colors tracking-widest">完整视频 ↗</a>
+                        <a href="https://www.bilibili.com/video/${sol.bvid}?p=${sol.page}" target="_blank" class="mono text-[10px] text-paper hover:text-muted transition-colors tracking-widest">B站观看 ↗</a>
+                    </div>
+                </div>`;
+        }
+
+        function renderStage(stageCode, items, stageName) {
+            const wrap = document.getElementById('stageWrap');
+            const stageCodeUp = stageCode.toUpperCase();
+            const nameKeys = stageName ? [stageName, stageName.replace(/^#\d+\s*/, '')] : [];
+            const sols = [];
+            for (const it of items) {
+                const allText = it.title + ' ' + (it.pages || []).map(p => p.part).join(' ');
+                if (nameKeys.length && nameKeys.some(k => allText.includes(k))) {
+                    // 按地图名匹配整个视频的对应分P：取第一个分P（剿灭一般单P），如多P取含名称的分P
+                    const matchedPages = (it.pages || []).filter(p => !isObsolete(p.part));
+                    const page = matchedPages.length ? matchedPages[0] : { page: 1 };
+                    sols.push({ bvid: it.bvid, page: page.page, part: page.part || it.title, duration: page.duration, vtitle: it.title, link: it.link });
+                    continue;
+                }
+                for (const p of it.pages || []) {
+                    if (isObsolete(p.part)) continue;
+                    if (normCode(matchCode(p.part)) === normCode(stageCode)) {
+                        sols.push({ bvid: it.bvid, page: p.page, part: p.part, duration: p.duration, vtitle: it.title, link: it.link });
+                    }
+                }
+            }
+            const titleStr = stageName || stageCodeUp;
+            if (sols.length === 0) {
+                wrap.innerHTML = `
+                    <div class="text-center py-24 border border-line/50 grid-bg">
+                        <div class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Stage</div>
+                        <div class="display text-4xl md:text-6xl mb-8">${titleStr}</div>
+                        <p class="text-sm text-muted mb-8">该关卡暂无收录攻略，或数据尚未同步。</p>
+                        <div class="flex justify-center gap-4">
+                            <a href="modes.html" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-3">返回模式页</a>
+                            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-3">前往B站空间</a>
+                        </div>
+                    </div>`;
+                document.title = titleStr + ' — 低配挂机研讨会';
+                return;
+            }
+            wrap.innerHTML = `
+                <a href="javascript:history.back()" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-8">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回
+                </a>
+                <div class="reveal-up mb-10">
+                    <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Stage Guide</span>
+                    <h1 class="display text-4xl md:text-7xl mb-6">${titleStr}</h1>
+                    <div class="flex flex-wrap items-center gap-3 text-xs text-muted mono tracking-widest">
+                        <span>${sols.length} 个解法方案</span>
+                        <span class="w-px h-3 bg-line"></span>
+                        <span>低配挂机研讨会</span>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-2 gap-5">
+                    ${sols.map((s, i) => solCard(s, i)).join('')}
+                </div>`;
+            document.title = stageCodeUp + ' 攻略 — 低配挂机研讨会';
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.reveal-up').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('visible'), 50 + i * 80);
+                });
+            });
+        }
+
+        function renderError() {
+            const wrap = document.getElementById('stageWrap');
+            wrap.innerHTML = `
+                <div class="text-center py-24 border border-line/50 grid-bg">
+                    <p class="text-sm text-muted mb-6">数据加载失败，请稍后重试</p>
+                    <a href="index.html" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-3 inline-block">返回主页</a>
+                </div>`;
+        }
+
+        (async function init() {
+            const params = new URLSearchParams(location.search);
+            const code = params.get('code') || '';
+            const name = params.get('name') || '';
+            if (!code && !name) { renderError(); return; }
+            const json = await fetchJSON(DATA_URLS);
+            const items = json && json.data;
+            if (!items) { renderError(); return; }
+            renderStage(code || 'ANN', items, name);
+        })();
+    </script>
+</body>
+</html>
