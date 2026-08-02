@@ -160,7 +160,7 @@
                     g.items.forEach((it, ii) => {
                         const isCh = it.img && it.img.includes('章节名称');
                         const ratio = isCh ? '1 / 1' : '2.05 / 1';
-                        const img = it.img ? `<div class="thumb" style="aspect-ratio:${ratio}"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
+                        const img = it.img ? `<div class="thumb" style="aspect-ratio:${ratio}" data-fit><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" onload="const p=this.parentElement;if(this.naturalWidth&&this.naturalHeight){p.style.aspectRatio=(this.naturalWidth/this.naturalHeight).toFixed(3)+' / 1'}" /></div>` : '';
                         const stageCount = (it.stages || []).length;
                         html += `
                             <div class="act-card reveal-up">
