@@ -2,8 +2,8 @@ name: Daily Build & Deploy
 
 on:
   schedule:
-    # UTC 20:00 = 北京时间 04:00（每天）
-    - cron: '0 20 * * *'
+    # UTC 20:30 = 北京时间 04:30（本地 04:00 抓取上传之后）
+    - cron: '30 20 * * *'
   workflow_dispatch:
 
 permissions:
