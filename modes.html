@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>低配挂机研讨会 — 游戏模式</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000', 'paper': '#ffffff', 'ash': '#888888', 'smoke': '#555555',
+                        'charcoal': '#333333', 'graphite': '#1a1a1a', 'fog': '#0a0a0a', 'line': '#222222',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; cursor:crosshair; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
+        .rule { height:1px; background:var(--line); }
+        .rule-v { width:1px; background:var(--line); }
+        .grid-bg { background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:80px 80px; }
+        .reveal-up { opacity:0; transform:translateY(60px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        .mode-card { position:relative; background:var(--graphite); border:1px solid var(--line); overflow:hidden; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; }
+        .mode-card:hover { border-color:var(--paper); transform:translateY(-4px); background:var(--charcoal); }
+        .mode-card .thumb { position:relative; padding-bottom:56.25%; background:var(--fog); overflow:hidden; }
+        .mode-card .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:grayscale(0.4) contrast(0.95); transition:transform 0.5s ease, filter 0.5s ease; }
+        .mode-card:hover .thumb img { transform:scale(1.05); filter:grayscale(0) contrast(1.05); }
+        .mode-index { font-family:'Space Grotesk',sans-serif; font-size:2.5rem; font-weight:700; color:transparent; -webkit-text-stroke:1px var(--line); line-height:1; transition:all 0.4s ease; }
+        .mode-card:hover .mode-index { color:var(--paper); -webkit-text-stroke-color:var(--paper); }
+        .cursor-dot { position:fixed; width:8px; height:8px; background:#fff; border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; transition:transform 0.15s ease; }
+        .cursor-ring { position:fixed; width:40px; height:40px; border:1px solid rgba(255,255,255,0.3); border-radius:50%; pointer-events:none; z-index:9999; transition:all 0.3s ease; }
+    </style>
+</head>
+<body>
+    <div class="cursor-dot hidden md:block" id="cursorDot"></div>
+    <div class="cursor-ring hidden md:block" id="cursorRing"></div>
+
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <span class="mono text-xs text-muted group-hover:text-paper transition-colors">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="hidden md:flex items-center gap-10">
+                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Modes</a>
+                <a href="index.html#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
+            </div>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
+        </div>
+    </nav>
+
+    <main class="pt-16 grid-bg">
+        <section class="max-w-[1400px] mx-auto px-6 md:px-10 py-20 md:py-28">
+            <div class="reveal-up mb-16">
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-6">Game Modes</span>
+                <h1 class="display text-[clamp(2.5rem,7vw,6rem)] text-paper mb-6 leading-[0.95]">游戏模式</h1>
+                <p class="text-sm text-muted max-w-xl leading-relaxed">覆盖明日方舟全模式关卡攻略，从活动关卡到剿灭作战，每个关卡收录低配挂机研讨会的全部分P解法方案。</p>
+            </div>
+            <div id="modesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </section>
+    </main>
+
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4"><span class="mono text-lg font-bold">LC</span><span class="rule-v h-4"></span><span class="text-xs text-muted">低配挂机研讨会</span></div>
+            <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+        </div>
+    </footer>
+
+    <script>
+        const MODES_URLS = [
+            '/modes.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/modes.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/modes.json'
+        ];
+
+        async function fetchJSON(urls) {
+            for (const url of urls) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return await resp.json();
+                } catch (e) {
+                    console.error('数据源失败 ' + url + ':', e.message);
+                }
+            }
+            return null;
+        }
+
+        const THUMBS = {
+            'event-stages': 'images/modes/活动名称_直到大地变成一颗酸橙.png',
+            'main-stages': 'images/modes/章节名称_第十七章.png',
+            'crisis-contract': 'images/modes/活动名称_涤墨作战.png',
+            'resource': 'images/modes/活动名称_训练场.png',
+            'other-events': 'images/modes/活动名称_引航者试炼_06.png',
+            'annihilation': 'images/modes/活动名称_危机合约.png',
+            'paradox-sim': null,
+            'current-event': 'images/modes/活动名称_直到大地变成一颗酸橙.png'
+        };
+        const ORDER = ['current-event', 'event-stages', 'other-events', 'main-stages', 'annihilation', 'crisis-contract', 'paradox-sim', 'resource'];
+
+        function renderModes(modes) {
+            const grid = document.getElementById('modesGrid');
+            const byKey = {};
+            modes.forEach(m => byKey[m.key] = m);
+            const ordered = ORDER.map(k => byKey[k]).filter(Boolean);
+            grid.innerHTML = ordered.map((m, i) => {
+                const totalStages = m.groups.reduce((s, g) => s + g.items.reduce((x, it) => x + (it.stages ? it.stages.length : 0), 0), 0);
+                const thumb = THUMBS[m.key];
+                const img = thumb ? `<img src="${thumb}" alt="${m.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" />` : '';
+                return `
+                    <a href="mode-${m.key}.html" class="mode-card group block relative reveal-up" style="transition-delay:${i * 0.08}s">
+                        <div class="flex items-start justify-between p-5 border-b border-line">
+                            <div>
+                                <span class="mono text-[10px] text-muted tracking-[0.3em] uppercase block mb-2">Mode ${String(i + 1).padStart(2, '0')}</span>
+                                <div class="display text-2xl md:text-3xl text-paper">${m.name}</div>
+                            </div>
+                            <div class="mode-index">${String(i + 1).padStart(2, '0')}</div>
+                        </div>
+                        ${thumb ? `<div class="thumb">${img}</div>` : `<div class="h-24 bg-fog flex items-center justify-center"><span class="mono text-[10px] text-muted tracking-widest">NO IMAGE</span></div>`}
+                        <div class="p-5">
+                            <p class="text-xs text-muted leading-relaxed mb-4">${m.desc}</p>
+                            <div class="flex items-center justify-between text-[10px] mono tracking-widest text-muted">
+                                <span>${totalStages} 关卡</span>
+                                <span class="text-paper group-hover:translate-x-1 transition-transform">进入 →</span>
+                            </div>
+                        </div>
+                    </a>`;
+            }).join('');
+            requestAnimationFrame(() => {
+                grid.querySelectorAll('.reveal-up').forEach(el => el.classList.add('visible'));
+            });
+        }
+
+        (async function init() {
+            const data = await fetchJSON(MODES_URLS);
+            if (data && data.modes) {
+                renderModes(data.modes);
+            } else {
+                document.getElementById('modesGrid').innerHTML = '<div class="col-span-full text-center py-20 border border-line/50"><p class="text-sm text-muted">模式数据加载失败</p></div>';
+            }
+        })();
+
+        const dot = document.getElementById('cursorDot');
+        const ring = document.getElementById('cursorRing');
+        let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            dot.style.left = mouseX - 4 + 'px'; dot.style.top = mouseY - 4 + 'px';
+        });
+        function animateRing() {
+            ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+            ring.style.left = ringX - 20 + 'px'; ring.style.top = ringY - 20 + 'px';
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+    </script>
+</body>
+</html>
