@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{TITLE}} — 低配挂机研讨会</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000', 'paper': '#ffffff', 'ash': '#888888', 'smoke': '#555555',
+                        'charcoal': '#333333', 'graphite': '#1a1a1a', 'fog': '#0a0a0a', 'line': '#222222',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; cursor:crosshair; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
+        .rule { height:1px; background:var(--line); }
+        .rule-v { width:1px; background:var(--line); }
+        .grid-bg { background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:80px 80px; }
+        .reveal-up { opacity:0; transform:translateY(40px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        .mode-section-title { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+        .mode-section-title::before { content:''; width:8px; height:8px; background:var(--paper); transform:rotate(45deg); flex-shrink:0; }
+        .zone-card { position:relative; background:var(--graphite); border:1px solid var(--line); padding:18px 22px; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; display:block; }
+        .zone-card::before { content:''; position:absolute; inset:0; background:var(--paper); transform:scaleX(0); transform-origin:left; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); z-index:0; }
+        .zone-card:hover::before { transform:scaleX(1); }
+        .zone-card:hover .zone-code, .zone-card:hover .zone-name, .zone-card:hover .zone-tag { color:var(--ink); z-index:1; position:relative; }
+        .zone-code { font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:0.1em; color:var(--muted); display:block; margin-bottom:6px; transition:color 0.3s; }
+        .zone-name { font-size:15px; color:var(--paper); transition:color 0.3s; }
+        .zone-tag { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--muted); display:block; margin-top:6px; transition:color 0.3s; }
+        .act-card { position:relative; background:var(--graphite); border:1px solid var(--line); transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; }
+        .act-card:hover { border-color:var(--paper); transform:translateY(-3px); background:var(--charcoal); }
+        .act-card .thumb { position:relative; background:var(--fog); overflow:hidden; }
+        .act-card .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:grayscale(0.4) contrast(0.95); transition:transform 0.5s ease, filter 0.5s ease; }
+        .act-card:hover .thumb img { filter:grayscale(0) contrast(1.05); }
+        .stage-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:0.05em; padding:6px 10px; transition:all 0.3s; }
+        .stage-chip:hover { border-color:var(--paper); color:var(--paper); background:rgba(255,255,255,0.05); }
+        .stage-chip .sol { color:var(--ash); }
+        .stage-chip:hover .sol { color:var(--ink); }
+        .cursor-dot { position:fixed; width:8px; height:8px; background:#fff; border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; transition:transform 0.15s ease; }
+        .cursor-ring { position:fixed; width:40px; height:40px; border:1px solid rgba(255,255,255,0.3); border-radius:50%; pointer-events:none; z-index:9999; transition:all 0.3s ease; }
+        .panel { max-height:0; overflow:hidden; transition:max-height 0.6s cubic-bezier(0.16,1,0.3,1); }
+        .panel.open { max-height:1200px; }
+    </style>
+</head>
+<body>
+    <div class="cursor-dot hidden md:block" id="cursorDot"></div>
+    <div class="cursor-ring hidden md:block" id="cursorRing"></div>
+
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <span class="mono text-xs text-muted group-hover:text-paper transition-colors">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="hidden md:flex items-center gap-10">
+                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Modes</a>
+                <a href="index.html#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
+            </div>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
+        </div>
+    </nav>
+
+    <main class="pt-16 grid-bg">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 py-16 md:py-24">
+            <div class="reveal-up mb-16">
+                <a href="modes.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-6">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回模式
+                </a>
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">{{EN}}</span>
+                <h1 class="display text-[clamp(2.5rem,6vw,5.5rem)] text-paper mb-6">{{NAME}}</h1>
+                <p class="text-sm text-muted max-w-xl leading-relaxed">{{DESC}}</p>
+            </div>
+            <div id="modeWrap" class="space-y-16"></div>
+        </div>
+    </main>
+
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4"><span class="mono text-lg font-bold">LC</span><span class="rule-v h-4"></span><span class="text-xs text-muted">低配挂机研讨会</span></div>
+            <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+        </div>
+    </footer>
+
+    <script>
+        const MODES_URLS = [
+            '/modes.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/modes.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/modes.json'
+        ];
+        const DATA_URLS = [
+            '/latest.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
+        ];
+        const MODE_KEY = '{{KEY}}';
+
+        async function fetchJSON(urls) {
+            for (const url of urls) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return await resp.json();
+                } catch (e) {
+                    console.error('数据源失败 ' + url + ':', e.message);
+                }
+            }
+            return null;
+        }
+
+        // 视频匹配：活动关卡按代码(TO-1)，其余按名称包含
+        function findVideosFor(it, items) {
+            const allText = it.name;
+            if (it.stages && it.stages.length) return {}; // 活动类：由关卡 chip 直接链 stage.html
+            const names = [it.name, it.name.replace(/^#\d+\s*/, '')];
+            return items.filter(v => {
+                const txt = v.title + ' ' + (v.pages || []).map(p => p.part).join(' ');
+                return names.some(n => txt.includes(n));
+            });
+        }
+
+        function renderMode(data, items) {
+            const wrap = document.getElementById('modeWrap');
+            const mode = data.modes.find(m => m.key === MODE_KEY);
+            if (!mode) { wrap.innerHTML = '<p class="text-sm text-muted">数据加载失败</p>'; return; }
+            const hasStages = mode.groups.some(g => g.items.some(it => it.stages && it.stages.length > 0));
+            let html = '';
+            mode.groups.forEach((g, gi) => {
+                html += `
+                    <div class="reveal-up" style="transition-delay:${gi * 0.06}s">
+                        <div class="mode-section-title">
+                            <span class="display text-2xl md:text-3xl">${g.name}</span>
+                            <span class="text-xs text-muted mono tracking-widest">${g.items.length} 项</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">`;
+                if (hasStages) {
+                    // 活动/主线类：图片卡片，点击展开关卡列表
+                    g.items.forEach((it, ii) => {
+                        const isCh = it.img && it.img.includes('章节名称');
+                        const ratio = isCh ? '1 / 1' : '2.05 / 1';
+                        const img = it.img ? `<div class="thumb" style="aspect-ratio:${ratio}" data-fit><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" onload="const p=this.parentElement;if(this.naturalWidth&&this.naturalHeight){p.style.aspectRatio=(this.naturalWidth/this.naturalHeight).toFixed(3)+' / 1'}" /></div>` : '';
+                        const stageCount = (it.stages || []).length;
+                        html += `
+                            <div class="act-card reveal-up">
+                                ${img}
+                                <div class="p-4 border-b border-line">
+                                    <span class="zone-code block mb-1">${stageCount} 个关卡</span>
+                                    <span class="zone-name">${it.name}</span>
+                                </div>
+                                <div class="panel" data-panel="${gi}-${ii}">
+                                    <div class="p-4 flex flex-wrap gap-2">${(it.stages || []).map(s => `
+                                        <a class="stage-chip" href="stage.html?code=${encodeURIComponent(s.code)}">${s.code}<span class="sol">·${s.solutions}解</span></a>`).join('') || '<span class="zone-tag">暂无收录关卡</span>'}
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+                } else {
+                    // 名称类：直接卡片链接
+                    g.items.forEach(it => {
+                        const vids = findVideosFor(it, items);
+                        const count = vids.length;
+                        const href = count > 0 ? `stage.html?name=${encodeURIComponent(it.name)}` : 'javascript:void(0)';
+                        const img = it.img ? `<div class="thumb"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
+                        html += `
+                            <a href="${href}" class="zone-card block ${count > 0 ? '' : 'opacity-50'}">
+                                <span class="zone-code">${count > 0 ? count + ' 个视频' : '暂无攻略'}</span>
+                                <span class="zone-name">${it.name}</span>
+                            </a>`;
+                    });
+                }
+                html += `</div></div>`;
+            });
+            wrap.innerHTML = html;
+            // 活动类点击展开
+            document.querySelectorAll('.act-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.stage-chip')) return;
+                    const panel = card.querySelector('.panel');
+                    panel.classList.toggle('open');
+                });
+            });
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.reveal-up').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('visible'), 50 + i * 60);
+                });
+            });
+        }
+
+        (async function init() {
+            const [modeData, latest] = await Promise.all([fetchJSON(MODES_URLS), fetchJSON(DATA_URLS)]);
+            if (modeData && modeData.modes) {
+                renderMode(modeData, latest && latest.data || []);
+            } else {
+                document.getElementById('modeWrap').innerHTML = '<div class="text-center py-20 border border-line/50"><p class="text-sm text-muted">数据加载失败</p></div>';
+            }
+        })();
+
+        const dot = document.getElementById('cursorDot');
+        const ring = document.getElementById('cursorRing');
+        let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            dot.style.left = mouseX - 4 + 'px'; dot.style.top = mouseY - 4 + 'px';
+        });
+        function animateRing() {
+            ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+            ring.style.left = ringX - 20 + 'px'; ring.style.top = ringY - 20 + 'px';
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+    </script>
+</body>
+</html>
