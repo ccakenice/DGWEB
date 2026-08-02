@@ -104,7 +104,6 @@
                 <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
             </a>
             <div class="hidden md:flex items-center gap-10">
-                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Modes</a>
                 <a href="#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
                 <a href="#about" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">About</a>
             </div>
@@ -125,9 +124,9 @@
             <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-10" style="transition-delay:0.7s;">
                 <p class="text-sm text-muted max-w-md leading-relaxed">愿为世界添砖加瓦。旨在制作出更多简单好抄的攻略，<br />让每一位博士都能轻松通关。</p>
                 <div class="flex gap-16">
-                    <div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div></div>
-                    <div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div></div>
-                    <div class="hidden sm:block"><div class="stat-big" id="statLikes" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">LIKES</div></div>
+                    <div><div class="stat-big" data-count="191000">0</div><div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div></div>
+                    <div><div class="stat-big" data-count="244">0</div><div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div></div>
+                    <div class="hidden sm:block"><div class="stat-big" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">PLAYLISTS</div></div>
                 </div>
             </div>
         </div>
@@ -173,16 +172,29 @@
                     </div>
                 </div>
                 <div id="latestGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5"></div>
-                <div id="latestMore" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 hidden"></div>
-                <div class="text-center mt-8">
-                    <button id="toggleBtn" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase border border-line hover:border-paper px-8 py-3 hidden">展开全部</button>
-                </div>
                 <div id="latestError" class="hidden text-center py-12 border border-line/50 mt-4">
                     <p class="text-sm text-muted mb-3">暂时无法获取最新投稿</p>
                     <button id="retryBtn" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-2 inline-block">重新尝试</button>
                     <span class="mx-3 text-muted">|</span>
                     <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-2 inline-block">前往B站空间 →</a>
                 </div>
+            </div>
+
+            <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 border-b border-line pb-6">
+                <div class="flex flex-wrap gap-6 md:gap-10" id="filterTabs">
+                    <button class="filter-tab active text-sm" data-category="all">全部</button>
+                    <button class="filter-tab text-sm" data-category="main">主线</button>
+                    <button class="filter-tab text-sm" data-category="event">活动</button>
+                    <button class="filter-tab text-sm" data-category="annihilation">剿灭</button>
+                    <button class="filter-tab text-sm" data-category="cc">合约</button>
+                    <button class="filter-tab text-sm" data-category="guide">新手</button>
+                </div>
+                <div class="w-full md:w-64"><input type="text" id="searchInput" placeholder="搜索攻略..." class="search-field" /></div>
+            </div>
+
+            <div id="videoList"></div>
+            <div class="reveal-up mt-16 text-center">
+                <button onclick="loadMore()" id="loadMoreBtn" class="mono text-xs text-muted hover:text-paper tracking-widest uppercase border border-line hover:border-paper px-8 py-4 transition-all">Load More</button>
             </div>
         </div>
     </section>
@@ -229,22 +241,11 @@
         </div>
     </footer>
 
-    <button id="collapseBtn" style="display:none" class="fixed right-4 md:right-8 bottom-8 z-50 items-center gap-2 mono text-xs text-paper hover:text-paper font-bold tracking-widest uppercase border border-paper/60 hover:border-paper bg-black backdrop-blur px-5 py-3">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
-        收起
-    </button>
-
     <script>
-        const DATA_URLS = [
-            '/latest.json',
-            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
-            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
-        ];
+        const WORKER_URL = 'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json';
 
         function proxyImage(url) {
-            if (!url) return url;
-            if (url.startsWith('//')) url = 'https:' + url;
-            if (!url.startsWith('http')) return url;
+            if (!url || !url.startsWith('http')) return url;
             if (url.includes('images.weserv.nl') || url.includes('i3.wp.com')) return url;
             if (url.includes('hdslb.com')) {
                 return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&h=225&fit=cover`;
@@ -252,51 +253,57 @@
             return url;
         }
 
+        const videos = [
+            { title: "【明日方舟】2025神级开局攻略 16分钟让你少走6年弯路", bvid: "BV1mw4m1r7qM", category: "guide", views: "12.5万", duration: "16:32", date: "2024-11-10", cover: "https://i0.hdslb.com/bfs/archive/978461ef1f89b05bef8e5f415b8ce492330b6799.jpg" },
+            { title: "【明日方舟】2025神级主线攻略 单核轻松！摆完挂机！0-8章", bvid: "BV1E2p6zXEcP", category: "main", views: "7.8万", duration: "7:44:44", date: "2025-05-03", cover: "https://i2.hdslb.com/bfs/archive/1bba2fb35a247998670b29ea64006905a93406b5.jpg" },
+            { title: "【明日方舟】SideStory「火山旅梦」SL-1~SL-EX-8 摆完挂机", bvid: "BV1dM4y1x7zH", category: "event", views: "3.2万", duration: "1:23:45", date: "2025-04-20", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】剿灭作战「龙门商业街」400杀 单核挂机", bvid: "BV1aB4y1z7zK", category: "annihilation", views: "5.6万", duration: "28:15", date: "2025-03-15", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】危机合约#3「渊默行动」18级 单核攻略", bvid: "BV1cY4y1G7zP", category: "cc", views: "8.1万", duration: "12:08", date: "2025-02-28", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】主线R8-11 单核挂机 简单好抄", bvid: "BV1xL4y1T7zQ", category: "main", views: "2.3万", duration: "05:42", date: "2025-01-20", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】SideStory「孤星」CW-1~CW-EX-8 摆完挂机", bvid: "BV1yV4y1z7zR", category: "event", views: "4.5万", duration: "2:15:30", date: "2025-01-10", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】剿灭作战「切尔诺伯格」400杀 新手单核", bvid: "BV1mK4y1z7zS", category: "annihilation", views: "6.7万", duration: "32:18", date: "2024-12-25", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】新手必看！开局六星选择推荐", bvid: "BV1nL4y1T7zT", category: "guide", views: "15.2万", duration: "08:33", date: "2024-12-15", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】主线H7-4 单核挂机 摆完就过", bvid: "BV1qK4y1z7zU", category: "main", views: "1.8万", duration: "09:12", date: "2024-12-05", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】危机合约#2「赝波行动」18级 单核挂机", bvid: "BV1cV4y1z7zV", category: "cc", views: "7.3万", duration: "14:25", date: "2024-11-28", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】SideStory「叙拉古人」IS-1~IS-EX-8 摆完挂机", bvid: "BV1yL4y1T7zW", category: "event", views: "3.9万", duration: "1:45:20", date: "2024-11-20", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】剿灭作战「龙门外环」400杀 单核挂机", bvid: "BV1mV4y1z7zX", category: "annihilation", views: "4.2万", duration: "26:45", date: "2024-11-15", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】主线10-7 单核挂机 简单好抄", bvid: "BV1nK4y1z7zY", category: "main", views: "2.1万", duration: "06:18", date: "2024-11-08", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】新手教程：基建布局与干员培养优先级", bvid: "BV1cL4y1T7zZ", category: "guide", views: "9.8万", duration: "18:42", date: "2024-11-01", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】SideStory「照我以火」FC-1~FC-EX-8 摆完挂机", bvid: "BV1qV4y1z7zA", category: "event", views: "3.5万", duration: "1:38:15", date: "2024-10-25", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】危机合约#1「起源行动」18级 单核挂机", bvid: "BV1yK4y1z7zB", category: "cc", views: "11.2万", duration: "11:05", date: "2024-10-18", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】剿灭作战「北原冰封废城」400杀 单核挂机", bvid: "BV1nV4y1z7zC", category: "annihilation", views: "5.1万", duration: "30:22", date: "2024-10-10", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】主线9-19 单核挂机 摆完就过", bvid: "BV1cK4y1z7zD", category: "main", views: "1.5万", duration: "07:33", date: "2024-10-05", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" },
+            { title: "【明日方舟】新手必看！资源本效率与刷取建议", bvid: "BV1qL4y1T7zE", category: "guide", views: "7.6万", duration: "10:15", date: "2024-09-28", cover: "https://i0.hdslb.com/bfs/archive/default.jpg" }
+        ];
+
+        let currentCategory = 'all';
+        let displayedCount = 10;
         let isStale = false;
 
         async function fetchBilibiliLatest() {
-            for (const url of DATA_URLS) {
-                try {
-                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    const json = await resp.json();
-                    if (json.code === 0 && json.data) {
-                        isStale = json.stale === true;
-                        return json;
-                    }
+            try {
+                const resp = await fetch(WORKER_URL, { signal: AbortSignal.timeout(10000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                if (json.code === 0 && json.data) {
+                    isStale = json.stale === true;
+                    return json.data;
+                } else {
                     throw new Error(json.message || '接口返回错误');
-                } catch (error) {
-                    console.error(`数据源失败 ${url}:`, error.message);
                 }
-            }
-            return null;
-        }
-
-        function applyStats(stats) {
-            if (!stats) return;
-            const map = {
-                statFollowers: stats.fans,
-                statVideos: stats.videos,
-                statLikes: stats.likes
-            };
-            for (const [id, val] of Object.entries(map)) {
-                if (val === undefined || val === null) continue;
-                const el = document.getElementById(id);
-                if (el) el.dataset.count = String(val);
+            } catch (error) {
+                console.error('请求 Worker 失败:', error.message);
+                return null;
             }
         }
 
         function renderLatest(items) {
             const grid = document.getElementById('latestGrid');
-            const moreGrid = document.getElementById('latestMore');
-            const toggleBtn = document.getElementById('toggleBtn');
             const errorEl = document.getElementById('latestError');
             const badge = document.getElementById('liveBadge');
 
             if (!items || items.length === 0) {
                 grid.innerHTML = '';
-                moreGrid.innerHTML = '';
-                toggleBtn.classList.add('hidden');
                 errorEl.classList.remove('hidden');
                 return;
             }
@@ -314,8 +321,9 @@
                 }
             }
 
-            const card = (item) => {
-                const videoUrl = 'detail.html?bvid=' + (item.bvid || (item.link ? item.link.split('/').pop() : ''));
+            const slice = items.slice(0, 8);
+            grid.innerHTML = slice.map((item) => {
+                const videoUrl = item.link || '#';
                 let cover = item.media?.thumbnail || item.thumbnail || item.cover || '';
                 cover = proxyImage(cover);
                 let pubDate = item.pubDate || item.published || item.date || '';
@@ -332,13 +340,13 @@
                 const staleTag = isStale ? '<div class="stale-badge">缓存</div>' : '';
 
                 return `
-                    <a href="${videoUrl}" class="latest-card group block relative">
+                    <a href="${videoUrl}" target="_blank" class="latest-card group block relative">
                         ${staleTag}
                         <div class="cover-wrap">
                             <img src="${cover}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" 
                                  onerror="this.src='https://images.weserv.nl/?url=https://i0.hdslb.com/bfs/archive/default.jpg&w=400&h=225&fit=cover'" />
                             <div class="absolute bottom-2 right-2 bg-ink/80 text-paper text-[10px] px-2 py-0.5 mono tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                                详情
+                                观看
                             </div>
                         </div>
                         <div class="p-3 md:p-4">
@@ -346,60 +354,12 @@
                             <div class="card-mono text-[10px] text-muted mt-2 flex items-center gap-3">
                                 <span>${dateStr}</span>
                                 <span class="w-px h-3 bg-line"></span>
-                                <span>${item.typename || 'B站同步'}</span>
+                                <span>B站同步</span>
                             </div>
                         </div>
                     </a>
                 `;
-            };
-
-            const visible = items.slice(0, 8);
-            const rest = items.slice(8);
-
-            const collapseBtn = document.getElementById('collapseBtn');
-
-            grid.innerHTML = visible.map(card).join('');
-            if (rest.length > 0) {
-                moreGrid.innerHTML = rest.map(card).join('');
-                toggleBtn.classList.remove('hidden');
-                toggleBtn.textContent = '展开全部 (' + items.length + ')';
-            } else {
-                moreGrid.innerHTML = '';
-                toggleBtn.classList.add('hidden');
-            }
-
-            const collapse = () => {
-                moreGrid.classList.add('hidden');
-                toggleBtn.textContent = '展开全部 (' + items.length + ')';
-                if (collapseBtn) collapseBtn.style.display = 'none';
-                window.removeEventListener('scroll', onScroll);
-            };
-
-            const onScroll = () => {
-                if (!collapseBtn) return;
-                const rect = toggleBtn.getBoundingClientRect();
-                const aVisible = rect.top < window.innerHeight && rect.bottom > 0;
-                collapseBtn.style.display = aVisible ? 'none' : 'inline-flex';
-            };
-
-            toggleBtn.onclick = () => {
-                const expanding = moreGrid.classList.contains('hidden');
-                moreGrid.classList.toggle('hidden');
-                toggleBtn.textContent = expanding ? '收起' : '展开全部 (' + items.length + ')';
-                if (expanding) {
-                    collapseBtn.style.display = 'inline-flex';
-                    window.addEventListener('scroll', onScroll, { passive: true });
-                    requestAnimationFrame(onScroll);
-                } else {
-                    collapse();
-                }
-            };
-
-            collapseBtn.onclick = () => {
-                collapse();
-                const top = document.getElementById('latestUpdates').getBoundingClientRect().top + window.scrollY;
-                window.scrollTo({ top: top - 16, behavior: 'smooth' });
-            };
+            }).join('');
         }
 
         async function loadLatest(showLoading = true) {
@@ -422,10 +382,8 @@
             }
 
             try {
-                const json = await fetchBilibiliLatest();
-                const items = json ? json.data : null;
+                const items = await fetchBilibiliLatest();
                 if (items && items.length > 0) {
-                    if (json && json.stats) applyStats(json.stats);
                     renderLatest(items);
                     localStorage.setItem('bili_latest_cache', JSON.stringify(items));
                     localStorage.setItem('bili_latest_time', Date.now().toString());
@@ -455,6 +413,62 @@
             }
             document.getElementById('latestGrid').innerHTML = '';
             document.getElementById('latestError').classList.remove('hidden');
+        }
+
+        function renderVideos(filter = '') {
+            const list = document.getElementById('videoList');
+            const filtered = videos.filter(v => {
+                const matchCat = currentCategory === 'all' || v.category === currentCategory;
+                const matchSearch = v.title.toLowerCase().includes(filter.toLowerCase());
+                return matchCat && matchSearch;
+            });
+
+            const toShow = filtered.slice(0, displayedCount);
+            if (toShow.length === 0) {
+                list.innerHTML = `<div class="text-center py-16 text-muted text-sm">没有找到匹配的攻略</div>`;
+                document.getElementById('loadMoreBtn').style.display = 'none';
+                return;
+            }
+
+            list.innerHTML = toShow.map((v, i) => {
+                const cover = proxyImage(v.cover);
+                return `
+                    <a href="https://www.bilibili.com/video/${v.bvid}" target="_blank" 
+                       class="video-row block py-6 md:py-8 px-4 md:px-6 -mx-4 md:-mx-6">
+                        <div class="flex items-center gap-4 md:gap-8">
+                            <div class="w-12 md:w-20 flex-shrink-0">
+                                <span class="row-index">${String(i + 1).padStart(2, '0')}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="row-text text-base md:text-lg font-medium leading-snug mb-2 truncate">${v.title}</h3>
+                                <div class="row-muted flex items-center gap-4 md:gap-6 text-xs mono">
+                                    <span>${v.date}</span>
+                                    <span class="hidden sm:inline">${v.views} views</span>
+                                    <span class="hidden sm:inline">${v.duration}</span>
+                                    <span class="sm:hidden">${v.views}</span>
+                                </div>
+                            </div>
+                            <div class="hidden md:block w-32 h-20 flex-shrink-0 overflow-hidden">
+                                <img src="${cover}" alt="" class="row-img w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer"
+                                     onerror="this.style.display='none'">
+                            </div>
+                            <div class="hidden md:flex items-center justify-center w-10 h-10 border border-line group-hover:border-ink flex-shrink-0 transition-colors">
+                                <svg class="w-4 h-4 row-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+
+            document.getElementById('loadMoreBtn').style.display =
+                displayedCount < filtered.length ? 'inline-block' : 'none';
+        }
+
+        function loadMore() {
+            displayedCount += 10;
+            renderVideos(document.getElementById('searchInput').value);
         }
 
         function animateCounters() {
@@ -532,6 +546,19 @@
             });
         });
 
+        document.getElementById('filterTabs').addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-tab')) {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                currentCategory = e.target.dataset.category;
+                displayedCount = 10;
+                renderVideos(document.getElementById('searchInput').value);
+            }
+        });
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            displayedCount = 10;
+            renderVideos(e.target.value);
+        });
         document.getElementById('refreshBtn').addEventListener('click', () => loadLatest(true));
         document.getElementById('retryBtn').addEventListener('click', () => loadLatest(true));
 
@@ -541,7 +568,9 @@
             }, 1200);
         });
 
+        renderVideos();
         loadLatest(true);
+        window.loadMore = loadMore;
     </script>
 </body>
 </html>
