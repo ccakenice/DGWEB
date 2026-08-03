@@ -355,7 +355,8 @@ function opCountsFor(data) {
 function renderTabs() {
     const bar = document.getElementById('yearTabs');
     if (!bar) return;
-    const years = ['all'].concat(allYears);
+    // 新年份在左边
+    const years = ['all'].concat(allYears.slice().reverse());
     bar.innerHTML = years.map(y => {
         const label = y === 'all' ? '总榜' : y + ' 年';
         const active = y === currentYear;
