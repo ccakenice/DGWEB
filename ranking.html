@@ -256,6 +256,15 @@ function isPlotPart(part) {
     return part.indexOf('剧情') >= 0 || TR_RE.test(part);
 }
 
+// 过时标记（旧版/初版/参考版/不用看/删除）
+const OLD_MARKS = ['旧版', '初版', '参考版', '不用看', '删除'];
+function isOldPart(part) {
+    for (const mk of OLD_MARKS) {
+        if (part.indexOf(mk) >= 0) return true;
+    }
+    return false;
+}
+
 function stageKey(part, title) {
     for (const txt of [part, title]) {
         const m = STAGE_RE.exec(txt);
@@ -299,6 +308,8 @@ function buildStats() {
             const part = (p.part || '').trim();
             // 排除剧情体验难度（剧情模式 / TR 教程关）
             if (isPlotPart(part)) continue;
+            // 排除旧版/初版等过时关卡
+            if (isOldPart(part)) continue;
             // 只统计含单核/单挂的攻略关（单P视频并查主标题）
             const danheText = isMulti ? part : part + ' ' + (v.title || '');
             if (danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0) continue;
