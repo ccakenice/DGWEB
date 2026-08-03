@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>低配挂机研讨会 — 官方网站</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.loli.net" />
+    <link href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -30,14 +30,14 @@
         }
     </script>
     <style>
-        :root { --bg: #000000; --fg: #ffffff; --muted: #888888; --line: #222222; --hover-bg: #ffffff; --hover-fg: #000000; }
+        :root { --bg: #000000; --fg: #ffffff; --muted: #888888; --line: #222222; --hover-bg: #ffffff; --hover-fg: #000000; --acc: #f5a623; --acc-dim: rgba(245,166,35,.12); }
         * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
         *::-webkit-scrollbar { width:4px; }
         *::-webkit-scrollbar-track { background:#000; }
         *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
         body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; cursor:crosshair; }
         body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
-        ::selection { background:#fff; color:#000; }
+        ::selection { background:var(--acc); color:#000; }
         .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
         .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
         .rule { height:1px; background:var(--line); }
@@ -71,13 +71,13 @@
         .search-field::placeholder { color:var(--charcoal); }
         #loader { position:fixed; inset:0; background:#000; z-index:10000; display:flex; align-items:center; justify-content:center; transition:opacity 0.8s ease, visibility 0.8s; }
         #loader.done { opacity:0; visibility:hidden; pointer-events:none; }
-        .loader-text { font-family:'Space Grotesk',sans-serif; font-size:0.75rem; letter-spacing:0.2em; color:var(--muted); }
+        .loader-text { font-family:'Space Grotesk',sans-serif; font-size:0.75rem; letter-spacing:0.2em; color:var(--acc); }
         .loader-bar { width:120px; height:1px; background:var(--line); margin-top:1rem; position:relative; overflow:hidden; }
-        .loader-bar::after { content:''; position:absolute; left:-100%; top:0; width:100%; height:100%; background:var(--paper); animation:loadSlide 1.5s ease-in-out infinite; }
+        .loader-bar::after { content:''; position:absolute; left:-100%; top:0; width:100%; height:100%; background:var(--acc); animation:loadSlide 1.5s ease-in-out infinite; }
         @keyframes loadSlide { 0% { left:-100%; } 50% { left:0; } 100% { left:100%; } }
         .stat-big { font-family:'Space Grotesk',sans-serif; font-size:clamp(3rem,8vw,6rem); font-weight:700; line-height:1; letter-spacing:-0.04em; }
         .latest-card { position:relative; background:var(--graphite); border:1px solid var(--line); overflow:hidden; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; }
-        .latest-card:hover { border-color:var(--paper); transform:translateY(-4px); background:var(--charcoal); }
+        .latest-card:hover { border-color:var(--acc); transform:translateY(-4px); background:var(--charcoal); box-shadow:0 12px 36px rgba(0,0,0,.55), 0 0 0 1px rgba(245,166,35,.22); }
         .latest-card .cover-wrap { position:relative; padding-bottom:56.25%; background:var(--fog); overflow:hidden; }
         .latest-card .cover-wrap img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; filter:grayscale(0.3) contrast(0.95); }
         .latest-card:hover .cover-wrap img { transform:scale(1.04); filter:grayscale(0) contrast(1.05); }
@@ -85,6 +85,43 @@
         .latest-card .card-meta { font-size:0.7rem; letter-spacing:0.05em; }
         .skeleton-pulse { animation:skeletonPulse 1.5s ease-in-out infinite; }
         @keyframes skeletonPulse { 0%,100% { opacity:0.3; } 50% { opacity:0.6; } }
+        /* ===== V0.09 战术终端美术 ===== */
+        .acc { color:var(--acc); }
+        @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.2; } }
+        @keyframes blinkCur { 0%,49% { opacity:1; } 50%,100% { opacity:0; } }
+        a:focus-visible, button:focus-visible, input:focus-visible { outline:1px solid var(--acc); outline-offset:2px; }
+        .frame-corner { position:fixed; width:16px; height:16px; z-index:70; pointer-events:none; opacity:.5; }
+        .fc-tl { top:76px; left:12px; border-top:1px solid var(--acc); border-left:1px solid var(--acc); }
+        .fc-tr { top:76px; right:12px; border-top:1px solid var(--acc); border-right:1px solid var(--acc); }
+        .fc-bl { bottom:12px; left:12px; border-bottom:1px solid var(--acc); border-left:1px solid var(--acc); }
+        .fc-br { bottom:12px; right:12px; border-bottom:1px solid var(--acc); border-right:1px solid var(--acc); }
+        .hero-glow { position:absolute; left:-10vw; bottom:-12vh; width:62vw; height:62vh; background:radial-gradient(ellipse at center, rgba(245,166,35,.07) 0%, transparent 65%); pointer-events:none; }
+        .hero-mark { position:absolute; right:0; top:13vh; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:clamp(6rem,14vw,13rem); line-height:.9; color:transparent; -webkit-text-stroke:1px rgba(255,255,255,.055); letter-spacing:-.03em; pointer-events:none; user-select:none; white-space:nowrap; }
+        .term-bar { position:absolute; top:88px; left:24px; font-size:10px; letter-spacing:.25em; color:var(--muted); display:flex; align-items:center; gap:8px; }
+        .term-dot { width:6px; height:6px; background:var(--acc); animation:pulseDot 1.6s ease-in-out infinite; }
+        .stat-cell { position:relative; padding:1.1rem 1.4rem .9rem; border:1px solid var(--line); border-top:2px solid var(--acc); background:linear-gradient(180deg, rgba(255,255,255,.025), transparent); min-width:130px; }
+        .stat-cell .stat-idx { font-family:'Space Grotesk',monospace; font-size:.62rem; color:var(--acc); letter-spacing:.25em; margin-bottom:.45rem; }
+        .stat-cell .stat-big { font-size:clamp(2.1rem,4.5vw,3.6rem); }
+        .stat-cell .stat-lbl { font-family:'Space Grotesk',monospace; font-size:.62rem; color:var(--muted); letter-spacing:.22em; margin-top:.45rem; }
+        .nav-mid a { position:relative; }
+        .nav-mid a::after { content:''; position:absolute; left:0; bottom:-6px; width:0; height:1px; background:var(--acc); transition:width .3s ease; }
+        .nav-mid a:hover::after { width:100%; }
+        .bili-btn:hover { border-color:var(--acc) !important; color:var(--acc) !important; }
+        .marquee-track:hover { animation-play-state:paused; }
+        #liveBadge { display:inline-flex; align-items:center; gap:6px; border-color:rgba(245,166,35,.5) !important; color:var(--acc) !important; }
+        #liveBadge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; animation:pulseDot 1.6s ease-in-out infinite; }
+        .rank-no { position:absolute; top:8px; left:8px; z-index:2; font-family:'Space Grotesk',sans-serif; font-size:1.05rem; font-weight:700; color:transparent; -webkit-text-stroke:1px rgba(255,255,255,.55); letter-spacing:.05em; text-shadow:0 1px 8px rgba(0,0,0,.6); transition:all .3s; }
+        .latest-card:hover .rank-no { -webkit-text-stroke-color:var(--acc); }
+        .play-ovl { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:2; opacity:0; transition:opacity .3s; background:rgba(0,0,0,.28); }
+        .play-ovl svg { width:34px; height:34px; color:var(--acc); filter:drop-shadow(0 2px 10px rgba(0,0,0,.8)); transform:scale(.8); transition:transform .3s; }
+        .latest-card:hover .play-ovl { opacity:1; }
+        .latest-card:hover .play-ovl svg { transform:scale(1); }
+        .card-meta-dot { width:4px; height:4px; background:var(--acc); display:inline-block; flex-shrink:0; }
+        .about-lead { border-left:2px solid var(--acc); padding-left:1rem; color:#c9c9c9; }
+        .cursor-blink { color:var(--acc); animation:blinkCur 1.2s steps(1) infinite; }
+        .status-dot { width:6px; height:6px; border-radius:50%; background:var(--acc); display:inline-block; animation:pulseDot 1.6s ease-in-out infinite; }
+        .scroll-line { background:var(--acc) !important; }
+        @media (max-width:768px) { .frame-corner, .term-bar, .hero-mark { display:none; } .stat-cell { flex:1 1 40%; } }
         @media (max-width:768px) { .row-index { font-size:2rem; } .latest-card .card-title { font-size:0.85rem; } }
         .spin { animation:spin 0.8s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
@@ -95,6 +132,7 @@
     <div id="loader"><div class="text-center"><div class="loader-text">INITIALIZING</div><div class="loader-bar"></div></div></div>
     <div class="cursor-dot hidden md:block" id="cursorDot"></div>
     <div class="cursor-ring hidden md:block" id="cursorRing"></div>
+    <span class="frame-corner fc-tl hidden md:block" aria-hidden="true"></span><span class="frame-corner fc-tr hidden md:block" aria-hidden="true"></span><span class="frame-corner fc-bl hidden md:block" aria-hidden="true"></span><span class="frame-corner fc-br hidden md:block" aria-hidden="true"></span>
 
     <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
         <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
@@ -103,16 +141,19 @@
                 <span class="rule-v h-4"></span>
                 <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
             </a>
-            <div class="hidden md:flex items-center gap-10">
-                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">模式 · Modes</a>
-                <a href="#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">归档 · Archive</a>
-                <a href="#about" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">关于 · About</a>
+            <div class="hidden md:flex items-center gap-10 nav-mid">
+                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Modes</a>
+                <a href="#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
+                <a href="#about" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">About</a>
             </div>
-            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="bili-btn mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line px-4 py-2">BILIBILI</a>
         </div>
     </nav>
 
     <section id="hero" class="relative min-h-screen flex flex-col justify-end pb-20 md:pb-32 px-6 md:px-10 pt-32 grid-bg">
+        <div class="term-bar mono" aria-hidden="true"><span class="term-dot"></span>SYS.LC-01 // TACTICAL ARCHIVE&nbsp;&nbsp;▍&nbsp;&nbsp;STATUS:&nbsp;<span class="acc">ONLINE</span></div>
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-mark" aria-hidden="true">LOWCOST</div>
         <div class="max-w-[1400px] mx-auto w-full">
             <div class="reveal-up" style="transition-delay:0.2s;">
                 <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-8">Arknights Strategy Group / Est. 2023</span>
@@ -120,19 +161,19 @@
             <h1 class="display text-[clamp(3rem,12vw,10rem)] text-paper mb-8 leading-[0.9]">
                 <div class="overflow-hidden"><span class="char-reveal inline-block" style="transition-delay:0.3s;">低</span><span class="char-reveal inline-block" style="transition-delay:0.35s;">配</span></div>
                 <div class="overflow-hidden"><span class="char-reveal inline-block" style="transition-delay:0.4s;">挂</span><span class="char-reveal inline-block" style="transition-delay:0.45s;">机</span></div>
-                <div class="overflow-hidden"><span class="char-reveal inline-block text-muted" style="transition-delay:0.5s;">研</span><span class="char-reveal inline-block text-muted" style="transition-delay:0.55s;">讨</span><span class="char-reveal inline-block text-muted" style="transition-delay:0.6s;">会</span></div>
+                <div class="overflow-hidden"><span class="char-reveal inline-block text-muted" style="transition-delay:0.5s;">研</span><span class="char-reveal inline-block text-muted" style="transition-delay:0.55s;">讨</span><span class="char-reveal inline-block text-muted" style="transition-delay:0.6s;">会</span><span class="char-reveal inline-block acc" style="transition-delay:0.7s;">.</span></div>
             </h1>
             <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-10" style="transition-delay:0.7s;">
                 <p class="text-sm text-muted max-w-md leading-relaxed">愿为世界添砖加瓦。旨在制作出更多简单好抄的攻略，<br />让每一位博士都能轻松通关。</p>
-                <div class="flex gap-16">
-                    <div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="mono text-xs text-muted tracking-widest mt-2">FOLLOWERS</div></div>
-                    <div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="mono text-xs text-muted tracking-widest mt-2">VIDEOS</div></div>
-                    <div class="hidden sm:block"><div class="stat-big" id="statLikes" data-count="46">0</div><div class="mono text-xs text-muted tracking-widest mt-2">LIKES</div></div>
+                <div class="flex gap-3 md:gap-4 flex-wrap">
+                    <div class="stat-cell"><div class="stat-idx">01</div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="stat-lbl">FOLLOWERS</div></div>
+                    <div class="stat-cell"><div class="stat-idx">02</div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="stat-lbl">VIDEOS</div></div>
+                    <div class="stat-cell hidden sm:block"><div class="stat-idx">03</div><div class="stat-big" id="statLikes" data-count="46">0</div><div class="stat-lbl">LIKES</div></div>
                 </div>
             </div>
         </div>
         <div class="absolute bottom-8 left-6 md:left-10 flex items-center gap-4">
-            <div class="w-px h-12 bg-line relative overflow-hidden"><div class="absolute top-0 left-0 w-full bg-paper animate-pulse" style="height:50%; animation:slideDown 2s ease-in-out infinite;"></div></div>
+            <div class="w-px h-12 bg-line relative overflow-hidden"><div class="absolute top-0 left-0 w-full scroll-line animate-pulse" style="height:50%; animation:slideDown 2s ease-in-out infinite;"></div></div>
             <span class="mono text-[10px] text-muted tracking-widest uppercase [writing-mode:vertical-lr]">Scroll</span>
         </div>
         <style>@keyframes slideDown { 0% { transform:translateY(-100%); } 100% { transform:translateY(200%); } }</style>
@@ -140,21 +181,21 @@
 
     <div class="border-y border-line py-4 overflow-hidden bg-paper">
         <div class="marquee-track">
-            <span class="mono text-sm text-ink mx-8">LOWCOST STRATEGY GROUP</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">ARKNIGHTS AFK GUIDES</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">SIMPLE &amp; RELIABLE</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">愿为世界添砖加瓦</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">LOWCOST STRATEGY GROUP</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">ARKNIGHTS AFK GUIDES</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">SIMPLE &amp; RELIABLE</span><span class="text-sm text-ink mx-8">◆</span>
-            <span class="mono text-sm text-ink mx-8">愿为世界添砖加瓦</span><span class="text-sm text-ink mx-8">◆</span>
+            <span class="mono text-sm text-ink mx-8">LOWCOST STRATEGY GROUP</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">ARKNIGHTS AFK GUIDES</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">SIMPLE &amp; RELIABLE</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">愿为世界添砖加瓦</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">LOWCOST STRATEGY GROUP</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">ARKNIGHTS AFK GUIDES</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">SIMPLE &amp; RELIABLE</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
+            <span class="mono text-sm text-ink mx-8">愿为世界添砖加瓦</span><span class="text-sm mx-8" style="color:var(--acc)">◆</span>
         </div>
     </div>
 
     <section id="archive" class="py-32 px-6 md:px-10">
         <div class="max-w-[1400px] mx-auto">
             <div class="reveal-up mb-12">
-                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Video Archive</span>
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4"><span class="acc">◆</span> 01 — Video Archive</span>
                 <h2 class="display text-5xl md:text-7xl">攻略档案</h2>
             </div>
 
@@ -191,10 +232,10 @@
         <div class="max-w-[1400px] mx-auto">
             <div class="grid md:grid-cols-2 gap-20 md:gap-32">
                 <div class="reveal-up">
-                    <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">About</span>
-                    <h2 class="display text-4xl md:text-6xl mb-10 leading-tight">简单好抄<br /><span class="text-muted">仅此而已</span></h2>
+                    <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4"><span class="acc">◆</span> 02 — About</span>
+                    <h2 class="display text-4xl md:text-6xl mb-10 leading-tight">简单好抄<br /><span class="text-muted">仅此而已</span><span class="cursor-blink">_</span></h2>
                     <div class="space-y-6 text-sm text-muted leading-relaxed max-w-md">
-                        <p>低配挂机研讨会成立于2023年，是一个专注于《明日方舟》低配挂机攻略的创作团队。</p>
+                        <p class="about-lead">低配挂机研讨会成立于2023年，是一个专注于《明日方舟》低配挂机攻略的创作团队。</p>
                         <p>我们不追求极限，不堆砌高配。我们的目标只有一个：让每一位玩家，无论练度高低，都能轻松抄完作业，安心挂机。</p>
                         <p>从主线关卡到Side Story，从剿灭作战到危机合约，我们持续输出最亲民的攻略方案。</p>
                     </div>
@@ -226,6 +267,10 @@
         <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div class="flex items-center gap-4"><span class="mono text-lg font-bold">LC</span><span class="rule-v h-4"></span><span class="text-xs text-muted">低配挂机研讨会</span></div>
             <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+            <div class="flex items-center gap-5">
+                <span class="mono text-[10px] text-muted tracking-widest flex items-center gap-2"><span class="status-dot"></span>SYSTEM ONLINE</span>
+                <a href="#hero" class="mono text-[10px] text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-3 py-1.5">TOP ↑</a>
+            </div>
         </div>
     </footer>
 
@@ -314,7 +359,7 @@
                 }
             }
 
-            const card = (item) => {
+            const card = (item, idx) => {
                 const videoUrl = 'detail.html?bvid=' + (item.bvid || (item.link ? item.link.split('/').pop() : ''));
                 let cover = item.media?.thumbnail || item.thumbnail || item.cover || '';
                 cover = proxyImage(cover);
@@ -330,6 +375,7 @@
                 }
                 const title = item.title || '无标题';
                 const staleTag = isStale ? '<div class="stale-badge">缓存</div>' : '';
+                const rankNo = String((idx || 0) + 1).padStart(2, '0');
 
                 return `
                     <a href="${videoUrl}" class="latest-card group block relative">
@@ -337,6 +383,8 @@
                         <div class="cover-wrap">
                             <img src="${cover}" alt="${title}" loading="lazy" referrerpolicy="no-referrer" 
                                  onerror="this.src='https://images.weserv.nl/?url=https://i0.hdslb.com/bfs/archive/default.jpg&w=400&h=225&fit=cover'" />
+                            <span class="rank-no">${rankNo}</span>
+                            <div class="play-ovl"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
                             <div class="absolute bottom-2 right-2 bg-ink/80 text-paper text-[10px] px-2 py-0.5 mono tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
                                 详情
                             </div>
@@ -345,7 +393,7 @@
                             <div class="card-title text-sm md:text-base text-paper group-hover:text-paper line-clamp-2">${title}</div>
                             <div class="card-mono text-[10px] text-muted mt-2 flex items-center gap-3">
                                 <span>${dateStr}</span>
-                                <span class="w-px h-3 bg-line"></span>
+                                <span class="card-meta-dot"></span>
                                 <span>${item.typename || 'B站同步'}</span>
                             </div>
                         </div>
@@ -358,9 +406,9 @@
 
             const collapseBtn = document.getElementById('collapseBtn');
 
-            grid.innerHTML = visible.map(card).join('');
+            grid.innerHTML = visible.map((item, i) => card(item, i)).join('');
             if (rest.length > 0) {
-                moreGrid.innerHTML = rest.map(card).join('');
+                moreGrid.innerHTML = rest.map((item, i) => card(item, i + 8)).join('');
                 toggleBtn.classList.remove('hidden');
                 toggleBtn.textContent = '展开全部 (' + items.length + ')';
             } else {
