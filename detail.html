@@ -55,6 +55,7 @@
                 <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
             </a>
             <div class="flex items-center gap-6">
+                <a href="search.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">搜索 · Search</a>
                 <a href="index.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
                     返回主页
@@ -251,6 +252,7 @@
         (async function init() {
             const params = new URLSearchParams(location.search);
             const bvid = params.get('bvid');
+            const wantPage = params.get('page');
             const items = await fetchData();
             if (!items) { renderError(); return; }
             const found = bvid
@@ -259,6 +261,10 @@
             if (found) {
                 renderVideo(found);
                 document.title = found.title + ' — 低配挂机研讨会';
+                if (wantPage) {
+                    const btn = document.querySelector(`.page-btn[data-page="${wantPage}"]`);
+                    if (btn) btn.click();
+                }
             } else {
                 renderError();
             }
