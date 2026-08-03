@@ -242,6 +242,12 @@ let opCounts = {};    // { name: 关卡数 }
 
 const STAGE_RE = /(?:[A-Z]{1,3}-(?:[A-Z]-\d{1,2}[A-Z]?|\d{1,2}[A-Z]?)|[A-Z]\d{1,2}-\d{1,2}[A-Z]?|\d{1,2}-\d{1,2}[A-Z]?)/;
 const STAGE_SKIP_AFTER = '～~-至—';
+// 排除剧情体验难度：剧情模式（如"剧情模式9-2"）与 TR 教程关（TO-TR-1 等）
+const TR_RE = /[A-Z]{1,3}-TR(?:-\d{1,2})?/;
+
+function isPlotPart(part) {
+    return part.indexOf('剧情') >= 0 || TR_RE.test(part);
+}
 
 function stageKey(part, title) {
     for (const txt of [part, title]) {
@@ -264,6 +270,8 @@ function buildStats() {
         for (let i = 0; i < pages.length; i++) {
             const p = pages[i];
             const part = (p.part || '').trim();
+            // 排除剧情体验难度（剧情模式 / TR 教程关）
+            if (isPlotPart(part)) continue;
             // 单P视频：把视频主标题也纳入
             const text = (!isMulti ? (v.title || '') + ' ' + part : part);
             if (!text.trim()) continue;
