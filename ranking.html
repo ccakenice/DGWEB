@@ -319,10 +319,12 @@ function addHit(year, name, stageKeyVal, stageLabel, item) {
     ops[name] = ops[name] || [];
     let entry = ops[name].find(e => e.stageKey === stageKeyVal);
     if (!entry) {
-        entry = { stageKey: stageKeyVal, stage: stageLabel, items: [] };
+        entry = { stageKey: stageKeyVal, stage: stageLabel, items: [], latest: 0 };
         ops[name].push(entry);
     }
     entry.items.push(item);
+    const t = item.pubDate ? Date.parse(item.pubDate) : 0;
+    if (t > entry.latest) entry.latest = t;
 }
 
 function buildStats() {
@@ -354,7 +356,8 @@ function buildStats() {
             for (const n of hits) {
                 addHit(year, n, stageKeyVal, stageLabel, {
                     bvid, title: v.title || '', part: p.part || '',
-                    page: p.page || i + 1, dur: p.duration || (isMulti ? '' : v.duration || '')
+                    page: p.page || i + 1, dur: p.duration || (isMulti ? '' : v.duration || ''),
+                    pubDate: v.pubDate || ''
                 });
             }
         }
@@ -429,12 +432,7 @@ function renderList() {
 }
 
 function showDetail(name) {
-    const groups = (getCurrentData()[name] || []).slice().sort((a, b) => {
-        const am = isMiePart(a.stage) ? 1 : 0;
-        const bm = isMiePart(b.stage) ? 1 : 0;
-        if (am !== bm) return bm - am;   // 剿灭在前
-        return a.stage < b.stage ? -1 : a.stage > b.stage ? 1 : 0;
-    });
+    const groups = (getCurrentData()[name] || []).slice().sort((a, b) => (b.latest || 0) - (a.latest || 0));
     const panel = document.getElementById('detailPanel');
     document.getElementById('detailTitle').textContent = name;
     document.getElementById('detailCount').textContent = groups.length + ' 个关卡';
