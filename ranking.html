@@ -172,6 +172,8 @@
         .d-item:hover .d-go { color:var(--acc); }
         .d-group { border:1px solid var(--line); margin-bottom:10px; }
         .d-group-head { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
+        .d-stage-right { display:flex; align-items:center; gap:10px; }
+        .d-mie-tag { font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.1em; color:#000; background:var(--acc); padding:2px 8px; border-radius:2px; }
         .d-stage { font-family:'Space Grotesk',monospace; font-size:15px; font-weight:700; color:var(--acc); letter-spacing:.05em; }
         .d-stage-cnt { font-size:11px; color:var(--muted); font-family:'Space Grotesk',monospace; }
         .d-links { display:flex; flex-direction:column; }
@@ -427,13 +429,19 @@ function renderList() {
 }
 
 function showDetail(name) {
-    const groups = getCurrentData()[name] || [];
+    const groups = (getCurrentData()[name] || []).slice().sort((a, b) => {
+        const am = isMiePart(a.stage) ? 1 : 0;
+        const bm = isMiePart(b.stage) ? 1 : 0;
+        if (am !== bm) return bm - am;   // 剿灭在前
+        return a.stage < b.stage ? -1 : a.stage > b.stage ? 1 : 0;
+    });
     const panel = document.getElementById('detailPanel');
     document.getElementById('detailTitle').textContent = name;
     document.getElementById('detailCount').textContent = groups.length + ' 个关卡';
     document.getElementById('detailStats').innerHTML = groups.map(g => {
         const cnt = g.items.length;
         const multi = cnt > 1;
+        const mieTag = isMiePart(g.stage) ? '<span class="d-mie-tag">剿灭</span>' : '';
         let links = '';
 if (multi) {
             links = '<div class="d-links">' + g.items.map(it => `
@@ -454,7 +462,7 @@ if (multi) {
         <div class="d-group">
             <div class="d-group-head">
                 <span class="d-stage">${g.stage}</span>
-                <span class="d-stage-cnt">${cnt} 个来源${multi ? '' : ''}</span>
+                <span class="d-stage-right">${mieTag}<span class="d-stage-cnt">${cnt} 个来源${multi ? '' : ''}</span></span>
             </div>
             ${links}
         </div>`;
