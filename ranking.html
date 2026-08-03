@@ -240,7 +240,7 @@ async function loadData() {
 let opDetails = {};   // { name: [{ stageKey, stage, items: [...] }] }
 let opCounts = {};    // { name: 关卡数 }
 
-const STAGE_RE = /(?:[A-Z]{1,3}-(?:[A-Z]-\d{1,2}[A-Z]?|\d{1,2}[A-Z]?)|[A-Z]\d{1,2}-\d{1,2}[A-Z]?|\d{1,2}-\d{1,2}[A-Z]?)/;
+const STAGE_RE = /(?:[A-Z]{1,3}-(?:[A-Z]{1,3}-\d{1,2}[A-Z]?|\d{1,2}[A-Z]?)|[A-Z]\d{1,2}-\d{1,2}[A-Z]?|\d{1,2}-\d{1,2}[A-Z]?)/;
 const STAGE_SKIP_AFTER = '～~-至—';
 // 排除剧情体验难度：剧情模式（如"剧情模式9-2"）与 TR 教程关（TO-TR-1 等）
 const TR_RE = /[A-Z]{1,3}-TR(?:-\d{1,2})?/;
@@ -253,8 +253,8 @@ function stageKey(part, title) {
     for (const txt of [part, title]) {
         const m = STAGE_RE.exec(txt);
         if (!m) continue;
-        const after = txt.charAt(m.index + m[0].length);
-        if (STAGE_SKIP_AFTER.indexOf(after) >= 0) continue;
+        const after = m.index + m[0].length < txt.length ? txt.charAt(m.index + m[0].length) : '';
+        if (after && STAGE_SKIP_AFTER.indexOf(after) >= 0) continue;
         return { key: m[0], stage: m[0] };
     }
     return null;
