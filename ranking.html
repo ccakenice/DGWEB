@@ -152,6 +152,17 @@
         .d-page { font-family:'Space Grotesk',monospace; font-size:11px; color:var(--acc); flex-shrink:0; }
         .d-go { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--muted); flex-shrink:0; }
         .d-item:hover .d-go { color:var(--acc); }
+        .d-group { border:1px solid var(--line); margin-bottom:10px; }
+        .d-group-head { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
+        .d-stage { font-family:'Space Grotesk',monospace; font-size:15px; font-weight:700; color:var(--acc); letter-spacing:.05em; }
+        .d-stage-cnt { font-size:11px; color:var(--muted); font-family:'Space Grotesk',monospace; }
+        .d-links { display:flex; flex-direction:column; }
+        .d-link { display:flex; align-items:center; gap:10px; padding:8px 14px; font-size:12.5px; color:var(--fg); text-decoration:none; border-bottom:1px solid rgba(255,255,255,.04); transition:background .3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .d-link:hover { background:rgba(245,166,35,.06); color:var(--acc); }
+        .d-link .d-av2 { width:28px; height:28px; flex-shrink:0; overflow:hidden; border:1px solid var(--line); }
+        .d-link .d-av2 img { width:100%; height:100%; object-fit:cover; }
+        .d-link .d-page { font-family:'Space Grotesk',monospace; font-size:10.5px; color:var(--muted); flex-shrink:0; }
+        .d-link:hover .d-page { color:var(--acc); }
     </style>
 
     <script>
@@ -225,9 +236,23 @@ async function loadData() {
     throw new Error('全部数据源均不可用');
 }
 
-// 干员 → 关卡列表
-let opDetails = {};   // { name: [{ bvid, title, part, page, duration, count }] }
-let opCounts = {};    // { name: 次数 }
+// 干员 → 关卡聚合
+let opDetails = {};   // { name: [{ stageKey, stage, items: [...] }] }
+let opCounts = {};    // { name: 关卡数 }
+
+const STAGE_RE = /(?:[A-Z]{1,3}-(?:[A-Z]-\d{1,2}[A-Z]?|\d{1,2}[A-Z]?)|[A-Z]\d{1,2}-\d{1,2}[A-Z]?|\d{1,2}-\d{1,2}[A-Z]?)/;
+const STAGE_SKIP_AFTER = '～~-至—';
+
+function stageKey(part, title) {
+    for (const txt of [part, title]) {
+        const m = STAGE_RE.exec(txt);
+        if (!m) continue;
+        const after = txt.charAt(m.index + m[0].length);
+        if (STAGE_SKIP_AFTER.indexOf(after) >= 0) continue;
+        return { key: m[0], stage: m[0] };
+    }
+    return null;
+}
 
 function buildStats() {
     opDetails = {}; opCounts = {};
@@ -243,16 +268,24 @@ function buildStats() {
             const text = (!isMulti ? (v.title || '') + ' ' + part : part);
             if (!text.trim()) continue;
             const hits = collectHits(text);
+            const sk = stageKey(part, v.title || '');
+            const stageKeyVal = sk ? sk.key : bvid + ':' + (p.page || i + 1);
+            const stageLabel = sk ? sk.stage : (part || '(无标题)');
             for (const n of hits) {
                 opDetails[n] = opDetails[n] || [];
-                opDetails[n].push({
+                let entry = opDetails[n].find(e => e.stageKey === stageKeyVal);
+                if (!entry) {
+                    entry = { stageKey: stageKeyVal, stage: stageLabel, items: [] };
+                    opDetails[n].push(entry);
+                }
+                entry.items.push({
                     bvid, title: v.title || '', part: p.part || '',
                     page: p.page || i + 1, dur: p.duration || (isMulti ? '' : v.duration || '')
                 });
             }
         }
     }
-    // 汇总计数（去重：同一视频同一P只计一次）
+    // 汇总：每干员 = 独立关卡数
     for (const n in opDetails) {
         opCounts[n] = opDetails[n].length;
     }
@@ -278,20 +311,38 @@ function renderList() {
 }
 
 function showDetail(name) {
-    const items = opDetails[name] || [];
+    const groups = opDetails[name] || [];
     const panel = document.getElementById('detailPanel');
     document.getElementById('detailTitle').textContent = name;
-    document.getElementById('detailCount').textContent = items.length + ' 个分P/视频';
-    document.getElementById('detailStats').innerHTML = items.map(it => `
-        <a class="d-item" href="detail.html?bvid=${encodeURIComponent(it.bvid)}&page=${it.page}">
-            <span class="d-av"><img src="${AVATARS[name]}" loading="lazy" onerror="this.style.display='none'"/></span>
-            <span class="d-body">
-                <span class="d-part">${it.part || it.title || ''}</span>
-                <span class="d-meta">${it.title || ''}</span>
-            </span>
-            <span class="d-page">P${it.page}</span>
-            <span class="d-go">进入 →</span>
-        </a>`).join('');
+    document.getElementById('detailCount').textContent = groups.length + ' 个关卡';
+    document.getElementById('detailStats').innerHTML = groups.map(g => {
+        const cnt = g.items.length;
+        const multi = cnt > 1;
+        let links = '';
+if (multi) {
+            links = '<div class="d-links">' + g.items.map(it => `
+                <a class="d-link" href="detail.html?bvid=${encodeURIComponent(it.bvid)}&page=${it.page}" title="${it.part || it.title || ''}"><span class="d-av2"><img src="${AVATARS[name]}" loading="lazy" onerror="this.style.display='none'"/></span>${it.part || it.title || ''} <span class="d-page">P${it.page}</span></a>`).join('') + '</div>';
+        } else {
+            const it = g.items[0];
+            links = `<a class="d-item" href="detail.html?bvid=${encodeURIComponent(it.bvid)}&page=${it.page}">
+                <span class="d-av"><img src="${AVATARS[name]}" loading="lazy" onerror="this.style.display='none'"/></span>
+                <span class="d-body">
+                    <span class="d-part">${it.part || it.title || ''}</span>
+                    <span class="d-meta">${it.title || ''}</span>
+                </span>
+                <span class="d-page">P${it.page}</span>
+                <span class="d-go">进入 →</span>
+            </a>`;
+        }
+        return `
+        <div class="d-group">
+            <div class="d-group-head">
+                <span class="d-stage">${g.stage}</span>
+                <span class="d-stage-cnt">${cnt} 个来源${multi ? '' : ''}</span>
+            </div>
+            ${links}
+        </div>`;
+    }).join('');
     panel.style.display = 'flex';
 }
 
