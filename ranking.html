@@ -86,7 +86,7 @@
                 <p class="text-sm text-muted max-w-2xl leading-relaxed">点击干员查看其参与的全部关卡。</p>
 
                 <div class="rules-wrap mt-5 max-w-2xl">
-                    <p class="rules-text text-xs text-muted leading-relaxed" id="rulesText">统计规则：仅统计 6 星干员；仅统计标题含「单核」「单挂」（含单核挂机）的攻略关卡，单P视频并查主标题；同一干员在同一关卡只计一次；排除剧情模式与 TR 教程关；排除旧版/初版/参考版/不用看等过时关卡；同视频同P重复提及不重复计。年榜按视频发布时间归属年份，只统计当年使用过的干员。</p>
+                    <p class="rules-text text-xs text-muted leading-relaxed" id="rulesText">统计规则：仅统计 6 星干员；仅统计标题含「单核」「单挂」（含单核挂机）的攻略关卡，剿灭关（MO 关与长期剿灭地图）不受此限，单P视频并查主标题；同一干员在同一关卡只计一次；排除剧情模式与 TR 教程关；排除旧版/初版/参考版/不用看等过时关卡；同视频同P重复提及不重复计。年榜按视频发布时间归属年份，只统计当年使用过的干员。</p>
                     <button class="rules-toggle" id="rulesToggle" style="display:none" onclick="toggleRules()">展开统计规则 <span class="rules-arrow">▾</span></button>
                 </div>
             </div>
@@ -277,6 +277,22 @@ function isOldPart(part) {
     return false;
 }
 
+// 剿灭关卡（MO 代号或长期剿灭地图名）——豁免单核/单挂过滤
+const MO_RE = /[A-Z]{1,3}-MO-\d/;
+const MIE_MAPS = ['长泉镇', '多索雷斯', '荒野', '小丘郡', '龙门', '切尔诺伯格', '废弃矿区',
+    '冰封', '北原', '腐烂', '多伦', '盐风', '黄铁', '血怒', '暗黑', '狂沙',
+    '愚人', '梦魇', '深渊', '黑雾', '回廊', '矿脉', '帕夏', '热风', '火圈',
+    '洞穴', '峡谷', '雪谷', '沼地', '绿洲', '荒漠', '沙丘', '矿洞',
+    '王城', '赤霄', '高塔', '壁垒', '海岸线', '潮汐', '礁石', '航线', '关隘',
+    '园区', '街道', '商路', '休止符'];
+function isMiePart(part) {
+    if (MO_RE.test(part)) return true;
+    for (const k of MIE_MAPS) {
+        if (part.indexOf(k) >= 0) return true;
+    }
+    return false;
+}
+
 function stageKey(part, title) {
     for (const txt of [part, title]) {
         const m = STAGE_RE.exec(txt);
@@ -322,9 +338,10 @@ function buildStats() {
             if (isPlotPart(part)) continue;
             // 排除旧版/初版等过时关卡
             if (isOldPart(part)) continue;
-            // 只统计含单核/单挂的攻略关（单P视频并查主标题）
+            // 只统计含单核/单挂的攻略关（单P视频并查主标题）；剿灭关豁免
             const danheText = isMulti ? part : part + ' ' + (v.title || '');
-            if (danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0) continue;
+            const isMie = isMiePart(part) || isMiePart(v.title || '');
+            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0) continue;
             // 单P视频：把视频主标题也纳入
             const text = (!isMulti ? (v.title || '') + ' ' + part : part);
             if (!text.trim()) continue;
