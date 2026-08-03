@@ -86,6 +86,10 @@
                 <p class="text-sm text-muted max-w-2xl leading-relaxed">统计已获取投稿中干员的出场次数（多P视频计分P标题，单P视频并入主标题）。异格分开计算。点击干员查看其参与的全部关卡。</p>
             </div>
 
+            <div id="yearTabs" class="year-tabs mb-8"></div>
+
+            <h2 id="listTitle" class="text-sm text-muted tracking-widest uppercase mb-4">干员泛用榜</h2>
+
             <div id="opList"></div>
 
             <div id="loadingState" class="empty-state">
@@ -122,6 +126,10 @@
     </footer>
 
     <style>
+        .year-tabs { display:flex; gap:10px; flex-wrap:wrap; }
+        .year-tab { font-family:'Space Grotesk',monospace; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); border:1px solid var(--line); padding:8px 18px; cursor:pointer; transition:all .3s; background:none; }
+        .year-tab:hover { border-color:var(--acc); color:var(--paper); }
+        .year-tab.active { border-color:var(--acc); color:var(--acc); background:rgba(245,166,35,.08); }
         .empty-state { border:1px dashed #333; padding:60px 20px; text-align:center; }
         .row { display:flex; align-items:center; gap:16px; border-bottom:1px solid var(--line); padding:10px 12px; transition:all .3s; cursor:pointer; }
         .row:hover { background:rgba(245,166,35,.06); border-color:var(--acc); }
@@ -234,9 +242,10 @@ async function loadData() {
     throw new Error('全部数据源均不可用');
 }
 
-// 干员 → 关卡聚合
-let opDetails = {};   // { name: [{ stageKey, stage, items: [...] }] }
-let opCounts = {};    // { name: 关卡数 }
+// 干员 → 关卡聚合（按年份分桶）
+let opByYear = {};      // { year: { name: [{ stageKey, stage, items }] } }
+let allYears = [];      // ['2023','2024',...]
+let currentYear = 'all';
 
 const STAGE_RE = /(?:[A-Z]{1,3}-(?:[A-Z]{1,3}-\d{1,2}[A-Z]?|\d{1,2}[A-Z]?)|[A-Z]\d{1,2}-\d{1,2}[A-Z]?|\d{1,2}-\d{1,2}[A-Z]?)/;
 const STAGE_SKIP_AFTER = '～~-至—';
@@ -258,13 +267,33 @@ function stageKey(part, title) {
     return null;
 }
 
+function videoYear(v) {
+    const s = String(v.pubDate || '');
+    const m = s.match(/20\d{2}/);
+    return m ? m[0] : null;
+}
+
+function addHit(year, name, stageKeyVal, stageLabel, item) {
+    if (!year) return;
+    opByYear[year] = opByYear[year] || {};
+    const ops = opByYear[year];
+    ops[name] = ops[name] || [];
+    let entry = ops[name].find(e => e.stageKey === stageKeyVal);
+    if (!entry) {
+        entry = { stageKey: stageKeyVal, stage: stageLabel, items: [] };
+        ops[name].push(entry);
+    }
+    entry.items.push(item);
+}
+
 function buildStats() {
-    opDetails = {}; opCounts = {};
+    opByYear = {};
     for (const v of allVideos) {
         const pages = v.pages || [];
         if (!pages.length) continue;
         const isMulti = pages.length > 1;
         const bvid = v.bvid || '';
+        const year = videoYear(v);
         for (let i = 0; i < pages.length; i++) {
             const p = pages[i];
             const part = (p.part || '').trim();
@@ -281,28 +310,64 @@ function buildStats() {
             const stageKeyVal = sk ? sk.key : bvid + ':' + (p.page || i + 1);
             const stageLabel = sk ? sk.stage : (part || '(无标题)');
             for (const n of hits) {
-                opDetails[n] = opDetails[n] || [];
-                let entry = opDetails[n].find(e => e.stageKey === stageKeyVal);
-                if (!entry) {
-                    entry = { stageKey: stageKeyVal, stage: stageLabel, items: [] };
-                    opDetails[n].push(entry);
-                }
-                entry.items.push({
+                addHit(year, n, stageKeyVal, stageLabel, {
                     bvid, title: v.title || '', part: p.part || '',
                     page: p.page || i + 1, dur: p.duration || (isMulti ? '' : v.duration || '')
                 });
             }
         }
     }
-    // 汇总：每干员 = 独立关卡数
-    for (const n in opDetails) {
-        opCounts[n] = opDetails[n].length;
+    allYears = Object.keys(opByYear).sort();
+    if (!allYears.includes(currentYear)) currentYear = 'all';
+}
+
+function getCurrentData() {
+    if (currentYear === 'all') {
+        // 合并所有年份
+        const merged = {};
+        for (const y of allYears) {
+            for (const name in opByYear[y]) {
+                merged[name] = (merged[name] || []).concat(opByYear[y][name]);
+            }
+        }
+        return merged;
     }
+    return opByYear[currentYear] || {};
+}
+
+function opCountsFor(data) {
+    const counts = {};
+    for (const n in data) counts[n] = data[n].length;
+    return counts;
+}
+
+function renderTabs() {
+    const bar = document.getElementById('yearTabs');
+    if (!bar) return;
+    const years = ['all'].concat(allYears);
+    bar.innerHTML = years.map(y => {
+        const label = y === 'all' ? '总榜' : y + ' 年';
+        const active = y === currentYear;
+        return `<button class="year-tab ${active ? 'active' : ''}" data-year="${y}" onclick="switchYear('${y}')">${label}</button>`;
+    }).join('');
+}
+
+function switchYear(y) {
+    currentYear = y;
+    renderTabs();
+    renderList();
+    const u = new URL(location.href);
+    if (y === 'all') u.searchParams.delete('year');
+    else u.searchParams.set('year', y);
+    history.replaceState(null, '', u.toString());
 }
 
 function renderList() {
-    const rows = Object.entries(opCounts).sort((a, b) => b[1] - a[1]);
+    const data = getCurrentData();
+    const counts = opCountsFor(data);
+    const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const max = rows.length ? rows[0][1] : 1;
+    const total = rows.reduce((s, r) => s + r[1], 0);
     const list = document.getElementById('opList');
     list.innerHTML = rows.map(([name, cnt], idx) => {
         const av = AVATARS[name] || '';
@@ -313,14 +378,15 @@ function renderList() {
             <span class="nm">${name}</span>
             <span class="bar"><i style="width:${(cnt / max * 100).toFixed(1)}%"></i></span>
             <span class="cnt">${cnt} 次</span>
-            <span class="pct">${(cnt / Object.keys(opDetails).reduce((s, k) => s + opDetails[k].length, 0) * 100).toFixed(1)}%</span>
+            <span class="pct">${(cnt / total * 100).toFixed(1)}%</span>
             <span class="go">详情 →</span>
         </div>`;
     }).join('');
+    document.getElementById('listTitle').textContent = currentYear === 'all' ? '干员泛用榜（总榜）' : currentYear + ' 年干员泛用榜';
 }
 
 function showDetail(name) {
-    const groups = opDetails[name] || [];
+    const groups = getCurrentData()[name] || [];
     const panel = document.getElementById('detailPanel');
     document.getElementById('detailTitle').textContent = name;
     document.getElementById('detailCount').textContent = groups.length + ' 个关卡';
@@ -366,6 +432,10 @@ document.getElementById('opList').addEventListener('click', function (ev) {
     try {
         await loadData();
         buildStats();
+        const up = new URLSearchParams(location.search);
+        const y = up.get('year');
+        if (y && allYears.includes(y)) currentYear = y;
+        renderTabs();
         renderList();
         document.getElementById('loadingState').style.display = 'none';
     } catch (e) {
@@ -374,6 +444,7 @@ document.getElementById('opList').addEventListener('click', function (ev) {
         document.getElementById('errMsg').textContent = e.message;
     }
 })();
+
     </script>
 </body>
 </html>
