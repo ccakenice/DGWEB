@@ -436,7 +436,12 @@ function renderList() {
 }
 
 function showDetail(name) {
-    const groups = (getCurrentData()[name] || []).slice().sort((a, b) => (b.latest || 0) - (a.latest || 0));
+    const groups = (getCurrentData()[name] || []).slice().sort((a, b) => {
+        const am = isMiePart(a.stage) ? 1 : 0;
+        const bm = isMiePart(b.stage) ? 1 : 0;
+        if (am !== bm) return bm - am;   // 剿灭在前
+        return (b.latest || 0) - (a.latest || 0);   // 其余按时间倒序
+    });
     const panel = document.getElementById('detailPanel');
     document.getElementById('detailTitle').textContent = name;
     document.getElementById('detailCount').textContent = groups.length + ' 个关卡';
