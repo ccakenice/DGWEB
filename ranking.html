@@ -86,7 +86,7 @@
                 <p class="text-sm text-muted max-w-2xl leading-relaxed">点击干员查看其参与的全部关卡。</p>
 
                 <div class="rules-wrap mt-5 max-w-2xl">
-                    <p class="rules-text text-xs text-muted leading-relaxed" id="rulesText">统计规则：仅统计 6 星干员；仅统计标题含「单核」「单挂」（含单核挂机）的攻略关卡，单P视频并查主标题；同一干员在同一关卡只计一次；排除剧情模式与 TR 教程关；排除旧版/初版/参考版/不用看/删除等过时关卡；同视频同P重复提及不重复计。年榜按视频发布时间归属年份，只统计当年使用过的干员。</p>
+                    <p class="rules-text text-xs text-muted leading-relaxed" id="rulesText">统计规则：仅统计 6 星干员；仅统计标题含「单核」「单挂」（含单核挂机）的攻略关卡，单P视频并查主标题；同一干员在同一关卡只计一次；排除剧情模式与 TR 教程关；排除旧版/初版/参考版/不用看等过时关卡；同视频同P重复提及不重复计。年榜按视频发布时间归属年份，只统计当年使用过的干员。</p>
                     <button class="rules-toggle" id="rulesToggle" style="display:none" onclick="toggleRules()">展开统计规则 <span class="rules-arrow">▾</span></button>
                 </div>
             </div>
@@ -268,8 +268,8 @@ function isPlotPart(part) {
     return part.indexOf('剧情') >= 0 || TR_RE.test(part);
 }
 
-// 过时标记（旧版/初版/参考版/不用看/删除）
-const OLD_MARKS = ['旧版', '初版', '参考版', '不用看', '删除'];
+// 过时标记（旧版/初版/参考版/不用看）
+const OLD_MARKS = ['旧版', '初版', '参考版', '不用看'];
 function isOldPart(part) {
     for (const mk of OLD_MARKS) {
         if (part.indexOf(mk) >= 0) return true;
