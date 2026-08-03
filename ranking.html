@@ -270,8 +270,9 @@ function buildStats() {
             const part = (p.part || '').trim();
             // 排除剧情体验难度（剧情模式 / TR 教程关）
             if (isPlotPart(part)) continue;
-            // 只统计含单核/单挂的攻略关
-            if (part.indexOf('单核') < 0 && part.indexOf('单挂') < 0) continue;
+            // 只统计含单核/单挂的攻略关（单P视频并查主标题）
+            const danheText = isMulti ? part : part + ' ' + (v.title || '');
+            if (danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0) continue;
             // 单P视频：把视频主标题也纳入
             const text = (!isMulti ? (v.title || '') + ' ' + part : part);
             if (!text.trim()) continue;
