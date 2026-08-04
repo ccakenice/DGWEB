@@ -4235,6 +4235,11 @@
        "name": "萨卡兹的无终奇语",
        "img": "images/modes/图标_萨卡兹的无终奇语.png",
        "stages": []
+      },
+      {
+       "name": "沉沦者的黑流树海",
+       "img": "images/modes/图标_沉沦者的黑流树海.png",
+       "stages": []
       }
      ]
     }
@@ -4273,6 +4278,11 @@
       {
        "name": "沙洲遗闻",
        "img": "images/modes/图标_沙洲遗闻.png",
+       "stages": []
+      },
+      {
+       "name": "重启锚点",
+       "img": "images/modes/图标_重启锚点.png",
        "stages": []
       }
      ]
