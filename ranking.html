@@ -49,7 +49,7 @@
         .score-pill { font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.08em; border:1px solid rgba(245,166,35,.4); color:var(--acc); padding:2px 10px; white-space:nowrap; }
         .hit-mark { color:var(--acc); }
         .thumb-box { position:relative; width:200px; height:112px; flex-shrink:0; overflow:hidden; border:1px solid var(--line); background:var(--fog); }
-        .thumb-box img { width:100%; height:100%; object-fit:cover; filter:grayscale(.3) contrast(.95); transition:transform .5s ease, filter .5s ease; }
+        .thumb-box img { width:100%; height:100%; object-fit:cover; filter:grayscale(0) contrast(1); transition:transform .5s ease, filter .5s ease; }
         .result-item:hover .thumb-box img { transform:scale(1.05); filter:grayscale(0) contrast(1.05); }
         .page-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.05em; padding:5px 10px; transition:all .3s; cursor:pointer; }
         .page-chip:hover { border-color:var(--acc); color:var(--acc); background:rgba(245,166,35,.08); }
@@ -164,7 +164,7 @@
         .row .no { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; color:var(--muted); width:46px; text-align:right; flex-shrink:0; }
         .row.top3 .no { color:var(--acc); }
         .row .av { width:46px; height:46px; flex-shrink:0; overflow:hidden; border:1px solid var(--line); }
-        .row .av img { width:100%; height:100%; object-fit:cover; filter:grayscale(.2); transition:filter .3s; }
+        .row .av img { width:100%; height:100%; object-fit:cover; filter:grayscale(0); transition:filter .3s; }
         .row:hover .av img { filter:grayscale(0); }
         .row .nm { flex:1; min-width:0; font-size:15px; letter-spacing:.03em; }
         .row .bar { flex:1; height:6px; background:var(--fog); position:relative; overflow:hidden; }
