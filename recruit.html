@@ -86,11 +86,15 @@
             </div>
 
             <div class="mb-8">
-                <label class="mono text-[10px] text-muted tracking-widest uppercase block mb-3">截图识别词条</label>
-                <div class="flex items-center gap-4 flex-wrap">
-                    <input type="file" id="shotFile" accept="image/*" class="text-xs text-muted file:border file:border-line file:bg-transparent file:text-muted file:px-4 file:py-2 file:mr-3 hover:file:text-acc cursor-pointer">
-                    <button onclick="recognizeShot()" class="mono text-xs text-muted hover:text-paper border border-line hover:border-acc px-5 py-2 transition-colors" id="ocrBtn">识别 TAG</button>
-                    <span class="text-xs text-ash/70" id="ocrStatus"></span>
+                <label class="mono text-[10px] text-muted tracking-widest uppercase block mb-3">截图识别词条 <span class="text-ash/50">（支持拖入 / 粘贴 Ctrl+V）</span></label>
+                <div id="shotZone" class="shot-zone">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <input type="file" id="shotFile" accept="image/*" class="text-xs text-muted file:border file:border-line file:bg-transparent file:text-muted file:px-4 file:py-2 file:mr-3 hover:file:text-acc cursor-pointer">
+                        <button onclick="recognizeShot()" class="mono text-xs text-muted hover:text-paper border border-line hover:border-acc px-5 py-2 transition-colors" id="ocrBtn">识别 TAG</button>
+                        <span class="text-xs text-ash/70" id="ocrStatus"></span>
+                    </div>
+                    <div class="shot-tip">将截图拖到这里，或直接 Ctrl+V 粘贴</div>
+                    <img id="shotPreview" class="shot-preview" style="display:none" alt="截图预览"/>
                 </div>
             </div>
 
@@ -125,6 +129,10 @@
         .r-op .r-locktag { font-size:10px; color:var(--acc); border:1px solid var(--acc); padding:1px 6px; font-family:'Space Grotesk',monospace; }
         .r-op .r-tags { font-size:10px; color:var(--ash); }
         .r-empty { border:1px dashed #333; padding:40px 20px; text-align:center; grid-column:1/-1; }
+        .shot-zone { border:1px dashed var(--line); padding:18px 20px; transition:all .3s; }
+        .shot-zone.drag { border-color:var(--acc); background:rgba(245,166,35,.06); }
+        .shot-tip { margin-top:12px; font-size:11px; color:var(--ash); letter-spacing:.04em; }
+        .shot-preview { margin-top:14px; max-width:220px; max-height:140px; border:1px solid var(--line); }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -180,9 +188,48 @@ function render() {
 }
 
 // 截图识别
+let shotFile = null;
+const shotZone = document.getElementById('shotZone');
+const shotPreview = document.getElementById('shotPreview');
+
+function setShot(f) {
+    if (!f || !f.type.startsWith('image/')) return;
+    shotFile = f;
+    const url = URL.createObjectURL(f);
+    shotPreview.src = url;
+    shotPreview.style.display = 'block';
+    document.getElementById('ocrStatus').textContent = '已载入截图，点击「识别 TAG」或按回车';
+}
+
+// 拖拽
+shotZone.addEventListener('dragover', e => { e.preventDefault(); shotZone.classList.add('drag'); });
+shotZone.addEventListener('dragleave', () => shotZone.classList.remove('drag'));
+shotZone.addEventListener('drop', e => {
+    e.preventDefault();
+    shotZone.classList.remove('drag');
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) setShot(f);
+});
+// 粘贴
+document.addEventListener('paste', e => {
+    const items = (e.clipboardData || {}).items;
+    if (!items) return;
+    for (const it of items) {
+        if (it.type.startsWith('image/')) {
+            const f = it.getAsFile();
+            if (f) { setShot(f); e.preventDefault(); return; }
+        }
+    }
+});
+// 文件选择
+document.getElementById('shotFile').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) setShot(f);
+});
+
 async function recognizeShot() {
-    const file = document.getElementById('shotFile').files[0];
-    if (!file) { document.getElementById('ocrStatus').textContent = '请先选择截图'; return; }
+    const file = shotFile || document.getElementById('shotFile').files[0];
+    if (!file) { document.getElementById('ocrStatus').textContent = '请先选择/拖入/粘贴截图'; return; }
     const status = document.getElementById('ocrStatus');
     const btn = document.getElementById('ocrBtn');
     btn.disabled = true;
