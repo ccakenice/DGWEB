@@ -204,6 +204,7 @@
                         const img = it.img ? `<div class="thumb"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
                         html += `
                             <a href="${href}" class="zone-card block ${count > 0 ? '' : 'opacity-50'}">
+                                ${img}
                                 <span class="zone-code">${count > 0 ? count + ' 个视频' : '暂无攻略'}</span>
                                 <span class="zone-name">${it.name}</span>
                             </a>`;
