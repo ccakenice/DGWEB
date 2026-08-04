@@ -189,6 +189,7 @@ function render() {
 
 // 截图识别
 let shotFile = null;
+let ocrWorker = null;
 const shotZone = document.getElementById('shotZone');
 const shotPreview = document.getElementById('shotPreview');
 
@@ -198,7 +199,7 @@ function setShot(f) {
     const url = URL.createObjectURL(f);
     shotPreview.src = url;
     shotPreview.style.display = 'block';
-    document.getElementById('ocrStatus').textContent = '已载入截图，点击「识别 TAG」或按回车';
+    document.getElementById('ocrStatus').textContent = '已载入截图，点击「识别 TAG」';
 }
 
 // 拖拽
@@ -227,19 +228,37 @@ document.getElementById('shotFile').addEventListener('change', e => {
     if (f) setShot(f);
 });
 
+// 语言包从本站加载（CF CDN，快）；页面加载即预加载，避免首次识别等待
+function initOcr() {
+    const status = document.getElementById('ocrStatus');
+    status.textContent = '正在加载 OCR 引擎与语言包（首次约 20MB，请稍候）…';
+    Tesseract.createWorker('chi_sim', 1, {
+        langPath: 'https://dgwebq.pages.dev/',
+        logger: m => {
+            if (m.status === 'loading tesseract core') status.textContent = '加载 OCR 引擎…';
+            else if (m.status === 'initializing tesseract') status.textContent = '初始化引擎…';
+            else if (m.status === 'loading language traineddata') status.textContent = '下载语言包 ' + Math.round(m.progress * 100) + '%';
+            else if (m.status === 'initializing api') status.textContent = '准备就绪，可上传截图识别';
+        }
+    }).then(w => {
+        ocrWorker = w;
+        status.textContent = 'OCR 已就绪';
+    }).catch(e => {
+        status.textContent = 'OCR 引擎加载失败：' + e.message + '（可手动选择词条）';
+    });
+}
+initOcr();
+
 async function recognizeShot() {
     const file = shotFile || document.getElementById('shotFile').files[0];
     if (!file) { document.getElementById('ocrStatus').textContent = '请先选择/拖入/粘贴截图'; return; }
+    if (!ocrWorker) { document.getElementById('ocrStatus').textContent = 'OCR 引擎尚未就绪，请稍候…'; return; }
     const status = document.getElementById('ocrStatus');
     const btn = document.getElementById('ocrBtn');
     btn.disabled = true;
-    status.textContent = 'OCR 识别中（首次需下载语言包）…';
+    status.textContent = '识别中…';
     try {
-        const worker = await Tesseract.createWorker('chi_sim', 0, {
-            logger: m => { if (m.status === 'recognizing text') status.textContent = '识别中 ' + Math.round(m.progress * 100) + '%'; }
-        });
-        const { data } = await worker.recognize(file);
-        await worker.terminate();
+        const { data } = await ocrWorker.recognize(file);
         const rawText = (data.text || '');
         const text = rawText.replace(/[\s　]+/g, '');  // 去空白
         status.textContent = '识别完成';
