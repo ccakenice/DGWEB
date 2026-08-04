@@ -4212,11 +4212,6 @@
      "name": "历届主题",
      "items": [
       {
-       "name": "刻俄柏的灰蕈迷境",
-       "img": "images/modes/图标_刻俄柏的灰蕈迷境.png",
-       "stages": []
-      },
-      {
        "name": "傀影与猩红孤钻",
        "img": "images/modes/图标_傀影与猩红孤钻.png",
        "stages": []
@@ -4239,6 +4234,11 @@
       {
        "name": "沉沦者的黑流树海",
        "img": "images/modes/图标_沉沦者的黑流树海.png",
+       "stages": []
+      },
+      {
+       "name": "岁的界园志异",
+       "img": "images/modes/图标_岁的界园志异.png",
        "stages": []
       }
      ]
