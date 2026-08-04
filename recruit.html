@@ -235,18 +235,36 @@ async function recognizeShot() {
     btn.disabled = true;
     status.textContent = 'OCR 识别中（首次需下载语言包）…';
     try {
-        const worker = await Tesseract.createWorker('chi_sim', 1, {
+        const worker = await Tesseract.createWorker('chi_sim', 0, {
             logger: m => { if (m.status === 'recognizing text') status.textContent = '识别中 ' + Math.round(m.progress * 100) + '%'; }
         });
         const { data } = await worker.recognize(file);
         await worker.terminate();
-        const text = (data.text || '');
+        const rawText = (data.text || '');
+        const text = rawText.replace(/[\s　]+/g, '');  // 去空白
         status.textContent = '识别完成';
-        // 匹配词条
-        const found = RECRUIT_TAGS.filter(t => text.includes(t));
+        // 模糊匹配词条：精确包含 或 允许 1 字差异
+        const found = RECRUIT_TAGS.filter(t => {
+            if (text.includes(t)) return true;
+            // 逐字匹配：OCR 文本中是否有与词条相似度高的片段
+            for (let i = 0; i <= text.length - t.length; i++) {
+                const seg = text.slice(i, i + t.length);
+                let diff = 0;
+                for (let k = 0; k < t.length; k++) {
+                    if (seg[k] !== t[k]) diff++;
+                    if (diff > 1) break;
+                }
+                if (diff <= 1) return true;
+            }
+            return false;
+        });
         found.forEach(t => selected.add(t));
         render();
-        status.textContent = '识别到词条：' + (found.join('、') || '无（请手动选择）');
+        if (found.length) {
+            status.textContent = '识别到词条：' + (found.join('、'));
+        } else {
+            status.textContent = '未能识别到词条，识别原文：' + rawText.replace(/\n/g, ' ').slice(0, 60) + '…（可手动选择）';
+        }
     } catch (e) {
         status.textContent = '识别失败：' + e.message;
     }
