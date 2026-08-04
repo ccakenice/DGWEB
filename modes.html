@@ -141,7 +141,10 @@
             'other-events': 'images/modes/活动名称_引航者试炼_06.png',
             'annihilation': 'images/modes/章节横幅_剿灭作战.jpg',
             'paradox-sim': null,
-            'current-event': 'images/modes/活动横幅_夏活2026.jpg'
+            'current-event': 'images/modes/活动横幅_夏活2026.jpg',
+            'integrated-strategies': 'images/modes/图标_刻俄柏的灰蕈迷境.png',
+            'stationary-security': 'images/modes/保全派驻_头图.png',
+            'reclamation-algorithm': 'images/modes/生息演算_头图.png'
         };
         const CROP = {
             'current-event': { ratio:3.12, scale:1, tx:0, ty:0 },
@@ -158,7 +161,7 @@
             if (c.pos) return `object-fit:cover;object-position:${c.pos};${extra || ''}`;
             return `object-fit:cover;transform-origin:center;transform:translate(${c.tx}%, ${c.ty}%) scale(${c.scale});${extra || ''}`;
         };
-        const ORDER = ['current-event', 'event-stages', 'story-set', 'other-events', 'main-stages', 'annihilation', 'crisis-contract', 'paradox-sim', 'resource'];
+        const ORDER = ['current-event', 'event-stages', 'story-set', 'other-events', 'main-stages', 'annihilation', 'crisis-contract', 'paradox-sim', 'resource', 'integrated-strategies', 'stationary-security', 'reclamation-algorithm'];
 
         function renderFeatured(ce) {
             const zone = document.getElementById('featuredZone');
