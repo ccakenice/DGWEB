@@ -181,17 +181,27 @@
         ];
         const MODE_KEY = 'main-stages';
 
+        var CACHE_TTL = 3 * 60 * 60 * 1000;
+        function cacheKey(urls) { return 'dgdata_' + ((urls && urls[0]) || 'x').replace(/[^a-z0-9]/gi, ''); }
         async function fetchJSON(urls) {
+            var ck = cacheKey(urls);
+            try {
+                var c = localStorage.getItem(ck);
+                if (c) { var o = JSON.parse(c); if (Date.now() - o.t < CACHE_TTL) return o.d; }
+            } catch (_) {}
+            var res = null;
             for (const url of urls) {
                 try {
                     const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                    return await resp.json();
+                    res = await resp.json();
+                    break;
                 } catch (e) {
                     console.error('数据源失败 ' + url + ':', e.message);
                 }
             }
-            return null;
+            if (res) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), d: res })); } catch (e) {} }
+            return res;
         }
 
         // 视频匹配：活动关卡按代码(TO-1)，其余按名称包含
