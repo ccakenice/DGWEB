@@ -542,6 +542,24 @@
             }
 
             try {
+                let cachedItems = null;
+                try {
+                    const c = localStorage.getItem('bili_latest_cache');
+                    if (c) {
+                        const p = JSON.parse(c);
+                        if (p && p.length) cachedItems = p;
+                    }
+                } catch (_) {}
+                if (cachedItems) {
+                    isStale = true;
+                    const sc = localStorage.getItem('bili_latest_stats');
+                    if (sc) {
+                        try { applyStats(JSON.parse(sc)); } catch (_) {}
+                    }
+                    renderLatest(cachedItems);
+                    refreshIcon.classList.remove('spin');
+                }
+
                 const json = await fetchBilibiliLatest();
                 const items = json ? json.data : null;
                 if (items && items.length > 0) {
