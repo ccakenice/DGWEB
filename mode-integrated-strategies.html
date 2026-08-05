@@ -150,14 +150,14 @@
                             <span class="text-xs text-muted mono tracking-widest">${g.items.length} 项</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">`;
-                g.items.forEach((it, ii) => {
+                g.items.slice().sort((a, b) => (b.year || 0) - (a.year || 0)).forEach((it, ii) => {
                     const stageCount = (it.stages || []).length;
                     const img = it.img ? `<div class="thumb" style="aspect-ratio:2.05 / 1"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
                     html += `
                             <div class="act-card reveal-up">
                                 ${img}
                                 <div class="p-4 border-b border-line">
-                                    <span class="mono text-[10px] text-muted tracking-widest block mb-1">${stageCount > 0 ? stageCount + ' 个关卡' : '集成战略主题'}</span>
+                                    <span class="mono text-[10px] text-muted tracking-widest block mb-1">${it.year ? it.year + ' 实装' : (stageCount > 0 ? stageCount + ' 个关卡' : '集成战略主题')}</span>
                                     <span class="text-[15px] text-paper">${it.name}</span>
                                 </div>
                                 <div class="panel" data-panel="${gi}-${ii}">
