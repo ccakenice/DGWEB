@@ -457,6 +457,11 @@
             btn.addEventListener('click', function (e) {
                 var light = root.classList.contains('light');
                 var target = light ? 'dark' : 'light';
+                var switches = (window.__sw || (window.__sw = []));
+                var now = Date.now();
+                switches.push(now);
+                while (switches.length > 0 && now - switches[0] > 60000) switches.shift();
+                if (switches.length >= 4) { window.location.href = 'easter-egg.html'; return; }
                 var cx = e.clientX, cy = e.clientY;
                 var size = Math.max(window.innerWidth, window.innerHeight) * 2.4;
                 var overlay = document.createElement('div');
