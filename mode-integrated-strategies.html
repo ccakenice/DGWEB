@@ -156,7 +156,7 @@
                     const stageCount = (it.stages || []).length;
                     const img = it.img ? `<div class="thumb" style="aspect-ratio:2.05 / 1"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
                     html += `
-                            <div class="act-card reveal-up">
+                            <div class="act-card reveal-up"${stageCount === 0 ? ` data-video-link="theme-videos.html?t=${encodeURIComponent(it.name)}"` : ''}>
                                 ${img}
                                 <div class="p-4 border-b border-line">
                                     <span class="mono text-[10px] text-muted tracking-widest block mb-1">${it.year ? it.year : (stageCount > 0 ? stageCount + ' 个关卡' : '集成战略主题')}</span>
@@ -172,10 +172,12 @@
                 html += `</div></div>`;
             });
             wrap.innerHTML = html;
-            // 点击展开关卡面板
+            // 点击：无关卡的主题卡跳转主题视频页，有关卡时展开面板
             document.querySelectorAll('.act-card').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (e.target.closest('.stage-chip')) return;
+                    const link = card.dataset.videoLink;
+                    if (link) { window.location.href = link; return; }
                     const panel = card.querySelector('.panel');
                     panel.classList.toggle('open');
                 });
