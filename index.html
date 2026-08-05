@@ -770,6 +770,7 @@
                 btn.innerHTML = light ? MOON : SUN;
                 btn.setAttribute('aria-label', light ? '切换到暗夜' : '切换到白昼');
                 btn.setAttribute('aria-pressed', light ? 'true' : 'false');
+                btn.setAttribute('title', light ? '黑夜模式' : '白昼模式');
             }
 
             function setTheme(t) {
