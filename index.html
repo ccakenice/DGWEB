@@ -554,12 +554,15 @@
                 const cs = getComputedStyle(el);
                 probe.style.cssText = 'font-family:' + cs.fontFamily + ';font-size:' + cs.fontSize + ';font-weight:' + cs.fontWeight + ';line-height:' + cs.lineHeight + ';letter-spacing:' + cs.letterSpacing + ';position:absolute;visibility:hidden;white-space:nowrap;';
                 document.body.appendChild(probe);
-                const w = probe.getBoundingClientRect().width;
+                const rect = probe.getBoundingClientRect();
                 probe.remove();
-                el.style.width = w + 'px';
+                el.style.width = rect.width + 'px';
+                el.style.height = rect.height + 'px';
                 el.style.maxWidth = '100%';
                 el.style.margin = '0 auto';
                 el.style.textAlign = 'center';
+                el.style.whiteSpace = 'nowrap';
+                el.style.overflow = 'hidden';
                 el.dataset.fixedW = '1';
             });
         }
