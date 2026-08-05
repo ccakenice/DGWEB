@@ -1712,11 +1712,6 @@
               ]
             },
             {
-              "name": "纷争演绎",
-              "img": "images/modes/活动名称_纷争演绎.png",
-              "stages": []
-            },
-            {
               "name": "不义之财",
               "img": "images/modes/活动名称_不义之财.png",
               "stages": [
@@ -4946,7 +4941,7 @@
     {
       "key": "other-events",
       "name": "其他活动",
-      "desc": "引航者试炼、矢量突破等特殊活动。",
+      "desc": "纷争演绎、引航者试炼、矢量突破等特殊活动。",
       "groups": [
         {
           "name": "引航者试炼",
@@ -5123,6 +5118,16 @@
                   "solutions": 1
                 }
               ]
+            }
+          ]
+        },
+        {
+          "name": "纷争演绎",
+          "items": [
+            {
+              "name": "纷争演绎",
+              "img": "images/modes/活动名称_纷争演绎.png",
+              "stages": []
             }
           ]
         }
