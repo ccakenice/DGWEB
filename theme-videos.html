@@ -136,7 +136,7 @@
             'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
             'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
         ];
-        const NOISE_SEGS = ['水月', '蓝之', '猩红'];
+        const NOISE_SEGS = ['水月', '蓝之', '猩红', '萨卡兹'];
 
         async function fetchJSON(urls) {
             for (const url of urls) {
@@ -153,21 +153,21 @@
 
         function han(s) { return (s || '').replace(/[^\u4e00-\u9fff]/g, ''); }
 
-        function commonLen(a, b) {
+        function commonSeg(a, b) {
             const A = han(a), B = han(b);
             const n = A.length, m = B.length;
-            let dp = new Array(m + 1).fill(0), best = 0;
+            let dp = new Array(m + 1).fill(0), best = 0, bestI = 0;
             for (let i = 1; i <= n; i++) {
                 const next = new Array(m + 1).fill(0);
                 for (let j = 1; j <= m; j++) {
                     if (A[i - 1] === B[j - 1]) {
                         next[j] = dp[j - 1] + 1;
-                        if (next[j] > best) best = next[j];
+                        if (next[j] > best) { best = next[j]; bestI = i; }
                     }
                 }
                 dp = next;
             }
-            return best;
+            return { len: best, seg: best ? A.slice(bestI - best, bestI) : '' };
         }
 
         function matchThemeVideos(themeName, videos) {
@@ -175,11 +175,17 @@
             const out = [];
             for (const v of videos) {
                 const sources = [v.title || '', ...(v.pages || []).map(p => p.part || '')];
-                let bestLen = 0;
-                for (const s of sources) bestLen = Math.max(bestLen, commonLen(t, s));
-                if (bestLen < 2) continue;
-                if (bestLen === 2 && NOISE_SEGS.some(ns => t.includes(ns))) continue;
-                out.push({ v, len: bestLen });
+                const segs = [];
+                for (const s of sources) {
+                    const r = commonSeg(t, s);
+                    if (r.len >= 2) segs.push(r);
+                }
+                if (!segs.length) continue;
+                const maxLen = Math.max(...segs.map(r => r.len));
+                const clean = segs.filter(r => r.len === maxLen)
+                    .some(r => !NOISE_SEGS.some(ns => ns.includes(r.seg)));
+                if (!clean) continue;
+                out.push({ v, len: maxLen });
             }
             out.sort((a, b) => b.len - a.len || ((b.v.stat || {}).play || 0) - ((a.v.stat || {}).play || 0));
             return out;
