@@ -541,7 +541,36 @@
             document.getElementById('latestError').classList.remove('hidden');
         }
 
+        function formatCount(val) {
+            if (val >= 10000) return (val / 10000).toFixed(1) + '万';
+            return String(val);
+        }
+
+        function fixStatWidths() {
+            document.querySelectorAll('.stat-big[data-count]').forEach(el => {
+                if (el.dataset.fixedW) return;
+                const probe = document.createElement('span');
+                probe.textContent = formatCount(parseInt(el.dataset.count));
+                const cs = getComputedStyle(el);
+                probe.style.cssText = 'font-family:' + cs.fontFamily + ';font-size:' + cs.fontSize + ';font-weight:' + cs.fontWeight + ';line-height:' + cs.lineHeight + ';letter-spacing:' + cs.letterSpacing + ';position:absolute;visibility:hidden;white-space:nowrap;';
+                document.body.appendChild(probe);
+                const w = probe.getBoundingClientRect().width;
+                probe.remove();
+                el.style.width = w + 'px';
+                el.style.maxWidth = '100%';
+                el.style.margin = '0 auto';
+                el.style.textAlign = 'center';
+                el.dataset.fixedW = '1';
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.stat-big[data-count]').forEach(el => delete el.dataset.fixedW);
+            fixStatWidths();
+        });
+
         function animateCounters() {
+            fixStatWidths();
             document.querySelectorAll('.stat-big[data-count]').forEach(el => {
                 const target = parseInt(el.dataset.count);
                 const duration = 2000;
@@ -551,11 +580,7 @@
                     const progress = Math.min(elapsed / duration, 1);
                     const eased = 1 - Math.pow(1 - progress, 3);
                     const current = Math.floor(eased * target);
-                    if (target >= 10000) {
-                        el.textContent = (current / 10000).toFixed(1) + '万';
-                    } else {
-                        el.textContent = current;
-                    }
+                    el.textContent = formatCount(current);
                     if (progress < 1) requestAnimationFrame(update);
                 }
                 requestAnimationFrame(update);
