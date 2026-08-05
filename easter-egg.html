@@ -43,7 +43,7 @@
     <script>
         (function () {
             var q = document.getElementById('question');
-            var segs = document.querySelectorAll('.scene .seg');
+            var segs = document.querySelectorAll('.scene .seg:not(.red)');
             var choices = document.getElementById('choices');
             var blackout = document.getElementById('blackout');
             var finalEl = document.getElementById('final');
