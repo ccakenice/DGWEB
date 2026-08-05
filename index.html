@@ -334,10 +334,24 @@
         let statsReady = false;
         let heroRevealed = false;
 
+        async function fetchWithTimeout(url) {
+            if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+                return fetch(url, { signal: AbortSignal.timeout(10000) });
+            }
+            const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            if (!controller) return fetch(url);
+            const timer = setTimeout(() => controller.abort(), 10000);
+            try {
+                return await fetch(url, { signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
         async function fetchBilibiliLatest() {
             for (const url of DATA_URLS) {
                 try {
-                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    const resp = await fetchWithTimeout(url);
                     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                     const json = await resp.json();
                     if (json.code === 0 && json.data) {
@@ -510,7 +524,10 @@
                 const json = await fetchBilibiliLatest();
                 const items = json ? json.data : null;
                 if (items && items.length > 0) {
-                    if (json && json.stats) applyStats(json.stats);
+                    if (json && json.stats) {
+                        applyStats(json.stats);
+                        localStorage.setItem('bili_latest_stats', JSON.stringify(json.stats));
+                    }
                     renderLatest(items);
                     localStorage.setItem('bili_latest_cache', JSON.stringify(items));
                     localStorage.setItem('bili_latest_time', Date.now().toString());
@@ -532,6 +549,10 @@
                     const parsed = JSON.parse(cached);
                     if (parsed && parsed.length > 0) {
                         isStale = true;
+                        const statsCache = localStorage.getItem('bili_latest_stats');
+                        if (statsCache) {
+                            try { applyStats(JSON.parse(statsCache)); } catch (_) {}
+                        }
                         renderLatest(parsed);
                         document.getElementById('latestError').classList.add('hidden');
                         return;
