@@ -79,11 +79,11 @@
     <main class="pt-16 grid-bg">
         <div class="max-w-[1400px] mx-auto px-6 md:px-10 py-16 md:py-24">
             <div class="reveal-up mb-16">
-                <a href="mode-integrated-strategies.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-6">
+                <a id="backLink" href="mode-integrated-strategies.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-6">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
-                    返回集成战略
+                    <span id="backLabel">返回集成战略</span>
                 </a>
-                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Integrated Strategies · Theme Videos</span>
+                <span id="sectionTag" class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Integrated Strategies · Theme Videos</span>
                 <h1 id="themeTitle" class="display text-[clamp(2.5rem,6vw,5.5rem)] text-paper mb-6">主题视频</h1>
                 <p id="themeMeta" class="text-sm text-muted max-w-xl leading-relaxed">按视频发布年份分区展示命中该主题的攻略视频。</p>
             </div>
@@ -170,6 +170,45 @@
             return { len: best, seg: best ? A.slice(bestI - best, bestI) : '' };
         }
 
+        function normalizeCode(c) {
+            let s = String(c || '').toUpperCase();
+            let m;
+            m = s.match(/^([A-Z]{1,4})-?(EX)-?(\d+[A-Z]?)$/);
+            if (m) return m[1] + '-EX-' + m[3];
+            m = s.match(/^([A-Z]{1,4})-?(MO)-?(\d+[A-Z]?)$/);
+            if (m) return m[1] + '-MO-' + m[3];
+            m = s.match(/^([A-Z]{1,4})-S(\d+[A-Z]?)$/);
+            if (m) return m[1] + '-S-' + m[2];
+            return s;
+        }
+
+        function normCode(c) {
+            return normalizeCode(c).replace(/^([A-Z]+)-?0+(\d)/, '$1-$2');
+        }
+
+        function extractCode(text) {
+            const t = (text || '').trim().toUpperCase();
+            let m = t.match(/^([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?|[A-Za-z]{1,4}|\d{1,2}-\d{1,2}[A-Za-z]?)/);
+            if (!m) m = t.match(/[\(（]\s*([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?)[^\)）]*[\)）]/);
+            return m ? normCode(m[1]) : '';
+        }
+
+        function matchStageVideos(item, videos) {
+            const codes = new Set((item.stages || []).map(s => normCode(s.code)));
+            const out = [];
+            for (const v of videos) {
+                const srcs = [v.title || '', ...(v.pages || []).map(p => p.part || '')];
+                const hit = new Set();
+                for (const s of srcs) {
+                    const c = extractCode(s);
+                    if (c && codes.has(c)) hit.add(c);
+                }
+                if (hit.size) out.push({ v, hit: [...hit] });
+            }
+            out.sort((a, b) => b.hit.length - a.hit.length || ((b.v.stat || {}).play || 0) - ((a.v.stat || {}).play || 0));
+            return out;
+        }
+
         function matchThemeVideos(themeName, videos) {
             const t = han(themeName);
             const out = [];
@@ -202,7 +241,8 @@
             return String(n);
         }
 
-        function cardHtml({ v, len }) {
+        function cardHtml(m, kind) {
+            const { v } = m;
             const bvid = v.bvid || (v.link || '').split('/').pop() || '';
             const thumb = v.media && v.media.thumbnail ? 'https:' + v.media.thumbnail : '';
             const st = v.stat || {};
@@ -210,11 +250,12 @@
             if (st.play) meta.push(fmtCount(st.play) + ' 播放');
             if (v.duration) meta.push(v.duration);
             const date = (v.pubDate || '').slice(0, 10);
+            const hitInfo = kind === 'stage' ? `命中 ${m.hit.length} 关` : `命中 ${m.len} 字`;
             return `
                 <a class="video-card group" href="https://www.bilibili.com/video/${encodeURIComponent(bvid)}" target="_blank" rel="noopener">
                     <div class="thumb">${thumb ? `<img src="${thumb}" alt="${esc(v.title || '')}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" />` : ''}</div>
                     <div class="p-4 border-b border-line flex-1 min-w-0">
-                        <span class="mono text-[10px] text-muted tracking-widest block mb-1">命中 ${len} 字 · ${date}</span>
+                        <span class="mono text-[10px] text-muted tracking-widest block mb-1">${hitInfo} · ${date}</span>
                         <span class="text-[15px] text-paper line-clamp-2 block leading-snug">${esc(v.title || '无标题')}</span>
                     </div>
                     <div class="px-4 py-3 flex items-center justify-between gap-2">
@@ -250,11 +291,22 @@
             });
         }
 
-        function render(theme, matches) {
+        const BACK_INFO = {
+            'integrated-strategies': ['mode-integrated-strategies.html', '返回集成战略', 'Integrated Strategies · Theme Videos'],
+            'event-stages': ['mode-event-stages.html', '返回活动关卡', 'Event Stages · Activity Videos'],
+            'main-stages': ['mode-main-stages.html', '返回主线', 'Main Stages · Chapter Videos'],
+            'story-set': ['mode-story-set.html', '返回故事集', 'Story Set · Story Videos'],
+        };
+
+        function render(theme, matches, kind, modeKey) {
             document.getElementById('themeTitle').textContent = theme.name;
             document.title = theme.name + ' — 低配挂机研讨会';
             document.getElementById('themeMeta').textContent =
                 (theme.year ? theme.year + ' · ' : '') + '命中 ' + matches.length + ' 个视频，按发布年份分区';
+            const back = BACK_INFO[modeKey] || BACK_INFO['integrated-strategies'];
+            document.getElementById('backLink').href = back[0];
+            document.getElementById('backLabel').textContent = back[1];
+            document.getElementById('sectionTag').textContent = back[2];
             document.getElementById('loadingState').classList.add('hidden');
             document.getElementById('errorState').classList.add('hidden');
             document.getElementById('emptyState').classList.add('hidden');
@@ -276,24 +328,32 @@
                         <span class="text-xs text-muted mono tracking-widest">${byYear.get(y).length} 个视频</span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        ${byYear.get(y).map(cardHtml).join('')}
+                        ${byYear.get(y).map(m => cardHtml(m, kind)).join('')}
                     </div>
                 </section>`).join('');
             reveal();
         }
 
         (async function init() {
-            const themeName = new URLSearchParams(location.search).get('t');
-            if (!themeName) { showError('缺少主题参数 t，请从集成战略页面进入'); return; }
+            const p = new URLSearchParams(location.search);
+            const themeName = p.get('t');
+            const modeKey = p.get('m') || 'integrated-strategies';
+            const itemName = p.get('i');
+            if (!themeName && !itemName) { showError('缺少主题参数，请从模式页面进入'); return; }
+            const target = themeName || itemName;
             const modeData = await fetchJSON(MODES_URLS);
             if (!modeData || !modeData.modes) { showError('数据加载失败'); return; }
-            const mode = modeData.modes.find(m => m.key === 'integrated-strategies');
-            const themes = (mode && mode.groups ? mode.groups.flatMap(g => g.items || []) : []);
-            const theme = themes.find(it => it.name === themeName) || themes.find(it => han(it.name) === han(themeName));
-            if (!theme) { showEmpty('未找到该主题：' + themeName); return; }
+            const mode = modeData.modes.find(m => m.key === modeKey);
+            const items = (mode && mode.groups ? mode.groups.flatMap(g => g.items || []) : []);
+            const item = items.find(it => it.name === target) || items.find(it => han(it.name) === han(target));
+            if (!item) { showEmpty('未找到该主题：' + target); return; }
             const videoData = await fetchJSON(DATA_URLS);
             if (!videoData || !Array.isArray(videoData.data)) { showError('数据加载失败'); return; }
-            render(theme, matchThemeVideos(theme.name, videoData.data));
+            const kind = themeName ? 'theme' : 'stage';
+            const matches = kind === 'theme'
+                ? matchThemeVideos(item.name, videoData.data)
+                : matchStageVideos(item, videoData.data);
+            render(item, matches, kind, modeKey);
         })();
 
         const dot = document.getElementById('cursorDot');
