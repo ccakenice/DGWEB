@@ -4214,32 +4214,38 @@
       {
        "name": "傀影与猩红孤钻",
        "img": "images/modes/活动名称_傀影与猩红孤钻.png",
-       "stages": []
+       "stages": [],
+       "year": 2021
       },
       {
        "name": "水月与深蓝之树",
        "img": "images/modes/活动名称_水月与深蓝之树.png",
-       "stages": []
+       "stages": [],
+       "year": 2022
       },
       {
        "name": "探索者的银凇止境",
        "img": "images/modes/活动名称_探索者的银凇止境.png",
-       "stages": []
+       "stages": [],
+       "year": 2023
       },
       {
        "name": "萨卡兹的无终奇语",
        "img": "images/modes/活动名称_萨卡兹的无终奇语.png",
-       "stages": []
+       "stages": [],
+       "year": 2024
       },
       {
        "name": "岁的界园志异",
        "img": "images/modes/活动名称_岁的界园志异.png",
-       "stages": []
+       "stages": [],
+       "year": 2025
       },
       {
        "name": "沉沦者的黑流树海",
        "img": "images/modes/活动名称_沉沦者的黑流树海.png",
-       "stages": []
+       "stages": [],
+       "year": 2026
       }
      ]
     }
