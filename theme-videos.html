@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>主题视频 — 低配挂机研讨会</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Ctext x='8' y='12' font-size='10' text-anchor='middle' fill='%23fff'%3E%E2%97%86%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000', 'paper': '#ffffff', 'ash': '#888888', 'smoke': '#555555',
+                        'charcoal': '#333333', 'graphite': '#1a1a1a', 'fog': '#0a0a0a', 'line': '#222222',
+                        'acc': '#f5a623',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; --acc:#f5a623; }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; cursor:crosshair; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
+        .rule { height:1px; background:var(--line); }
+        .rule-v { width:1px; background:var(--line); }
+        .grid-bg { background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:80px 80px; }
+        .reveal-up { opacity:0; transform:translateY(40px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        .mode-section-title { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+        .mode-section-title::before { content:''; width:8px; height:8px; background:var(--paper); transform:rotate(45deg); flex-shrink:0; }
+        .video-card { position:relative; display:flex; flex-direction:column; background:var(--graphite); border:1px solid var(--line); transition:all 0.4s cubic-bezier(0.16,1,0.3,1); overflow:hidden; }
+        .video-card:hover { border-color:var(--paper); transform:translateY(-3px); background:var(--charcoal); }
+        .video-card .thumb { position:relative; background:var(--fog); overflow:hidden; aspect-ratio:16/9; }
+        .video-card .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
+        .video-card:hover .thumb img { transform:scale(1.05); }
+        .cursor-dot { position:fixed; width:8px; height:8px; background:#fff; border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; transition:transform 0.15s ease; }
+        .cursor-ring { position:fixed; width:40px; height:40px; border:1px solid rgba(255,255,255,0.3); border-radius:50%; pointer-events:none; z-index:9999; transition:all 0.3s ease; }
+        .empty-state { border:1px dashed #333; padding:60px 20px; text-align:center; }
+    </style>
+</head>
+<body>
+    <div class="cursor-dot hidden md:block" id="cursorDot"></div>
+    <div class="cursor-ring hidden md:block" id="cursorRing"></div>
+
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <img src="images/logo.png" alt="LOWCOST 低配挂机研讨会" class="w-9 h-9 rounded-full object-cover" />
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="hidden md:flex items-center gap-10">
+                <a href="index.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">首页 <span class="text-ash/60">HOME</span></a>
+                <a href="modes.html" class="text-xs acc hover:text-paper transition-colors tracking-widest uppercase">模式 <span class="text-ash/60">MODES</span></a>
+                <a href="search.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">搜索 <span class="text-ash/60">SEARCH</span></a>
+                <a href="ranking.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">泛用榜 <span class="text-ash/60">RANK</span></a>
+                <a href="aliases.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">别名 <span class="text-ash/60">ALIASES</span></a>
+                <a href="index.html#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">归档 · Archive</a>
+            </div>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILI <span class="text-ash/60">哔哩</span></a>
+        </div>
+    </nav>
+
+    <main class="pt-16 grid-bg">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 py-16 md:py-24">
+            <div class="reveal-up mb-16">
+                <a href="mode-integrated-strategies.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-6">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回集成战略
+                </a>
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Integrated Strategies · Theme Videos</span>
+                <h1 id="themeTitle" class="display text-[clamp(2.5rem,6vw,5.5rem)] text-paper mb-6">主题视频</h1>
+                <p id="themeMeta" class="text-sm text-muted max-w-xl leading-relaxed">按视频发布年份分区展示命中该主题的攻略视频。</p>
+            </div>
+
+            <div id="loadingState" class="empty-state reveal-up">
+                <p class="text-sm text-muted">正在加载主题视频数据…</p>
+                <p class="mono text-[10px] text-muted tracking-widest mt-2">LOADING ARCHIVE</p>
+            </div>
+            <div id="errorState" class="empty-state reveal-up hidden">
+                <p class="text-sm text-muted mb-4">数据加载失败</p>
+                <button onclick="location.reload()" class="mono text-xs text-muted hover:text-paper transition-colors border border-line hover:border-paper px-6 py-2 inline-block">重新加载</button>
+            </div>
+            <div id="emptyState" class="empty-state reveal-up hidden">
+                <p class="text-sm text-muted mb-2">该主题暂无匹配视频</p>
+                <p class="mono text-[10px] text-muted tracking-widest">TRY ANOTHER THEME</p>
+            </div>
+            <div id="sections" class="space-y-16"></div>
+        </div>
+    </main>
+
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="toolbar">
+            <span class="toolbar-label">社区常用工具</span>
+            <a href="https://prts.wiki/w/公开招募" target="_blank" rel="noopener" class="toolbar-link">公招计算</a>
+            <a href="https://prts.wiki/" target="_blank" rel="noopener" class="toolbar-link">PRTS WIKI</a>
+            <a href="https://penguin-stats.io/" target="_blank" rel="noopener" class="toolbar-link">企鹅物流</a>
+            <a href="https://ark.yituliu.cn/" target="_blank" rel="noopener" class="toolbar-link">一图流</a>
+            <a href="https://tomimi.dev/zh" target="_blank" rel="noopener" class="toolbar-link">图米米</a>
+        </div>
+        <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4"><img src="images/logo.png" alt="LOWCOST 低配挂机研讨会" class="w-8 h-8 rounded-full object-cover" /></div>
+            <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+        </div>
+        <style>
+            .toolbar { max-width:1400px; margin:0 auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 24px 24px; }
+            .toolbar-label { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--ash); letter-spacing:.15em; margin-right:6px; }
+            .toolbar-link { font-size:11.5px; color:var(--muted); text-decoration:none; border:1px solid var(--line); padding:4px 10px; transition:all .25s; }
+            .toolbar-link:hover { border-color:var(--acc); color:var(--acc); }
+        </style>
+    </footer>
+
+    <script>
+        const MODES_URLS = [
+            '/modes.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/modes.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/modes.json'
+        ];
+        const DATA_URLS = [
+            '/latest.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
+        ];
+        const NOISE_SEGS = ['水月', '蓝之', '猩红'];
+
+        async function fetchJSON(urls) {
+            for (const url of urls) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return await resp.json();
+                } catch (e) {
+                    console.error('数据源失败 ' + url + ':', e.message);
+                }
+            }
+            return null;
+        }
+
+        function han(s) { return (s || '').replace(/[^\u4e00-\u9fff]/g, ''); }
+
+        function commonLen(a, b) {
+            const A = han(a), B = han(b);
+            const n = A.length, m = B.length;
+            let dp = new Array(m + 1).fill(0), best = 0;
+            for (let i = 1; i <= n; i++) {
+                const next = new Array(m + 1).fill(0);
+                for (let j = 1; j <= m; j++) {
+                    if (A[i - 1] === B[j - 1]) {
+                        next[j] = dp[j - 1] + 1;
+                        if (next[j] > best) best = next[j];
+                    }
+                }
+                dp = next;
+            }
+            return best;
+        }
+
+        function matchThemeVideos(themeName, videos) {
+            const t = han(themeName);
+            const out = [];
+            for (const v of videos) {
+                const sources = [v.title || '', ...(v.pages || []).map(p => p.part || '')];
+                let bestLen = 0;
+                for (const s of sources) bestLen = Math.max(bestLen, commonLen(t, s));
+                if (bestLen < 2) continue;
+                if (bestLen === 2 && NOISE_SEGS.some(ns => t.includes(ns))) continue;
+                out.push({ v, len: bestLen });
+            }
+            out.sort((a, b) => b.len - a.len || ((b.v.stat || {}).play || 0) - ((a.v.stat || {}).play || 0));
+            return out;
+        }
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function fmtCount(n) {
+            n = Number(n) || 0;
+            if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+            if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+            return String(n);
+        }
+
+        function cardHtml({ v, len }) {
+            const bvid = v.bvid || (v.link || '').split('/').pop() || '';
+            const thumb = v.media && v.media.thumbnail ? 'https:' + v.media.thumbnail : '';
+            const st = v.stat || {};
+            const meta = [];
+            if (st.play) meta.push(fmtCount(st.play) + ' 播放');
+            if (v.duration) meta.push(v.duration);
+            const date = (v.pubDate || '').slice(0, 10);
+            return `
+                <a class="video-card group" href="https://www.bilibili.com/video/${encodeURIComponent(bvid)}" target="_blank" rel="noopener">
+                    <div class="thumb">${thumb ? `<img src="${thumb}" alt="${esc(v.title || '')}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" />` : ''}</div>
+                    <div class="p-4 border-b border-line flex-1 min-w-0">
+                        <span class="mono text-[10px] text-muted tracking-widest block mb-1">命中 ${len} 字 · ${date}</span>
+                        <span class="text-[15px] text-paper line-clamp-2 block leading-snug">${esc(v.title || '无标题')}</span>
+                    </div>
+                    <div class="px-4 py-3 flex items-center justify-between gap-2">
+                        <span class="mono text-[10px] text-muted tracking-widest truncate">${meta.join(' · ') || '—'}</span>
+                        <span class="mono text-[10px] acc group-hover:translate-x-1 transition-transform shrink-0">BILI →</span>
+                    </div>
+                </a>`;
+        }
+
+        function showEmpty(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            const e = document.getElementById('emptyState');
+            e.classList.remove('hidden');
+            e.querySelector('p:first-child').textContent = msg || '该主题暂无匹配视频';
+            reveal();
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            const e = document.getElementById('errorState');
+            e.classList.remove('hidden');
+            if (msg) e.querySelector('p').textContent = msg;
+            reveal();
+        }
+
+        function reveal() {
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.reveal-up').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('visible'), 50 + i * 60);
+                });
+            });
+        }
+
+        function render(theme, matches) {
+            document.getElementById('themeTitle').textContent = theme.name;
+            document.title = theme.name + ' — 低配挂机研讨会';
+            document.getElementById('themeMeta').textContent =
+                (theme.year ? theme.year + ' · ' : '') + '命中 ' + matches.length + ' 个视频，按发布年份分区';
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            const wrap = document.getElementById('sections');
+            if (!matches.length) { showEmpty('该主题暂无匹配视频'); return; }
+
+            const byYear = new Map();
+            for (const m of matches) {
+                const y = (m.v.pubDate || '').slice(0, 4) || '未知';
+                if (!byYear.has(y)) byYear.set(y, []);
+                byYear.get(y).push(m);
+            }
+            const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
+
+            wrap.innerHTML = years.map((y, yi) => `
+                <section class="reveal-up" style="transition-delay:${yi * 0.06}s">
+                    <div class="mode-section-title">
+                        <span class="display text-2xl md:text-3xl">${y}</span>
+                        <span class="text-xs text-muted mono tracking-widest">${byYear.get(y).length} 个视频</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        ${byYear.get(y).map(cardHtml).join('')}
+                    </div>
+                </section>`).join('');
+            reveal();
+        }
+
+        (async function init() {
+            const themeName = new URLSearchParams(location.search).get('t');
+            if (!themeName) { showError('缺少主题参数 t，请从集成战略页面进入'); return; }
+            const modeData = await fetchJSON(MODES_URLS);
+            if (!modeData || !modeData.modes) { showError('数据加载失败'); return; }
+            const mode = modeData.modes.find(m => m.key === 'integrated-strategies');
+            const themes = (mode && mode.groups ? mode.groups.flatMap(g => g.items || []) : []);
+            const theme = themes.find(it => it.name === themeName) || themes.find(it => han(it.name) === han(themeName));
+            if (!theme) { showEmpty('未找到该主题：' + themeName); return; }
+            const videoData = await fetchJSON(DATA_URLS);
+            if (!videoData || !Array.isArray(videoData.data)) { showError('数据加载失败'); return; }
+            render(theme, matchThemeVideos(theme.name, videoData.data));
+        })();
+
+        const dot = document.getElementById('cursorDot');
+        const ring = document.getElementById('cursorRing');
+        let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            dot.style.left = mouseX - 4 + 'px'; dot.style.top = mouseY - 4 + 'px';
+        });
+        function animateRing() {
+            ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+            ring.style.left = ringX - 20 + 'px'; ring.style.top = ringY - 20 + 'px';
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+    </script>
+</body>
+</html>
