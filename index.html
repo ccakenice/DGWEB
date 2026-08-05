@@ -149,7 +149,8 @@
                 <span class="rule-v h-4"></span>
                 <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
             </a>
-            <div class="hidden md:flex items-center gap-10 nav-mid">
+            <button id="navToggle" class="nav-toggle md:hidden" aria-label="菜单" aria-expanded="false"><span></span><span></span><span></span></button>
+                <div class="hidden md:flex items-center gap-10 nav-mid">
                 <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">模式 <span class="text-ash/60">MODES</span></a>
                 <a href="search.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">搜索 <span class="text-ash/60">SEARCH</span></a>
                 <a href="ranking.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">核心使用率 <span class="text-ash/60">RANK</span></a>
@@ -159,7 +160,15 @@
             </div>
             <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="bili-btn mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line px-4 py-2">BILI <span class="text-ash/60">哔哩</span></a>
         </div>
-    </nav>
+    <div id="mobileMenu" class="mobile-menu hidden md:hidden fixed inset-x-0 top-16 bg-ink/95 backdrop-blur-md border-b border-line px-6 py-2">
+<a href="modes.html" class="mono">模式 MODES<span class="text-ash/60">→</span></a>
+<a href="search.html" class="mono">搜索 SEARCH<span class="text-ash/60">→</span></a>
+<a href="ranking.html" class="mono">核心使用率 RANK<span class="text-ash/60">→</span></a>
+<a href="aliases.html" class="mono">别名 ALIASES<span class="text-ash/60">→</span></a>
+<a href="#archive" class="mono">投稿 ARCHIVE<span class="text-ash/60">→</span></a>
+<a href="#about" class="mono">关于 ABOUT<span class="text-ash/60">→</span></a>
+            </div>
+        </nav>
 
     <section id="hero" class="relative min-h-screen flex flex-col justify-end pb-20 md:pb-32 px-6 md:px-10 pt-32 grid-bg">
         <div class="term-bar mono" aria-hidden="true"><span class="term-dot"></span>SYS.LC-01 // TACTICAL ARCHIVE&nbsp;&nbsp;▍&nbsp;&nbsp;STATUS:&nbsp;<span class="acc">ONLINE</span></div>
@@ -613,6 +622,39 @@
         });
 
         loadLatest(true);
+    </script>
+
+    <style>
+        .nav-toggle { display:flex; flex-direction:column; gap:5px; padding:8px 4px; background:none; border:none; cursor:pointer; }
+        @media (min-width:768px) { .nav-toggle { display:none !important; } }
+        .nav-toggle span { display:block; width:20px; height:2px; background:var(--muted); transition:transform .3s, opacity .3s; }
+        .nav-toggle:hover span { background:var(--paper); }
+        .nav-toggle.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+        .nav-toggle.open span:nth-child(2) { opacity:0; }
+        .nav-toggle.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+        #mobileMenu { z-index:40; }
+        #mobileMenu a { display:flex; align-items:center; justify-content:space-between; padding:14px 0; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid rgba(255,255,255,.06); transition:color .3s; }
+        #mobileMenu a:hover, #mobileMenu a:active { color:var(--paper); }
+        #mobileMenu a.acc { color:var(--acc); }
+    </style>
+    <script>
+    (function () {
+        var btn = document.getElementById('navToggle');
+        var menu = document.getElementById('mobileMenu');
+        if (!btn || !menu) return;
+        btn.addEventListener('click', function () {
+            var open = menu.classList.toggle('hidden') === false;
+            btn.classList.toggle('open', open);
+            btn.setAttribute('aria-expanded', String(open));
+        });
+        menu.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () {
+                menu.classList.add('hidden');
+                btn.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            });
+        });
+    })();
     </script>
 </body>
 </html>
