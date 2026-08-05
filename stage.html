@@ -362,7 +362,7 @@
 
             function paint() {
                 var light = root.classList.contains('light');
-                btn.innerHTML = light ? SUN : MOON;
+                btn.innerHTML = light ? MOON : SUN;
                 btn.setAttribute('aria-label', light ? '切换到暗夜' : '切换到白昼');
                 btn.setAttribute('aria-pressed', light ? 'true' : 'false');
             }
