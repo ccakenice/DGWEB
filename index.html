@@ -330,6 +330,8 @@
         }
 
         let isStale = false;
+        let statsReady = false;
+        let heroRevealed = false;
 
         async function fetchBilibiliLatest() {
             for (const url of DATA_URLS) {
@@ -361,6 +363,8 @@
                 const el = document.getElementById(id);
                 if (el) el.dataset.count = String(val);
             }
+            statsReady = true;
+            if (heroRevealed) animateCounters();
         }
 
         function renderLatest(items) {
@@ -563,7 +567,8 @@
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
                     if (entry.target.querySelector('.stat-big[data-count]')) {
-                        animateCounters();
+                        heroRevealed = true;
+                        if (statsReady) animateCounters();
                     }
                 }
             });
