@@ -153,7 +153,8 @@
         }
 
         function matchCode(part) {
-            const m = part.trim().toUpperCase().match(/^([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?|[A-Za-z]{1,4}|\d{1,2}-\d{1,2}[A-Za-z]?)/);
+            let m = part.trim().toUpperCase().match(/^([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?|[A-Za-z]{1,4}|\d{1,2}-\d{1,2}[A-Za-z]?)/);
+            if (!m) m = part.trim().toUpperCase().match(/[\(（]\s*([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?)[^\)）]*[\)）]/);
             return m ? normalizeCode(m[1]) : '';
         }
 
