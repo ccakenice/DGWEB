@@ -238,23 +238,6 @@
                 }
                 return s.size;
             };
-            const inv = new Map();
-            for (const v of items) {
-                const codes = new Set();
-                for (const s of [v.title || '', ...(v.pages || []).map(p => p.part || '')]) {
-                    const c = extractCode(s);
-                    if (c) codes.add(c);
-                }
-                for (const c of codes) { if (!inv.has(c)) inv.set(c, new Set()); inv.get(c).add(v); }
-            }
-            const countOf = (it) => {
-                const s = new Set();
-                for (const st of it.stages || []) {
-                    const c = normCode(st.code);
-                    if (inv.has(c)) for (const vid of inv.get(c)) s.add(vid);
-                }
-                return s.size;
-            };
             let html = '';
             mode.groups.forEach((g, gi) => {
                 html += `
