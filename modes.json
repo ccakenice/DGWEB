@@ -85,6 +85,42 @@
                 {
                   "code": "TD-8",
                   "solutions": 5
+                },
+                {
+                  "code": "TD-EX-1",
+                  "solutions": 3
+                },
+                {
+                  "code": "TD-EX-2",
+                  "solutions": 3
+                },
+                {
+                  "code": "TD-EX-3",
+                  "solutions": 2
+                },
+                {
+                  "code": "TD-EX-4",
+                  "solutions": 5
+                },
+                {
+                  "code": "TD-EX-5",
+                  "solutions": 4
+                },
+                {
+                  "code": "TD-EX-6",
+                  "solutions": 3
+                },
+                {
+                  "code": "TD-EX-7",
+                  "solutions": 5
+                },
+                {
+                  "code": "TD-EX-8",
+                  "solutions": 2
+                },
+                {
+                  "code": "TD-S-1",
+                  "solutions": 4
                 }
               ]
             },
