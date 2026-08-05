@@ -56,6 +56,9 @@
         .stage-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:0.05em; padding:6px 10px; transition:all 0.3s; }
         .video-entry { display:inline-flex; align-items:center; gap:4px; margin-top:10px; font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.05em; color:var(--acc); text-decoration:none; transition:all .25s; }
         .video-entry:hover { color:var(--paper); text-decoration:underline; }
+        .stages-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.05em; padding:5px 10px; background:transparent; cursor:crosshair; transition:all .25s; }
+        .stages-btn:hover { border-color:var(--paper); color:var(--paper); }
+        .stages-btn.open { border-color:var(--acc); color:var(--acc); }
         .stage-chip:hover { border-color:var(--paper); color:var(--paper); background:rgba(255,255,255,0.05); }
         .stage-chip .sol { color:var(--ash); }
         .stage-chip:hover .sol { color:var(--ink); }
@@ -224,14 +227,19 @@
                         const img = it.img ? `<div class="thumb" style="aspect-ratio:${ratio}" data-fit><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" onload="const p=this.parentElement;if(this.naturalWidth&&this.naturalHeight){p.style.aspectRatio=(this.naturalWidth/this.naturalHeight).toFixed(3)+' / 1'}" /></div>` : '';
                         const stageCount = (it.stages || []).length;
                         const vcount = countOf(it);
-                        const entry = vcount > 0 ? `<a class="video-entry" href="theme-videos.html?m=${MODE_KEY}&i=${encodeURIComponent(it.name)}">▸ 相关视频 ${vcount} 个</a>` : '';
+                        const videoLink = `theme-videos.html?m=${MODE_KEY}&i=${encodeURIComponent(it.name)}`;
+                        const entry = vcount > 0 ? `<a class="video-entry" href="${videoLink}">▸ 相关视频 ${vcount} 个</a>` : '';
+                        const stageBtn = stageCount > 0 ? `<button class="stages-btn" type="button">关卡列表 ▾</button>` : '';
                         html += `
-                            <div class="act-card reveal-up">
+                            <div class="act-card reveal-up" data-video-link="${videoLink}">
                                 ${img}
                                 <div class="p-4 border-b border-line">
                                     <span class="zone-code block mb-1">${stageCount} 个关卡</span>
                                     <span class="zone-name">${it.name}</span>
-                                    ${entry}
+                                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                                        ${entry}
+                                        ${stageBtn}
+                                    </div>
                                 </div>
                                 <div class="panel" data-panel="${gi}-${ii}">
                                     <div class="p-4 flex flex-wrap gap-2">${(it.stages || []).map(s => `
@@ -261,8 +269,20 @@
             document.querySelectorAll('.act-card').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (e.target.closest('a')) return;
+                    if (e.target.closest('.stages-btn')) return;
+                    const link = card.dataset.videoLink;
+                    if (link) { window.location.href = link; return; }
                     const panel = card.querySelector('.panel');
                     panel.classList.toggle('open');
+                });
+            });
+            // 关卡列表按钮：展开/收起面板
+            document.querySelectorAll('.stages-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const p = btn.closest('.act-card').querySelector('.panel');
+                    p.classList.toggle('open');
+                    btn.classList.toggle('open');
                 });
             });
             requestAnimationFrame(() => {
