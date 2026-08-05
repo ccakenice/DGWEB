@@ -59,6 +59,11 @@
         .stages-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.05em; padding:5px 10px; background:transparent; cursor:crosshair; transition:all .25s; }
         .stages-btn:hover { border-color:var(--paper); color:var(--paper); }
         .stages-btn.open { border-color:var(--acc); color:var(--acc); }
+        .video-entry { display:inline-flex; align-items:center; gap:4px; margin-top:10px; font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.05em; color:var(--acc); text-decoration:none; transition:all .25s; }
+        .video-entry:hover { color:var(--paper); text-decoration:underline; }
+        .stages-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.05em; padding:5px 10px; background:transparent; cursor:crosshair; transition:all .25s; }
+        .stages-btn:hover { border-color:var(--paper); color:var(--paper); }
+        .stages-btn.open { border-color:var(--acc); color:var(--acc); }
         .stage-chip:hover { border-color:var(--paper); color:var(--paper); background:rgba(255,255,255,0.05); }
         .stage-chip .sol { color:var(--ash); }
         .stage-chip:hover .sol { color:var(--ink); }
@@ -188,11 +193,51 @@
             return m ? normCode(m[1]) : '';
         }
 
+                function normalizeCode(c) {
+            let s = String(c || '').toUpperCase();
+            let m;
+            m = s.match(/^([A-Z]{1,4})-?(EX)-?(\d+[A-Z]?)$/);
+            if (m) return m[1] + '-EX-' + m[3];
+            m = s.match(/^([A-Z]{1,4})-?(MO)-?(\d+[A-Z]?)$/);
+            if (m) return m[1] + '-MO-' + m[3];
+            m = s.match(/^([A-Z]{1,4})-S(\d+[A-Z]?)$/);
+            if (m) return m[1] + '-S-' + m[2];
+            return s;
+        }
+
+        function normCode(c) {
+            return normalizeCode(c).replace(/^([A-Z]+)-?0+(\d)/, '$1-$2');
+        }
+
+        function extractCode(text) {
+            const t = (text || '').trim().toUpperCase();
+            let m = t.match(/^([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?|[A-Za-z]{1,4}|\d{1,2}-\d{1,2}[A-Za-z]?)/);
+            if (!m) m = t.match(/[\(（]\s*([A-Za-z]{1,4}-?(?:EX|S|MO)?-?\d+[A-Za-z]?)[^\)）]*[\)）]/);
+            return m ? normCode(m[1]) : '';
+        }
+
                 function renderMode(data, items) {
             const wrap = document.getElementById('modeWrap');
             const mode = data.modes.find(m => m.key === MODE_KEY);
             if (!mode) { wrap.innerHTML = '<p class="text-sm text-muted">数据加载失败</p>'; return; }
             const hasStages = mode.groups.some(g => g.items.some(it => it.stages && it.stages.length > 0));
+            const inv = new Map();
+            for (const v of items) {
+                const codes = new Set();
+                for (const s of [v.title || '', ...(v.pages || []).map(p => p.part || '')]) {
+                    const c = extractCode(s);
+                    if (c) codes.add(c);
+                }
+                for (const c of codes) { if (!inv.has(c)) inv.set(c, new Set()); inv.get(c).add(v); }
+            }
+            const countOf = (it) => {
+                const s = new Set();
+                for (const st of it.stages || []) {
+                    const c = normCode(st.code);
+                    if (inv.has(c)) for (const vid of inv.get(c)) s.add(vid);
+                }
+                return s.size;
+            };
             const inv = new Map();
             for (const v of items) {
                 const codes = new Set();
@@ -234,7 +279,7 @@
                             <div class="act-card reveal-up" data-video-link="${videoLink}">
                                 ${img}
                                 <div class="p-4 border-b border-line">
-                                    <span class="zone-code block mb-1">${stageCount} 个关卡</span>
+                                    <span class="zone-code block mb-1">${stageCount > 0 ? stageCount + ' 个关卡' : '专题活动'}</span>
                                     <span class="zone-name">${it.name}</span>
                                     <div class="flex flex-wrap items-center gap-2 mt-2">
                                         ${entry}
