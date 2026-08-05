@@ -202,7 +202,13 @@
             const rest = ORDER.filter(k => k !== 'current-event').map(k => byKey[k]).filter(Boolean);
             grid.innerHTML = rest.map((m, i) => {
                 const totalStages = m.groups.reduce((s, g) => s + g.items.reduce((x, it) => x + (it.stages ? it.stages.length : 0), 0), 0);
-                const thumb = THUMBS[m.key];
+                let thumb = THUMBS[m.key];
+                // 集成战略：封面自动同步为最新主题（year 最大）的封面
+                if (m.key === 'integrated-strategies') {
+                    const themeItems = (m.groups[0] && m.groups[0].items) || [];
+                    const latest = themeItems.slice().sort((a, b) => (b.year || 0) - (a.year || 0))[0];
+                    if (latest && latest.img) thumb = latest.img;
+                }
                 const c = CROP[m.key];
                 const ratio = c ? (c.ratio + ' / 1') : (thumb ? (thumb.includes('章节横幅') ? '3.12 / 1' : (thumb.includes('章节名称') ? '1 / 1' : '2.05 / 1')) : '2.05 / 1');
                 const fit = c ? cropStyle(c) : (thumb && thumb.includes('章节横幅') ? 'object-fit:contain;width:100%;height:100%' : '');
