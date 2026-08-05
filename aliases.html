@@ -60,6 +60,49 @@
         .empty-state { border:1px dashed #333; padding:60px 20px; text-align:center; }
                 </style></head>
 
+    <style id="theme-css">
+        /* ===== V0.17 白昼模式 ===== */
+        html.light { --bg:#f4f4f2; --fg:#141414; --muted:#787878; --line:#e2e2df; --hover-bg:#141414; --hover-fg:#f4f4f2; --paper:#141414; --charcoal:#c6c6c3; --smoke:#6a6a68; --graphite:#ececea; --fog:#efefed; --ash:#8a8a88; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        html.light body { background:var(--bg); color:var(--fg); }
+        html.light body::before { filter:invert(1); opacity:.5; }
+        html.light *::-webkit-scrollbar-track { background:#ececea; }
+        html.light *::-webkit-scrollbar-thumb { background:#c4c4c1; }
+        html.light * { scrollbar-color:#c4c4c1 #ececea; }
+        html.light #loader { background:#f4f4f2; }
+        html.light .grid-bg { background-image:linear-gradient(rgba(0,0,0,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.045) 1px, transparent 1px); }
+        html.light .hero-mark { -webkit-text-stroke-color:rgba(0,0,0,.09); }
+        html.light .cursor-ring { border-color:rgba(0,0,0,.28); }
+        html.light .stat-cell { background:linear-gradient(180deg, rgba(0,0,0,.028), transparent); }
+        html.light .latest-card:hover { box-shadow:0 12px 36px rgba(0,0,0,.16), 0 0 0 1px rgba(224,143,0,.28); }
+        html.light .bg-ink, html.light .bg-ink\/80, html.light .bg-ink\/90, html.light .bg-ink\/95 { background-color:#f4f4f2; }
+        html.light .text-paper { color:#141414; }
+        html.light .border-paper, html.light .border-paper\/60 { border-color:#141414; }
+        html.light .text-ink { color:#f4f4f2; }
+        html.light .text-ash\/60 { color:rgba(20,20,20,.58); }
+        html.light .text-ash\/50 { color:rgba(20,20,20,.5); }
+        html.light .text-smoke { color:#6a6a68; }
+        html.light .border-line, html.light .border-line\/50 { border-color:#e2e2df; }
+        html.light .stroke-line { stroke:#e2e2df; }
+        html.light .divide-line > :not([hidden]) ~ :not([hidden]) { border-color:#e2e2df; }
+        html.light .bg-line, html.light .bg-line\/30, html.light .bg-line\/50 { background-color:#e2e2df; }
+        html.light .bg-graphite { background-color:#ececea; }
+        html.light .bg-charcoal, html.light .bg-charcoal\/50 { background-color:#d8d8d5; }
+        html.light .bg-fog { background-color:#efefed; }
+        html.light .bg-paper { background-color:#141414; }
+        html.light .bg-black, html.light .bg-black\/70, html.light .bg-black\/80 { background-color:rgba(244,244,242,.92); }
+        .theme-overlay { position:fixed; border-radius:50%; transform:scale(0); pointer-events:none; z-index:9999; }
+        .theme-overlay.run { animation:themeWipe .55s cubic-bezier(.4,0,.2,1) forwards; }
+        @keyframes themeWipe { to { transform:scale(1); } }
+        #themeToggle { position:fixed; right:20px; bottom:96px; width:44px; height:44px; z-index:60; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--line); background:var(--fg); color:var(--bg); cursor:pointer; transition:transform .3s ease, background .3s ease, color .3s ease; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+        #themeToggle:hover { transform:rotate(180deg) scale(1.06); }
+        @media (max-width:768px) { #themeToggle { right:14px; bottom:80px; width:40px; height:40px; } }
+    </style>
+    <script>
+        (function () {
+            try { if (localStorage.getItem('dgweb_theme') === 'light') document.documentElement.classList.add('light'); } catch (e) {}
+        })();
+    </script>
+
 <body>
 <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
         <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
@@ -207,4 +250,54 @@ render('');
     })();
     </script>
 </body>
+
+    <button id="themeToggle" aria-label="切换到白昼" aria-pressed="false" title="白昼模式"></button>
+    <script>
+        (function () {
+            var KEY = 'dgweb_theme';
+            var SUN = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3L17 7M7 17l-1.7 1.7"/></svg>';
+            var MOON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a7 7 0 0 0 10.7 10.7z"/></svg>';
+            var root = document.documentElement;
+            var btn = document.getElementById('themeToggle');
+
+            function paint() {
+                var light = root.classList.contains('light');
+                btn.innerHTML = light ? SUN : MOON;
+                btn.setAttribute('aria-label', light ? '切换到暗夜' : '切换到白昼');
+                btn.setAttribute('aria-pressed', light ? 'true' : 'false');
+            }
+
+            function setTheme(t) {
+                if (t === 'light') root.classList.add('light'); else root.classList.remove('light');
+                try { localStorage.setItem(KEY, t); } catch (e) {}
+                paint();
+            }
+
+            paint();
+
+            btn.addEventListener('click', function (e) {
+                var light = root.classList.contains('light');
+                var target = light ? 'dark' : 'light';
+                var cx = e.clientX, cy = e.clientY;
+                var size = Math.max(window.innerWidth, window.innerHeight) * 2.4;
+                var overlay = document.createElement('div');
+                overlay.className = 'theme-overlay';
+                overlay.style.width = overlay.style.height = size + 'px';
+                overlay.style.left = (cx - size / 2) + 'px';
+                overlay.style.top = (cy - size / 2) + 'px';
+                overlay.style.background = (target === 'light') ? '#f4f4f2' : '#000000';
+                document.body.appendChild(overlay);
+                var done = false;
+                function finish() {
+                    if (done) return;
+                    done = true;
+                    setTheme(target);
+                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                }
+                overlay.addEventListener('animationend', finish, { once: true });
+                setTimeout(finish, 900);
+                requestAnimationFrame(function () { overlay.classList.add('run'); });
+            });
+        })();
+    </script>
 </html>
