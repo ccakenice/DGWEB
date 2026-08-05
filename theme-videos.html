@@ -296,6 +296,7 @@
             'event-stages': ['mode-event-stages.html', '返回活动关卡', 'Event Stages · Activity Videos'],
             'main-stages': ['mode-main-stages.html', '返回主线', 'Main Stages · Chapter Videos'],
             'story-set': ['mode-story-set.html', '返回故事集', 'Story Set · Story Videos'],
+            'other-events': ['mode-other-events.html', '返回其他活动', 'Other Events · Special Activities'],
         };
 
         function render(theme, matches, kind, modeKey) {
@@ -349,11 +350,11 @@
             if (!item) { showEmpty('未找到该主题：' + target); return; }
             const videoData = await fetchJSON(DATA_URLS);
             if (!videoData || !Array.isArray(videoData.data)) { showError('数据加载失败'); return; }
-            const kind = themeName ? 'theme' : 'stage';
-            const matches = kind === 'theme'
-                ? matchThemeVideos(item.name, videoData.data)
-                : matchStageVideos(item, videoData.data);
-            render(item, matches, kind, modeKey);
+            const useStage = !themeName && item.stages && item.stages.length > 0;
+            const matches = useStage
+                ? matchStageVideos(item, videoData.data)
+                : matchThemeVideos(item.name, videoData.data);
+            render(item, matches, useStage ? 'stage' : 'theme', modeKey);
         })();
 
         const dot = document.getElementById('cursorDot');
