@@ -104,6 +104,7 @@
         .stat-cell .stat-idx { font-family:'Space Grotesk',monospace; font-size:.62rem; color:var(--acc); letter-spacing:.25em; margin-bottom:.45rem; }
         .stat-cell .stat-big { font-size:clamp(2.1rem,4.5vw,3.6rem); }
         .stat-cell .stat-lbl { font-family:'Space Grotesk',monospace; font-size:.62rem; color:var(--muted); letter-spacing:.22em; margin-top:.45rem; }
+        .stat-cell .stat-lbl .cn { letter-spacing:.08em; }
         .nav-mid a { position:relative; }
         .nav-mid a::after { content:''; position:absolute; left:0; bottom:-6px; width:0; height:1px; background:var(--acc); transition:width .3s ease; }
         .nav-mid a:hover::after { width:100%; }
@@ -186,9 +187,9 @@
             <div class="reveal-up flex flex-col md:flex-row md:items-end justify-between gap-10" style="transition-delay:0.7s;">
                 <p class="text-sm text-muted max-w-md leading-relaxed">愿为世界添砖加瓦。旨在制作出更多简单好抄的攻略，<br />让每一位博士都能轻松通关。</p>
                 <div class="flex gap-3 md:gap-4 flex-wrap">
-                    <div class="stat-cell"><div class="stat-idx">01</div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="stat-lbl">FOLLOWERS</div></div>
-                    <div class="stat-cell"><div class="stat-idx">02</div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="stat-lbl">VIDEOS</div></div>
-                    <div class="stat-cell hidden sm:block"><div class="stat-idx">03</div><div class="stat-big" id="statLikes" data-count="46">0</div><div class="stat-lbl">LIKES</div></div>
+                    <div class="stat-cell"><div class="stat-idx">01</div><div class="stat-big" id="statFollowers" data-count="191000">0</div><div class="stat-lbl"><span class="cn">关注</span> FOLLOWERS</div></div>
+                    <div class="stat-cell"><div class="stat-idx">02</div><div class="stat-big" id="statVideos" data-count="244">0</div><div class="stat-lbl"><span class="cn">视频</span> VIDEOS</div></div>
+                    <div class="stat-cell hidden sm:block"><div class="stat-idx">03</div><div class="stat-big" id="statLikes" data-count="46">0</div><div class="stat-lbl"><span class="cn">点赞</span> LIKES</div></div>
                 </div>
             </div>
         </div>
