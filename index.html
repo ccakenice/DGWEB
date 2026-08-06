@@ -113,6 +113,8 @@
                        linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,.6) 100%); }
         .pv-frame { position:absolute; inset:-5%; }
         .pv-frame iframe, .pv-frame video { display:block; width:100%; height:100%; border:0; pointer-events:none; object-fit:cover; background:#000; }
+        .pv-frame video { opacity:0; transition:opacity .8s ease; }
+        .pv-frame video.pv-video-on { opacity:1; }
         @media (max-width:768px) {
             .pv-stage::after { background:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.45) 40%, rgba(0,0,0,.82) 100%); }
             .pv-frame { inset:-10%; }
@@ -216,7 +218,7 @@
         <div class="hero-mark" aria-hidden="true">LOWCOST</div>
         <div id="pvStage" class="pv-stage" aria-hidden="true">
             <div class="pv-frame">
-                <video id="pvVideo" muted playsinline preload="auto" style="display:none;"></video>
+                <video id="pvVideo" muted playsinline preload="auto"></video>
                 <iframe id="pvFrame" title="明日方舟官方先导PV" allow="autoplay" scrolling="no" frameborder="0"></iframe>
             </div>
         </div>
@@ -388,6 +390,7 @@
         let pv = null;
         let pvStart = 0;
         let pvTimer = null;
+        let pvReadyTimer = null;
         let pvMuted = true;
         let pvInit = false;
 
@@ -421,12 +424,37 @@
             }
         }
 
+        function pvVideoShow() {
+            const v = document.getElementById('pvVideo');
+            if (!v || v.dataset.playing !== '1') return;
+            if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
+            v.classList.add('pv-video-on');
+            v.play().catch(() => {});
+        }
+
+        function pvVideoCheck() {
+            const v = document.getElementById('pvVideo');
+            if (!v || v.dataset.playing !== '1') return;
+            if (v.classList.contains('pv-video-on')) return;
+            if (v.duration && v.buffered && v.buffered.length > 0 &&
+                v.buffered.end(v.buffered.length - 1) >= v.duration - 1) {
+                pvVideoShow();
+            }
+        }
+
+        function pvVideoFallback() {
+            const v = document.getElementById('pvVideo');
+            if (!v || v.dataset.playing !== '1') return;
+            v.classList.add('pv-video-on');
+            v.play().catch(() => {});
+        }
+
         function pvVideoError() {
             const v = document.getElementById('pvVideo');
             const f = document.getElementById('pvFrame');
             if (!v) return;
             v.dataset.playing = '0';
-            v.style.display = 'none';
+            v.classList.remove('pv-video-on');
             v.removeAttribute('src');
             if (pv) pv.stream = null;
             if (f) f.style.display = 'block';
@@ -444,18 +472,21 @@
                 if (v.dataset.playing !== '1') {
                     v.dataset.playing = '1';
                     v.muted = mutedState;
+                    v.classList.remove('pv-video-on');
                     v.src = '/pv?url=' + encodeURIComponent(pv.stream.url);
                     v.currentTime = pvStart;
-                    v.style.display = 'block';
                     f.style.display = 'none';
                     f.removeAttribute('src');
-                    v.play().catch(() => {});
+                    if (!mutedState) v.play().catch(() => {});
+                    if (pvReadyTimer) clearTimeout(pvReadyTimer);
+                    pvReadyTimer = setTimeout(pvVideoFallback, 60000);
                 } else {
                     v.muted = mutedState;
                     if (!mutedState) v.play().catch(() => {});
                 }
             } else {
-                if (v) { v.dataset.playing = '0'; v.style.display = 'none'; v.removeAttribute('src'); }
+                if (v) { v.dataset.playing = '0'; v.classList.remove('pv-video-on'); v.removeAttribute('src'); }
+                if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
                 f.style.display = 'block';
                 f.src = pvBuildSrc(pvStart, mutedState);
                 pvTimer = setTimeout(() => {
@@ -497,6 +528,8 @@
             if (pvVideo) {
                 pvVideo.addEventListener('timeupdate', pvVideoTick);
                 pvVideo.addEventListener('error', pvVideoError);
+                pvVideo.addEventListener('canplaythrough', pvVideoShow);
+                pvVideo.addEventListener('progress', pvVideoCheck);
             }
             document.body.addEventListener('pointerdown', pvUnlock, { once: false });
             document.body.addEventListener('keydown', pvUnlock, { once: false });
