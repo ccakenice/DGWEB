@@ -6,7 +6,7 @@
 - **GitHub 仓库**: `ccakenice/DGWEB`（CF Pages 自动部署，改完上传即上线）
 - **技术栈**: 纯静态 HTML/CSS/JS（原生 ES6 + Tailwind CDN），无构建工具
 - **数据来源**: B 站视频数据（bili-sync 同步）、PRTS Wiki、B 站 Wiki (biligame)
-- **版本管理**: V0.10~V0.20 已定格，当前版本 **V0.21**（草稿，功能已完成，待用户确认后定格）
+- **版本管理**: V0.10~V0.21 已定格，当前版本 **V0.22**（草稿，功能开发中）
 - **本地预览**: `serve_preview.py`（端口 8844，服务 Default Project 目录）
 
 ## 核心页面结构
@@ -78,10 +78,19 @@
 - **跨域限制已知**：B 站 iframe 禁止 postMessage 实时进度回传（已实测不可行），因此「续播」=记住上次播放的 P，非秒级进度
 - **播放器优化已验证**：分P切换 / URL同步 / autoplay 均已生效
 
+### 9. 主页 hero 官方先导PV 副屏 (index.html) 【2026-08-06 V0.22】
+- **数据抓取** `fetch_ark_pv.py`：WBI 签名 + BILI_SESSDATA 搜索 UP 主 UID 161775300（明日方舟官方）带「先导PV」关键词的最新视频 → `ark_pv.json`（含 bvid/title/duration/pages/cid），本地运行上传 bili-sync + DGWEB 两仓库，Actions 中只写本地由 workflow commit
+- **hero iframe 播放器**：`https://player.bilibili.com/player.html?bvid=..&page=1&danmaku=0&high_quality=1&autoplay=1&muted=1&t=随机`
+- **随机起点**：每次打开在 0:07~2:30（t=7~150 秒）随机开始；按视频时长 `setTimeout` 重载模拟循环（每次重载重新随机 t）
+- **静音策略**：默认 `muted=1` 自动静音播放（浏览器策略），监听首次 `pointerdown/keydown/touchstart` 后重建 iframe 去掉 muted（自动开声）；静音按钮 `#pvMute` 手动切换（重建 iframe）
+- **边缘艺术效果**：`.pv-frame` 用 `mask-image: radial-gradient` 羽化边缘（无方形边框）+ drop-shadow 发光；iframe 高度放大 + 上移裁掉 B 站自有控制条/标题（无进度条等交互控件，pointer-events:none）
+- **数据回退**：`/ark_pv.json` > jsdelivr(bili-sync) > GitHub raw，与 latest.json 加载逻辑一致
+
 ## 数据源与素材库
 | 文件 | 说明 |
 |------|------|
 | latest.json | B 站视频数据（512 视频 / 1575 分P），bili-sync 仓库自动同步 |
+| ark_pv.json | 明日方舟官方最新「先导PV」视频（fetch_ark_pv.py 每日抓取） |
 | modes.json | 12 模式完整数据 |
 | aliases_reviewed.json | 干员别名（用户审查） |
 | prts_rarity.json | 干员星级 |
@@ -95,14 +104,15 @@
 | V0.13 ~ V0.16 | 🔒 定格 | 历史存档 |
 | **V0.17** | 🔒 定格 | 核心使用率/模式/主题/彩蛋/性能优化 |
 | **V0.20** | 🔒 定格 | 备份修复 + 全量 git 同步 + CDN 缓存刷新 |
-| **V0.21** | 🧪 草稿 | 详情页分P/续播 + 搜索高亮 + 干员筛选 + 移动端补强 |
+| **V0.21** | 🔒 定格 | 详情页分P/续播 + 搜索高亮 + 干员筛选 + 移动端补强 |
+| **V0.22** | 🧪 草稿 | 主页 hero 官方先导PV 副屏（随机起点循环播放） |
 
 **同步流程**：
 1. 主目录 (`E:\WebProjects\DGWEB`) 修改
-2. 同步到 `E:\WebProjects\versions\DGWEB_V0.21\`
+2. 同步到 `E:\WebProjects\versions\DGWEB_V0.22\`
 3. 上传 GitHub → CF Pages 自动部署（1~3 分钟）
 4. 线上验证（网络波动时多轮重试）
-5. 更新 `V0.21\版本说明.txt`
+5. 更新 `V0.22\版本说明.txt`
 
 **版本变更历史（自动汇总）**：
 - 管理器「理解AI」每次点击时，自动扫描 versions 下**所有已定格版本**的版本说明.txt，
@@ -121,7 +131,16 @@
 
 ## 当前进度 (2026-08-06)
 
-### 🧪 V0.21（草稿，功能完成待定格）
+### 🧪 V0.22（草稿，开发中）
+- [x] 抓取脚本 fetch_ark_pv.py：明日方舟官方空间「先导PV」最新视频 → ark_pv.json（本地已验证抓到 BV1KN3M6wEm9「直到大地变成一颗酸橙」活动先导PV）
+- [x] 主页 hero 副屏播放器：iframe + t 随机起点(7~150s) + 定时重载循环 + 默认静音自动播
+- [x] 首次交互自动开声（pointerdown/keydown/touchstart 后重建 iframe）
+- [x] 静音按钮手动切换 + 边缘 mask 羽化 + 控制条裁剪（无进度条）
+- [x] daily.yml 增加 fetch_ark_pv.py 步骤（Actions 定时 04:30 抓取）
+- [x] playwright 本地验证：加载/随机t/交互开声/按钮切换全部通过
+- [ ] 同步 V0.22 + 上传 GitHub + 线上验证
+
+### ✅ V0.21（已定格）
 - [x] 视频详情页分 P 播放器优化（p-nav 翻P + iframe src 同步 + URL `?p=N` + autoplay=1）
 - [x] 播放进度本地存储（localStorage 记住上次播放 P，`PLAY_KEY`，再次进入自动续播该 P）
 - [x] 验证 B 站 postMessage 跨域通信：**不可行**，降级为「记住上次播放的 P」
@@ -146,7 +165,7 @@
 - [x] 集成战略主题自动同步脚本 sync_themes_auto.py
 
 ### 待办
-- （无，当前版本功能已完成，待用户确认定格 V0.21）
+- （V0.22 同步上传 + 线上验证后，待用户确认定格）
 
 ## 常见问题与解决方案
 | 问题 | 解决方案 |
@@ -172,13 +191,13 @@
 
 ## 部署流程
 ```
-1. 主目录修改 → 同步到 versions\DGWEB_V0.21\
+1. 主目录修改 → 同步到 versions\DGWEB_V0.22\
 2. python upload_all.py（批量）或 upload_single.py 文件名（单文件）
 3. 等 CF 构建（1~3 分钟），多轮重试验证 https://dgwebq.pages.dev/
 ```
 
 ## 后续 AI 接手指引
-1. 先读 `AI_PROGRESS.md`、`ai_handoff/` 同步副本、`V0.21\版本说明.txt`
+1. 先读 `AI_PROGRESS.md`、`ai_handoff/` 同步副本、`V0.22\版本说明.txt`
 2. 本地预览 `serve_preview.py`（8844，注意服务的是 Default Project 目录，验证前需先复制页面过去）
 3. 改动前遵守项目规范（不扩大范围、先局部后全局）
 4. 改完同步 V0.21 → 上传 → 验证 → 更新文档
