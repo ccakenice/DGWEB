@@ -154,6 +154,8 @@ def fetch_playurl(bvid, cid, quality='112'):
             endpoints.append(('wbi', 'https://api.bilibili.com/x/player/wbi/playurl?' + sign(params, mixin)))
         endpoints.append(('plain', 'https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s'
                           '&fnval=4048&fnver=0&fourk=1&qn=%s' % (bvid, cid, qn)))
+        endpoints.append(('intl', 'https://api.biliintl.com/x/player/playurl?bvid=%s&cid=%s'
+                          '&fnval=4048&fourk=1&qn=%s&s_locale=zh_CN&t_locale=zh_CN' % (bvid, cid, qn)))
         for tag, url in endpoints:
             try:
                 raw = http_get(url, headers)
