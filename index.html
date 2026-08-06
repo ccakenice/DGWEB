@@ -471,6 +471,8 @@
                     v.src = '/pv?url=' + encodeURIComponent(pv.stream.url);
                     f.style.display = 'none';
                     f.removeAttribute('src');
+                    v.muted = mutedState;
+                    v.play().catch(() => {});
                     if (pvReadyTimer) clearTimeout(pvReadyTimer);
                     pvReadyTimer = setTimeout(pvVideoFallback, 60000);
                 } else {
