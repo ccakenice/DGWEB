@@ -400,7 +400,7 @@
         function pvRandomStart() {
             const dur = pvDuration();
             const lo = 7;
-            const hi = Math.max(lo, Math.min(150, dur - 3));
+            const hi = Math.max(lo, Math.min(150, dur - 10));
             return lo + Math.floor(Math.random() * (hi - lo + 1));
         }
 
@@ -422,7 +422,7 @@
             pvTimer = setTimeout(() => {
                 pvStart = pvRandomStart();
                 pvRender(pvMuted);
-            }, Math.max(6000, (pvDuration() - pvStart)) * 1000);
+            }, Math.max(3000, (pvDuration() - pvStart - 6)) * 1000);
         }
 
         function pvUnlock() {
