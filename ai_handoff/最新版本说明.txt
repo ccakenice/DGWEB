@@ -1,0 +1,18 @@
+﻿项目：DGWEB
+版本：V0.20
+日期：2026-08-06
+状态：正式（已定格）
+
+改动说明：
+1. 备份目录（versions）回归修复：V0.17/V0.18/V0.19 三个版本目录此前只生成「版本说明.txt」、缺少项目文件，已从主目录补全为完整项目副本（与当前项目一致）。
+2. 模式数据完整性核对：modes.json 12 模式齐全（集成战略 6 主题 / 保全派驻 1 项 / 生息演算 3 主题等），详情页 MODE_KEY 全匹配，线上渲染 12 卡片无缺失。
+3. 模式入口「消失」问题定位与修复：
+   - 根因一：浏览器 localStorage 缓存 modes.json（fetchJSON，dgdata_ 前缀，TTL 3 小时），刷新不更新
+   - 根因二：jsDelivr CDN 缓存旧版 bili-sync modes.json（9 模式），已通过 purge.jsdelivr.net 刷新为 12 模式
+   - 修复：CDN 缓存刷新 + 提供 localStorage 清理命令
+4. 「理解AI」文档全量更新：AI_PROGRESS.md（进度/版本 V0.20）、AI_DOCS.md（索引）、ai_handoff 三件套（版本变更历史/最新版本说明/项目日志）。
+5. git 全量同步：本地与 GitHub main 历史合并（保留远端提交记录），全站 20 页面 + 图片 + modes.json 纳入版本管理；.gitignore 排除 deploy-config.json（含 token）、__pycache__、本地日志。
+6. 四方一致性确认：本地 E:\WebProjects\DGWEB / versions\DGWEB_V0.20 / GitHub main / 线上 dgwebq.pages.dev 内容一致。
+
+文件清单（约 200 个）：
+index.html, modes.html, ranking.html, aliases.html, search.html, detail.html, stage.html, theme-videos.html, easter-egg.html, easter-storyteller.mp3, 13 个 mode-*.html, modes.json, latest.json, tailwind.css, worker.js, fetch_bili.py, deploy.ps1, sync_themes_auto.py, AI_PROGRESS.md, AI_DOCS.md, 版本说明.txt, images/*（含 images/modes 153 张）, ai_handoff/*, run.bat
