@@ -438,7 +438,9 @@ function buildStats() {
             // 只统计含单核/单挂（含单核挂机、单核半挂机）的攻略关（分P与主标题均查）；剿灭关豁免
             const danheText = part + ' ' + (v.title || '');
             const isMie = isMiePart(part) || isMiePart(v.title || '');
-            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0) continue;
+            // 分P名符合「干员名+N人/单人/双人…」格式（不含高配等排除词）也收录
+            const isNumPeople = /[\u4e00-\u9fff]{1,6}(?:单|双|两|[三四五六七八九十\d]{1,2})人/.test(part);
+            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0 && !isNumPeople) continue;
             // 排除高配/多核/双核方案、剪辑版
             if (danheText.indexOf('高配') >= 0 || danheText.indexOf('多核') >= 0 || danheText.indexOf('双核') >= 0 || danheText.indexOf('剪辑') >= 0) continue;
             // 单P视频：把视频主标题也纳入
