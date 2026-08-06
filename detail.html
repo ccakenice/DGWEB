@@ -279,7 +279,7 @@
             const pagesHtml = pages.length > 1 ? `
                 <div class="reveal-up">
                     <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">分P列表 (${pages.length})${fromMemo ? ` · <span class="acc">已续播上次 P${curPage}</span>` : ''}</span>
-                    <div class="border border-line divide-y divide-line ${needsScroll ? 'overflow-y-auto max-h-[400px]' : ''}">
+                    <div class="border border-line divide-y divide-line ${needsScroll ? 'page-list-scroll' : ''}">
                         ${pages.map((p, i) => `
                             <button data-page="${p.page}" class="page-btn w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors">
                                 <span class="flex items-center gap-3">
@@ -398,6 +398,7 @@
     </script>
 
     <style>
+        .page-list-scroll { overflow-y:auto; max-height:400px; -webkit-overflow-scrolling:touch; }
         .p-nav { font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.1em; color:var(--muted); border:1px solid var(--line); padding:6px 14px; background:none; cursor:pointer; transition:all .3s; flex-shrink:0; }
         .p-nav:hover:not(:disabled) { border-color:var(--acc); color:var(--acc); }
         .p-nav:disabled { opacity:.35; cursor:default; }
