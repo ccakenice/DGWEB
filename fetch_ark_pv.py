@@ -62,12 +62,23 @@ def github_upload(content_bytes, repo=None):
     return r2.status in (200, 201)
 
 def build_cookie_str():
+    """完整指纹 cookie：cookie jar warm-up 首页 + spi buvid3/4 + SESSDATA（复刻 fetch_bili.py 成功策略）"""
     parts = []
-    # buvid
+    cj = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    opener.addheaders = [('User-Agent', UA), ('Accept', 'text/html,application/xhtml+xml')]
+    try:
+        opener.open('https://www.bilibili.com/', timeout=20).read()
+    except Exception:
+        pass
+    extra = '; '.join(f'{c.name}={c.value}' for c in cj)
+    if extra:
+        parts.append(extra)
     try:
         spi = json.loads(http_get('https://api.bilibili.com/x/frontend/finger/spi', {'User-Agent': UA}))
         d = spi.get('data', {})
-        if d.get('b_3'): parts.append(f"buvid3={d['b_3']}; buvid4={d.get('b_4','')}")
+        if d.get('b_3'):
+            parts.append(f"buvid3={d['b_3']}; buvid4={d.get('b_4','')}")
     except Exception:
         pass
     if SESSDATA:
@@ -140,15 +151,15 @@ def fetch_playurl(bvid, cid, quality='112'):
         endpoints = []
         if mixin:
             params = {'bvid': bvid, 'cid': cid, 'fnval': '4048', 'fnver': 0, 'fourk': 1, 'qn': qn}
-            endpoints.append('https://api.bilibili.com/x/player/wbi/playurl?' + sign(params, mixin))
-        endpoints.append('https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s'
-                         '&fnval=4048&fnver=0&fourk=1&qn=%s' % (bvid, cid, qn))
-        for url in endpoints:
+            endpoints.append(('wbi', 'https://api.bilibili.com/x/player/wbi/playurl?' + sign(params, mixin)))
+        endpoints.append(('plain', 'https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s'
+                          '&fnval=4048&fnver=0&fourk=1&qn=%s' % (bvid, cid, qn)))
+        for tag, url in endpoints:
             try:
                 raw = http_get(url, headers)
                 d = json.loads(raw)
                 if d.get('code') != 0:
-                    last = f"code={d.get('code')} {d.get('message','')}"
+                    last = f"[{tag}] code={d.get('code')} {d.get('message','')}"
                     continue
                 data = d.get('data') or {}
                 durls = data.get('durl') or []
@@ -164,7 +175,7 @@ def fetch_playurl(bvid, cid, quality='112'):
                             'url': best.get('baseUrl', ''), 'backup': best.get('backupUrl') or [],
                             'bandwidth': best.get('bandwidth')}
             except Exception as e:
-                last = str(e)
+                last = f"[{tag}] {e}"
         time.sleep(1)
     print('playurl failed:', last)
     return None
