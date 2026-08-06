@@ -423,14 +423,16 @@
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
             if (pvLooping) return;
-            if (v.duration && v.currentTime >= pvDuration() - 5) {
+            if (v.duration && v.currentTime >= pvDuration() - 6) {
                 pvLooping = true;
                 v.classList.add('pv-fade-out');
                 setTimeout(() => {
                     v.currentTime = pvStart;
-                    v.classList.remove('pv-fade-out');
-                    setTimeout(() => { pvLooping = false; }, 1000);
-                }, 900);
+                    setTimeout(() => {
+                        v.classList.remove('pv-fade-out');
+                        setTimeout(() => { pvLooping = false; }, 1000);
+                    }, 2000);
+                }, 850);
             }
         }
 
@@ -504,9 +506,11 @@
                     f.classList.add('pv-fade-out');
                     setTimeout(() => {
                         pvStart = pvRandomStart();
-                        pvRender(pvMuted);
-                        f.classList.remove('pv-fade-out');
-                    }, 900);
+                        setTimeout(() => {
+                            pvRender(pvMuted);
+                            f.classList.remove('pv-fade-out');
+                        }, 2000);
+                    }, 850);
                 }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
             }
         }
