@@ -105,6 +105,20 @@
         .spin { animation:spin 0.8s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .stale-badge { position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.7); border:1px solid var(--line); color:var(--muted); font-size:10px; padding:2px 8px; letter-spacing:0.1em; z-index:2; }
+        /* ===== V0.22 hero 官方先导PV 副屏 ===== */
+        .pv-stage { position:absolute; top:17vh; right:4vw; width:min(430px, 34vw); z-index:5; display:none; filter:drop-shadow(0 22px 60px rgba(0,0,0,.45)); }
+        .pv-stage.ready { display:block; animation:pvFadeIn .9s ease both; }
+        @keyframes pvFadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+        .pv-frame { position:relative; border-radius:22px; overflow:hidden; aspect-ratio:16/9; background:#000;
+            -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%, #000 55%, transparent 99%);
+            mask-image:radial-gradient(ellipse 80% 80% at 50% 50%, #000 55%, transparent 99%); }
+        .pv-frame::after { content:''; position:absolute; inset:0; border-radius:22px; border:1px solid rgba(245,166,35,.14); pointer-events:none; }
+        .pv-frame iframe { display:block; width:100%; height:calc(100% + 88px); margin-top:-34px; border:0; background:#000; pointer-events:none; }
+        .pv-tag { position:absolute; left:16px; top:12px; z-index:6; font-family:'Space Grotesk',monospace; font-size:9px; letter-spacing:.28em; color:rgba(255,255,255,.9); text-shadow:0 1px 8px rgba(0,0,0,.9); pointer-events:none; }
+        .pv-mute { position:absolute; right:10px; bottom:10px; z-index:6; width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.55); color:#fff; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .25s; }
+        .pv-mute:hover { border-color:var(--acc); color:var(--acc); transform:scale(1.06); }
+        .pv-mute svg { width:17px; height:17px; }
+        @media (max-width:768px) { .pv-stage { display:none !important; } }
     
 
 
@@ -196,6 +210,13 @@
         <div class="term-bar mono" aria-hidden="true"><span class="term-dot"></span>SYS.LC-01 // TACTICAL ARCHIVE&nbsp;&nbsp;▍&nbsp;&nbsp;STATUS:&nbsp;<span class="acc">ONLINE</span></div>
         <div class="hero-glow" aria-hidden="true"></div>
         <div class="hero-mark" aria-hidden="true">LOWCOST</div>
+        <div id="pvStage" class="pv-stage" aria-hidden="false">
+            <div class="pv-frame">
+                <iframe id="pvFrame" title="明日方舟官方先导PV" allow="autoplay; fullscreen" allowfullscreen scrolling="no" frameborder="0"></iframe>
+            </div>
+            <span class="pv-tag mono">OFFICIAL&nbsp;//&nbsp;先导PV</span>
+            <button id="pvMute" class="pv-mute" aria-label="切换声音" title="声音"></button>
+        </div>
         <div class="max-w-[1400px] mx-auto w-full">
             <div class="reveal-up" style="transition-delay:0.2s;">
                 <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-8">Arknights Strategy Group / Est. 2023</span>
@@ -354,6 +375,116 @@
         let isStale = false;
         let statsReady = false;
         let heroRevealed = false;
+
+        /* ===== V0.22 官方先导PV 副屏 ===== */
+        const PV_URLS = [
+            '/ark_pv.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/ark_pv.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/ark_pv.json'
+        ];
+        let pv = null;
+        let pvStart = 0;
+        let pvTimer = null;
+        let pvMuted = true;
+        let pvInit = false;
+
+        function pvSvg(on) {
+            return on
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
+        }
+
+        function pvDuration() {
+            try {
+                const d = pv && pv.pages && pv.pages[0] ? pv.pages[0].duration : (pv ? pv.duration : 151);
+                return d > 0 ? d : 151;
+            } catch (_) { return 151; }
+        }
+
+        function pvRandomStart() {
+            const dur = pvDuration();
+            const lo = 7;
+            const hi = Math.max(lo, Math.min(150, dur - 3));
+            return lo + Math.floor(Math.random() * (hi - lo + 1));
+        }
+
+        function pvBuildSrc(t, muted) {
+            let src = 'https://player.bilibili.com/player.html?bvid=' + encodeURIComponent(pv.bvid);
+            src += '&page=1&danmaku=0&high_quality=1&autoplay=1';
+            src += '&muted=' + (muted ? 1 : 0);
+            if (t > 0) src += '&t=' + t;
+            return src;
+        }
+
+        function pvRender(muted) {
+            const f = document.getElementById('pvFrame');
+            if (!f || !pv) return;
+            clearTimeout(pvTimer);
+            const mutedState = muted === undefined ? (pvMuted || !pvInit) : muted;
+            f.src = pvBuildSrc(pvStart, mutedState);
+            pvMuted = mutedState;
+            document.getElementById('pvMute').innerHTML = pvSvg(!pvMuted);
+            pvTimer = setTimeout(() => {
+                pvStart = pvRandomStart();
+                pvRender(pvMuted);
+            }, Math.max(6000, (pvDuration() - pvStart)) * 1000);
+        }
+
+        function pvUnlock() {
+            if (pvInit) return;
+            pvInit = true;
+            pvStart = pvRandomStart();
+            pvRender(false);
+            document.body.removeEventListener('pointerdown', pvUnlock);
+            document.body.removeEventListener('keydown', pvUnlock);
+            document.body.removeEventListener('touchstart', pvUnlock);
+        }
+
+        async function fetchArkPV() {
+            for (const url of PV_URLS) {
+                try {
+                    const resp = await fetchWithTimeout(url);
+                    if (!resp.ok) continue;
+                    const json = await resp.json();
+                    if (json.code === 0 && json.video && json.video.bvid) return json.video;
+                } catch (_) {}
+            }
+            return null;
+        }
+
+        async function initPVStage() {
+            const video = await fetchArkPV();
+            const stage = document.getElementById('pvStage');
+            if (!video || !stage) return;
+            pv = video;
+            pvStart = pvRandomStart();
+            document.body.addEventListener('pointerdown', pvUnlock, { once: false });
+            document.body.addEventListener('keydown', pvUnlock, { once: false });
+            document.body.addEventListener('touchstart', pvUnlock, { once: false });
+            const btn = document.getElementById('pvMute');
+            if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); pvToggleMute(); });
+            stage.classList.add('ready');
+            pvRender(true);
+        }
+
+        function pvToggleMute() {
+            const next = !pvMuted;
+            pvInit = true;
+            document.body.removeEventListener('pointerdown', pvUnlock);
+            document.body.removeEventListener('keydown', pvUnlock);
+            document.body.removeEventListener('touchstart', pvUnlock);
+            clearTimeout(pvTimer);
+            const f = document.getElementById('pvFrame');
+            if (f) {
+                f.src = pvBuildSrc(pvStart, next);
+                pvMuted = next;
+                document.getElementById('pvMute').innerHTML = pvSvg(!next);
+                pvTimer = setTimeout(() => {
+                    pvStart = pvRandomStart();
+                    pvRender(pvMuted);
+                }, Math.max(6000, (pvDuration() - pvStart)) * 1000);
+            }
+        }
 
         async function fetchWithTimeout(url) {
             if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
@@ -716,6 +847,7 @@
         });
 
         loadLatest(true);
+        initPVStage();
     </script>
 
     <style>
