@@ -427,19 +427,12 @@
         function pvVideoShow() {
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
+            if (v.classList.contains('pv-video-on')) return;
+            if (!(v.duration && v.buffered && v.buffered.length > 0 &&
+                  v.buffered.end(v.buffered.length - 1) >= v.duration - 1)) return;
             if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
             v.classList.add('pv-video-on');
             v.play().catch(() => {});
-        }
-
-        function pvVideoCheck() {
-            const v = document.getElementById('pvVideo');
-            if (!v || v.dataset.playing !== '1') return;
-            if (v.classList.contains('pv-video-on')) return;
-            if (v.duration && v.buffered && v.buffered.length > 0 &&
-                v.buffered.end(v.buffered.length - 1) >= v.duration - 1) {
-                pvVideoShow();
-            }
         }
 
         function pvVideoFallback() {
@@ -531,7 +524,7 @@
                 pvVideo.addEventListener('timeupdate', pvVideoTick);
                 pvVideo.addEventListener('error', pvVideoError);
                 pvVideo.addEventListener('canplaythrough', pvVideoShow);
-                pvVideo.addEventListener('progress', pvVideoCheck);
+                pvVideo.addEventListener('progress', pvVideoShow);
             }
             document.body.addEventListener('pointerdown', pvUnlock, { once: false });
             document.body.addEventListener('keydown', pvUnlock, { once: false });
