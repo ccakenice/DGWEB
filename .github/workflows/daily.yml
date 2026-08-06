@@ -32,6 +32,13 @@ jobs:
           GH_TOKEN: ''
           GITHUB_REPO_SYNC: '0'
 
+      - name: Fetch arknights PV
+        run: python fetch_ark_pv.py
+        env:
+          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+          GH_TOKEN: ''
+          GITHUB_REPO_SYNC: '0'
+
       - name: Build modes.json
         run: python _build_modes.py
         env:
