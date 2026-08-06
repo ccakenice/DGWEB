@@ -185,6 +185,18 @@
                 </div>`;
         }
 
+        // ===== 播放进度本地记忆（分P级）=====
+        const PLAY_KEY = 'dgweb_play_pos';
+        function readPlayStore() {
+            try { return JSON.parse(localStorage.getItem(PLAY_KEY) || '{}') || {}; }
+            catch (_) { return {}; }
+        }
+        function savePlayStore(store) {
+            try {
+                localStorage.setItem(PLAY_KEY, JSON.stringify(store).slice(0, 65535));
+            } catch (_) {}
+        }
+
         function renderVideo(item) {
             const wrap = document.getElementById('detailWrap');
             const title = item.title || '无标题';
@@ -205,14 +217,73 @@
             const pages = Array.isArray(item.pages) ? item.pages : [];
             const MAX_PAGES_SHOWN = 20;
             const needsScroll = pages.length > MAX_PAGES_SHOWN;
+
+            // —— 起始 P 决策：URL ?page= 优先，其次本地记忆，缺省 P1 ——
+            const playStore = readPlayStore();
+            let curPage = 1;
+            let fromMemo = false;
+            if (pages.length) {
+                const want = parseInt(new URLSearchParams(location.search).get('page'), 10);
+                if (want && want >= 1 && want <= pages.length) {
+                    curPage = want;
+                } else {
+                    const memo = playStore[bvid] && playStore[bvid].page;
+                    if (memo && memo >= 1 && memo <= pages.length) { curPage = memo; fromMemo = true; }
+                }
+            }
+            function playerSrc(p) {
+                return `https://player.bilibili.com/player.html?bvid=${bvid}&page=${p}&high_quality=1&autoplay=1`;
+            }
+            function savePos() {
+                playStore[bvid] = { page: curPage, at: Date.now() };
+                savePlayStore(playStore);
+            }
+            function loadPage(p) {
+                if (!pages.length) return;
+                p = Math.max(1, Math.min(parseInt(p, 10) || 1, pages.length));
+                if (p === curPage) return;
+                curPage = p;
+                const player = document.getElementById('biliPlayer');
+                if (player) player.src = playerSrc(p);
+                updatePageChrome();
+                const u = new URL(location.href);
+                u.searchParams.set('page', p);
+                history.replaceState(null, '', u.toString());
+                savePos();
+            }
+            function updatePageChrome() {
+                const btns = document.querySelectorAll('.page-btn');
+                btns.forEach(b => {
+                    const active = b.dataset.page === String(curPage);
+                    b.classList.toggle('bg-charcoal', active);
+                    b.classList.toggle('text-paper', active);
+                    b.classList.toggle('text-muted', !active);
+                    b.classList.toggle('hover:text-paper', !active);
+                    b.classList.toggle('hover:bg-graphite', !active);
+                    const sp = b.querySelector('span.mono');
+                    if (sp) sp.classList.toggle('text-paper', active);
+                    if (sp) sp.classList.toggle('text-smoke', !active);
+                });
+                const prev = document.getElementById('prevP');
+                const next = document.getElementById('nextP');
+                if (prev) prev.disabled = curPage <= 1;
+                if (next) next.disabled = curPage >= pages.length;
+                const ind = document.getElementById('pIndicator');
+                if (ind) {
+                    const part = (pages[curPage - 1] && pages[curPage - 1].part) || ('P' + curPage);
+                    ind.textContent = `P${curPage} / ${pages.length} · ${part}`;
+                    ind.title = part;
+                }
+            }
+
             const pagesHtml = pages.length > 1 ? `
                 <div class="reveal-up">
-                    <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">分P列表 (${pages.length})</span>
+                    <span class="mono text-[10px] text-muted tracking-widest uppercase block mb-4">分P列表 (${pages.length})${fromMemo ? ` · <span class="acc">已续播上次 P${curPage}</span>` : ''}</span>
                     <div class="border border-line divide-y divide-line ${needsScroll ? 'overflow-y-auto max-h-[400px]' : ''}">
                         ${pages.map((p, i) => `
-                            <button data-page="${p.page}" class="page-btn w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${i === 0 ? 'bg-charcoal text-paper' : 'text-muted hover:text-paper hover:bg-graphite'}">
+                            <button data-page="${p.page}" class="page-btn w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors">
                                 <span class="flex items-center gap-3">
-                                    <span class="mono text-[10px] w-6 text-center ${i === 0 ? 'text-paper' : 'text-smoke'}">P${p.page}</span>
+                                    <span class="mono text-[10px] w-6 text-center">P${p.page}</span>
                                     <span class="text-xs line-clamp-1">${p.part || ('P' + p.page)}</span>
                                 </span>
                                 ${p.duration ? `<span class="mono text-[10px] text-smoke shrink-0">${fmtDuration(p.duration)}</span>` : ''}
@@ -228,10 +299,10 @@
 
                 <div class="grid lg:grid-cols-[1fr_340px] gap-10 md:gap-14">
                 <div class="reveal-up">
-                    <div class="relative bg-fog border border-line overflow-hidden mb-8" style="padding-bottom:56.25%">
+                    <div class="relative bg-fog border border-line overflow-hidden mb-3" style="padding-bottom:56.25%">
                         <iframe
                             id="biliPlayer"
-                            src="https://player.bilibili.com/player.html?bvid=${bvid}&page=1&high_quality=1"
+                            src="${playerSrc(curPage)}"
                             class="absolute inset-0 w-full h-full"
                             scrolling="no" border="0" frameborder="no" framespacing="0"
                             allowfullscreen="true" allow="autoplay; fullscreen; picture-in-picture"
@@ -239,6 +310,12 @@
                         <div class="absolute top-4 left-4 mono text-[10px] text-muted border border-line bg-black/70 px-3 py-1 tracking-widest">${item.typename || 'BILIBILI'}</div>
                         ${duration ? `<div class="absolute bottom-4 right-4 mono text-[10px] bg-black/80 text-paper px-2 py-1">${duration}</div>` : ''}
                     </div>
+                    ${pages.length > 1 ? `
+                    <div class="flex items-center gap-3 mb-8">
+                        <button id="prevP" class="p-nav" title="上一P">‹ 上一P</button>
+                        <span id="pIndicator" class="p-nav-ind mono text-xs text-muted tracking-widest flex-1 truncate"></span>
+                        <button id="nextP" class="p-nav" title="下一P">下一P ›</button>
+                    </div>` : ''}
                         <h1 class="display text-2xl md:text-4xl leading-tight mb-6">${title}</h1>
                         <div class="rule mb-6"></div>
                         <div class="flex flex-wrap items-center gap-4 mb-8 text-xs text-muted mono tracking-widest">
@@ -277,19 +354,21 @@
 
             const player = document.getElementById('biliPlayer');
             document.querySelectorAll('.page-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const page = btn.dataset.page;
-                    if (player) player.src = `https://player.bilibili.com/player.html?bvid=${bvid}&page=${page}&high_quality=1`;
-                    document.querySelectorAll('.page-btn').forEach(b => {
-                        b.classList.remove('bg-charcoal', 'text-paper');
-                        b.classList.add('text-muted', 'hover:text-paper', 'hover:bg-graphite');
-                        b.querySelector('span.mono') && b.querySelector('span.mono').classList.add('text-smoke');
-                    });
-                    btn.classList.add('bg-charcoal', 'text-paper');
-                    btn.classList.remove('text-muted', 'hover:text-paper', 'hover:bg-graphite');
-                    btn.querySelector('span.mono') && btn.querySelector('span.mono').classList.remove('text-smoke');
-                });
+                btn.addEventListener('click', () => loadPage(btn.dataset.page));
             });
+            const prevBtn = document.getElementById('prevP');
+            const nextBtn = document.getElementById('nextP');
+            if (prevBtn) prevBtn.addEventListener('click', () => loadPage(curPage - 1));
+            if (nextBtn) nextBtn.addEventListener('click', () => loadPage(curPage + 1));
+            updatePageChrome();
+            savePos();
+            window.addEventListener('beforeunload', savePos);
+            setTimeout(() => {
+                const bar = document.querySelector('.max-w-[1200px] [id="detailWrap"]');
+                if (!bar) return;
+                const ind = document.getElementById('pIndicator');
+                if (ind && ind.scrollWidth > ind.clientWidth) ind.style.webkitLineClamp = '1';
+            }, 0);
         }
 
         function renderError() {
@@ -304,7 +383,6 @@
         (async function init() {
             const params = new URLSearchParams(location.search);
             const bvid = params.get('bvid');
-            const wantPage = params.get('page');
             const items = await fetchData();
             if (!items) { renderError(); return; }
             const found = bvid
@@ -313,10 +391,6 @@
             if (found) {
                 renderVideo(found);
                 document.title = found.title + ' — 低配挂机研讨会';
-                if (wantPage) {
-                    const btn = document.querySelector(`.page-btn[data-page="${wantPage}"]`);
-                    if (btn) btn.click();
-                }
             } else {
                 renderError();
             }
@@ -324,6 +398,10 @@
     </script>
 
     <style>
+        .p-nav { font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.1em; color:var(--muted); border:1px solid var(--line); padding:6px 14px; background:none; cursor:pointer; transition:all .3s; flex-shrink:0; }
+        .p-nav:hover:not(:disabled) { border-color:var(--acc); color:var(--acc); }
+        .p-nav:disabled { opacity:.35; cursor:default; }
+        .p-nav-ind { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .nav-toggle { display:flex; flex-direction:column; gap:5px; padding:8px 4px; background:none; border:none; cursor:pointer; }
         @media (min-width:768px) { .nav-toggle { display:none !important; } }
         .nav-toggle span { display:block; width:20px; height:2px; background:var(--muted); transition:transform .3s, opacity .3s; }
