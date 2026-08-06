@@ -440,13 +440,16 @@ function buildStats() {
             const isMie = isMiePart(part) || isMiePart(v.title || '');
             // 分P名符合「干员名+N人/单人/双人…」格式（不含高配等排除词）也收录
             const isNumPeople = /[\u4e00-\u9fff]{1,6}(?:单|双|两|[三四五六七八九十\d]{1,2})人/.test(part);
-            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0 && !isNumPeople) continue;
-            // 排除高配/多核/双核方案、剪辑版
-            if (danheText.indexOf('高配') >= 0 || danheText.indexOf('多核') >= 0 || danheText.indexOf('双核') >= 0 || danheText.indexOf('剪辑') >= 0) continue;
             // 单P视频：把视频主标题也纳入
             const text = (!isMulti ? (v.title || '') + ' ' + part : part);
             if (!text.trim()) continue;
+            // 干员命中（含别名映射，全规则统一经 POOL/ALIAS 补全）
             const hits = collectHits(text);
+            // 分P名同时含「关卡代码 + 干员名」（如 SS-1 娜仁图亚）也收录
+            const stageInPart = STAGE_RE.test(part);
+            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0 && !isNumPeople && !(stageInPart && hits.length > 0)) continue;
+            // 排除高配/多核/双核方案、剪辑版
+            if (danheText.indexOf('高配') >= 0 || danheText.indexOf('多核') >= 0 || danheText.indexOf('双核') >= 0 || danheText.indexOf('剪辑') >= 0) continue;
             const sk = stageKey(part, v.title || '');
             const stageKeyVal = sk ? sk.key : bvid + ':' + (p.page || i + 1);
             const stageLabel = sk ? sk.stage : (part || '(无标题)');
