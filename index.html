@@ -142,10 +142,9 @@
         html.light .grid-bg { background-image:linear-gradient(rgba(0,0,0,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.045) 1px, transparent 1px); }
         html.light .hero-mark { -webkit-text-stroke-color:rgba(0,0,0,.09); }
         html.light #hero .hero-mark { -webkit-text-stroke-color:rgba(255,255,255,.12); }
-        html.light #hero .pv-stage + .max-w { color:#f4f4f2; }
-        html.light #hero .max-w h1, html.light #hero .max-w .stat-big, html.light #hero .stat-big { color:#f4f4f2; }
-        html.light #hero .max-w .stat-lbl, html.light #hero .max-w .stat-lbl .cn, html.light #hero .max-w p, html.light #hero .max-w span.text-muted { color:#a8a8a6; }
-        html.light #hero .term-bar, html.light #hero .mono.text-muted { color:#a8a8a6; }
+        html.light body.pv-active #hero h1, html.light body.pv-active #hero .stat-big, html.light body.pv-active #hero .stat-big { color:#f4f4f2; }
+        html.light body.pv-active #hero .stat-lbl, html.light body.pv-active #hero .stat-lbl .cn, html.light body.pv-active #hero p, html.light body.pv-active #hero span.text-muted, html.light body.pv-active #hero .term-bar, html.light body.pv-active #hero .mono.text-muted { color:#a8a8a6; }
+        html.light body.pv-active #hero .max-w-\[1400px\] { transition:color .8s ease; }
         html.light #hero span.acc, html.light #hero .acc { color:var(--acc); }
         html.light .cursor-ring { border-color:rgba(0,0,0,.28); }
         html.light .stat-cell { background:linear-gradient(180deg, rgba(0,0,0,.028), transparent); }
@@ -391,6 +390,7 @@
         let pvStart = 0;
         let pvTimer = null;
         let pvReadyTimer = null;
+        let pvStageTimer = null;
         let pvMuted = true;
         let pvInit = false;
 
@@ -433,6 +433,7 @@
             if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
             v.currentTime = pvStart;
             v.classList.add('pv-video-on');
+            pvStageShow();
             v.play().catch(() => {});
         }
 
@@ -441,6 +442,7 @@
             if (!v || v.dataset.playing !== '1') return;
             v.currentTime = pvStart;
             v.classList.add('pv-video-on');
+            pvStageShow();
             v.play().catch(() => {});
         }
 
@@ -484,6 +486,8 @@
                 if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
                 f.style.display = 'block';
                 f.src = pvBuildSrc(pvStart, mutedState);
+                if (pvStageTimer) clearTimeout(pvStageTimer);
+                pvStageTimer = setTimeout(pvStageShow, 12000);
                 pvTimer = setTimeout(() => {
                     pvStart = pvRandomStart();
                     pvRender(pvMuted);
@@ -531,8 +535,15 @@
             document.body.addEventListener('pointerdown', pvUnlock, { once: false });
             document.body.addEventListener('keydown', pvUnlock, { once: false });
             document.body.addEventListener('touchstart', pvUnlock, { once: false });
-            stage.classList.add('ready');
+            const pvFrame = document.getElementById('pvFrame');
+            if (pvFrame) pvFrame.addEventListener('load', () => pvStageShow());
             pvRender(true);
+        }
+
+        function pvStageShow() {
+            const stage = document.getElementById('pvStage');
+            if (stage) stage.classList.add('ready');
+            document.body.classList.add('pv-active');
         }
 
         async function fetchWithTimeout(url, ms) {
