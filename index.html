@@ -444,7 +444,7 @@
                 if (v.dataset.playing !== '1') {
                     v.dataset.playing = '1';
                     v.muted = mutedState;
-                    v.src = pv.stream.url;
+                    v.src = '/pv?url=' + encodeURIComponent(pv.stream.url);
                     v.currentTime = pvStart;
                     v.style.display = 'block';
                     f.style.display = 'none';
