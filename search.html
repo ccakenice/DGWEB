@@ -31,7 +31,7 @@
         .rank-no { font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:700; color:transparent; -webkit-text-stroke:1px var(--line); line-height:1; transition:color .3s ease, -webkit-text-stroke-color .3s ease; white-space:nowrap; }
         .result-item:hover .rank-no { color:var(--acc); -webkit-text-stroke-color:var(--acc); }
         .score-pill { font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:.08em; border:1px solid rgba(245,166,35,.4); color:var(--acc); padding:2px 10px; white-space:nowrap; }
-        .hit-mark { color:var(--acc); }
+        .hit-mark { color:var(--acc); background:rgba(245,166,35,.14); padding:0 1px; border-radius:2px; }
         .thumb-box { position:relative; width:200px; height:112px; flex-shrink:0; overflow:hidden; border:1px solid var(--line); background:var(--fog); }
         .thumb-box img { width:100%; height:100%; object-fit:cover; filter:grayscale(0.4) contrast(0.95); transition:transform .5s ease, filter .5s ease; }
         .result-item:hover .thumb-box img { transform:scale(1.05); filter:grayscale(0) contrast(1.05); }
@@ -76,6 +76,8 @@
         html.light .bg-fog { background-color:#efefed; }
         html.light .bg-paper { background-color:#141414; }
         html.light .bg-black, html.light .bg-black\/70, html.light .bg-black\/80 { background-color:rgba(244,244,242,.92); }
+        html.light .hit-mark { background:rgba(224,143,0,.16); color:#8a5a00; }
+        .hide { display:none; }
         .theme-overlay { position:fixed; border-radius:50%; transform:scale(0); pointer-events:none; z-index:9999; }
         .theme-overlay.run { animation:themeWipe .55s cubic-bezier(.4,0,.2,1) forwards; }
         @keyframes themeWipe { to { transform:scale(1); } }
@@ -347,9 +349,15 @@
                     const partTitle = highlightHtml(String(p.part), keywords);
                     return `<a href="detail.html?bvid=${encodeURIComponent(bvid)}&page=${p.page}" class="page-chip">P${p.page} <span class="pn">${partTitle}</span></a>`;
                 }).join('');
+                const hasMore = r.hitParts.length > 8;
+                const partRowsMore = hasMore ? r.hitParts.slice(8).map(p => {
+                    const partTitle = highlightHtml(String(p.part), keywords);
+                    return `<a href="detail.html?bvid=${encodeURIComponent(bvid)}&page=${p.page}" class="page-chip">P${p.page} <span class="pn">${partTitle}</span></a>`;
+                }).join('') : '';
+                const moreBtn = hasMore ? `<button type="button" class="page-chip" data-more="1">展开全部命中分P +${r.hitParts.length - 8}</button>` : '';
 
                 const partInfo = r.hitParts.length
-                    ? `<div class="flex flex-wrap items-center gap-2 mt-3">${hitPartRows}${r.hitParts.length > 8 ? `<span class="mono text-[10px] text-muted tracking-widest">+${r.hitParts.length - 8} P</span>` : ''}</div>`
+                    ? `<div class="flex flex-wrap items-center gap-2 mt-3">${hitPartRows}${moreBtn}<span class="hide">${partRowsMore}</span></div>`
                     : '';
 
                 return `
@@ -376,6 +384,9 @@
             const raw = document.getElementById('searchInput').value.trim();
             const countInfo = document.getElementById('countInfo');
             const keywords = raw.split(/\s+/).map(normalize).filter(Boolean);
+            const u = new URL(location.href);
+            if (raw) u.searchParams.set('q', raw); else u.searchParams.delete('q');
+            history.replaceState(null, '', u.toString());
 
             if (!keywords.length) {
                 document.getElementById('resultList').innerHTML = '';
@@ -400,6 +411,17 @@
         document.getElementById('searchInput').addEventListener('input', () => {
             clearTimeout(timer);
             timer = setTimeout(doSearch, 120);
+        });
+
+        document.getElementById('resultList').addEventListener('click', function (ev) {
+            const btn = ev.target.closest('[data-more]');
+            if (!btn) return;
+            let wrap = btn.parentElement;
+            if (wrap) {
+                const rest = wrap.querySelector('.hide');
+                if (rest) rest.classList.remove('hide');
+            }
+            btn.remove();
         });
 
         async function loadData() {
@@ -463,6 +485,12 @@
         #mobileMenu a { display:flex; align-items:center; justify-content:space-between; padding:14px 0; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid rgba(255,255,255,.06); transition:color .3s; }
         #mobileMenu a:hover, #mobileMenu a:active { color:var(--paper); }
         #mobileMenu a.acc { color:var(--acc); }
+        @media (max-width:640px) {
+            .result-item { gap:12px; padding:12px 14px; }
+            .thumb-box { width:88px; height:64px; }
+            .rank-no { font-size:1.4rem; }
+            .page-chip { padding:4px 8px; font-size:10.5px; }
+        }
     </style>
     <script>
     (function () {
