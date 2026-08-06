@@ -422,7 +422,7 @@
             pvTimer = setTimeout(() => {
                 pvStart = pvRandomStart();
                 pvRender(pvMuted);
-            }, Math.max(3000, (pvDuration() - pvStart - 6)) * 1000);
+            }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
         }
 
         function pvUnlock() {
