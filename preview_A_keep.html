@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>[A_keep] 主线关卡 — 低配挂机研讨会</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        'ink': '#000000', 'paper': '#ffffff', 'ash': '#888888', 'smoke': '#555555',
+                        'charcoal': '#333333', 'graphite': '#1a1a1a', 'fog': '#0a0a0a', 'line': '#222222',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; cursor:crosshair; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:-0.03em; line-height:0.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:0.05em; }
+        .rule { height:1px; background:var(--line); }
+        .rule-v { width:1px; background:var(--line); }
+        .grid-bg { background-image:linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size:80px 80px; }
+        .reveal-up { opacity:0; transform:translateY(40px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        .mode-section-title { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+        .mode-section-title::before { content:''; width:8px; height:8px; background:var(--paper); transform:rotate(45deg); flex-shrink:0; }
+        .zone-card { position:relative; background:var(--graphite); border:1px solid var(--line); padding:18px 22px; transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; display:block; }
+        .zone-card::before { content:''; position:absolute; inset:0; background:var(--paper); transform:scaleX(0); transform-origin:left; transition:transform 0.4s cubic-bezier(0.16,1,0.3,1); z-index:0; }
+        .zone-card:hover::before { transform:scaleX(1); }
+        .zone-card:hover .zone-code, .zone-card:hover .zone-name, .zone-card:hover .zone-tag { color:var(--ink); z-index:1; position:relative; }
+        .zone-code { font-family:'Space Grotesk',monospace; font-size:10px; letter-spacing:0.1em; color:var(--muted); display:block; margin-bottom:6px; transition:color 0.3s; }
+        .zone-name { font-size:15px; color:var(--paper); transition:color 0.3s; }
+        .zone-tag { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--muted); display:block; margin-top:6px; transition:color 0.3s; }
+        .act-card { position:relative; background:var(--graphite); border:1px solid var(--line); transition:all 0.4s cubic-bezier(0.16,1,0.3,1); cursor:pointer; overflow:hidden; }
+        .act-card:hover { border-color:var(--paper); transform:translateY(-3px); background:var(--charcoal); }
+        .act-card .thumb { position:relative; background:var(--fog); overflow:hidden; }
+        .act-card .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:grayscale(0.4) contrast(0.95); transition:transform 0.5s ease, filter 0.5s ease; }
+        .act-card:hover .thumb img { filter:grayscale(0) contrast(1.05); }
+        .stage-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:0.05em; padding:6px 10px; transition:all 0.3s; }
+        .stage-chip:hover { border-color:var(--paper); color:var(--paper); background:rgba(255,255,255,0.05); }
+        .stage-chip .sol { color:var(--ash); }
+        .stage-chip:hover .sol { color:var(--ink); }
+        .cursor-dot { position:fixed; width:8px; height:8px; background:#fff; border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; transition:transform 0.15s ease; }
+        .cursor-ring { position:fixed; width:40px; height:40px; border:1px solid rgba(255,255,255,0.3); border-radius:50%; pointer-events:none; z-index:9999; transition:all 0.3s ease; }
+        .panel { max-height:0; overflow:hidden; transition:max-height 0.6s cubic-bezier(0.16,1,0.3,1); }
+        .panel.open { max-height:1200px; }
+    </style>
+</head>
+<body>
+    <div class="cursor-dot hidden md:block" id="cursorDot"></div>
+    <div class="cursor-ring hidden md:block" id="cursorRing"></div>
+
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-ink/90 backdrop-blur-sm border-b border-line">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <span class="mono text-xs text-muted group-hover:text-paper transition-colors">LC</span>
+                <span class="rule-v h-4"></span>
+                <span class="text-sm font-medium tracking-wide">低配挂机研讨会</span>
+            </a>
+            <div class="hidden md:flex items-center gap-10">
+                <a href="modes.html" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Modes</a>
+                <a href="index.html#archive" class="text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase">Archive</a>
+            </div>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest border border-line hover:border-paper px-4 py-2">BILIBILI</a>
+        </div>
+    </nav>
+
+    <main class="pt-16 grid-bg">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-10 py-16 md:py-24">
+            <div class="reveal-up mb-16">
+                <a href="modes.html" class="mono text-xs text-muted hover:text-paper transition-colors tracking-widest uppercase flex items-center gap-2 mb-6">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                    返回模式
+                </a>
+                <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-4">Main Stages</span>
+                <h1 class="display text-[clamp(2.5rem,6vw,5.5rem)] text-paper mb-6">主线关卡</h1>
+                <p class="text-sm text-muted max-w-xl leading-relaxed">主线剧情章节关卡，按 ACT 分组，点击章节展开该章全部关卡。</p>
+            </div>
+            <div id="modeWrap" class="space-y-16"></div>
+        </div>
+    </main>
+
+    <footer class="border-t border-line py-12 px-6 md:px-10">
+        <div class="toolbar">
+            <span class="toolbar-label">社区常用工具</span>
+            <a href="https://prts.wiki/w/公开招募" target="_blank" rel="noopener" class="toolbar-link">公招计算</a>
+            <a href="https://prts.wiki/" target="_blank" rel="noopener" class="toolbar-link">PRTS WIKI</a>
+            <a href="https://penguin-stats.io/" target="_blank" rel="noopener" class="toolbar-link">企鹅物流</a>
+            <a href="https://ark.yituliu.cn/" target="_blank" rel="noopener" class="toolbar-link">一图流</a>
+            <a href="https://tomimi.dev/zh" target="_blank" rel="noopener" class="toolbar-link">图米米</a>
+        </div>
+        <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4"><img src="data:image/png;base64,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" alt="LOWCOST" class="w-10 h-10 rounded-full object-cover" /><span class="rule-v h-4"></span><span class="text-xs text-muted">低配挂机研讨会</span></div>
+            <div class="mono text-[10px] text-muted tracking-widest">© 2024-2026 LOWCOST STRATEGY GROUP</div>
+        </div>
+    
+    <style>
+        .toolbar { max-width:1400px; margin:0 auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 24px 24px; }
+        .toolbar-label { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--ash); letter-spacing:.15em; margin-right:6px; }
+        .toolbar-link { font-size:11.5px; color:var(--muted); text-decoration:none; border:1px solid var(--line); padding:4px 10px; transition:all .25s; }
+        .toolbar-link:hover { border-color:var(--acc); color:var(--acc); }
+    </style>
+</footer>
+
+    <script>
+        const MODES_URLS = [
+            '/modes.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/modes.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/modes.json'
+        ];
+        const DATA_URLS = [
+            '/latest.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/bili-sync@main/latest.json',
+            'https://raw.githubusercontent.com/ccakenice/bili-sync/main/latest.json'
+        ];
+        const MODE_KEY = 'main-stages';
+
+        async function fetchJSON(urls) {
+            for (const url of urls) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return await resp.json();
+                } catch (e) {
+                    console.error('数据源失败 ' + url + ':', e.message);
+                }
+            }
+            return null;
+        }
+
+        // 视频匹配：活动关卡按代码(TO-1)，其余按名称包含
+        function findVideosFor(it, items) {
+            const allText = it.name;
+            if (it.stages && it.stages.length) return {}; // 活动类：由关卡 chip 直接链 stage.html
+            const names = [it.name, it.name.replace(/^#\d+\s*/, '')];
+            return items.filter(v => {
+                const txt = v.title + ' ' + (v.pages || []).map(p => p.part).join(' ');
+                return names.some(n => txt.includes(n));
+            });
+        }
+
+        function renderMode(data, items) {
+            const wrap = document.getElementById('modeWrap');
+            const mode = data.modes.find(m => m.key === MODE_KEY);
+            if (!mode) { wrap.innerHTML = '<p class="text-sm text-muted">数据加载失败</p>'; return; }
+            const hasStages = mode.groups.some(g => g.items.some(it => it.stages && it.stages.length > 0));
+            let html = '';
+            mode.groups.forEach((g, gi) => {
+                html += `
+                    <div class="reveal-up" style="transition-delay:${gi * 0.06}s">
+                        <div class="mode-section-title">
+                            <span class="display text-2xl md:text-3xl">${g.name}</span>
+                            <span class="text-xs text-muted mono tracking-widest">${g.items.length} 项</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">`;
+                if (hasStages) {
+                    // 活动/主线类：图片卡片，点击展开关卡列表
+                    g.items.forEach((it, ii) => {
+                        const isCh = it.img && it.img.includes('章节名称');
+                        const ratio = isCh ? '1 / 1' : '2.05 / 1';
+                        const img = it.img ? `<div class="thumb" style="aspect-ratio:${ratio}" data-fit><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" onload="const p=this.parentElement;if(this.naturalWidth&&this.naturalHeight){p.style.aspectRatio=(this.naturalWidth/this.naturalHeight).toFixed(3)+' / 1'}" /></div>` : '';
+                        const stageCount = (it.stages || []).length;
+                        html += `
+                            <div class="act-card reveal-up">
+                                ${img}
+                                <div class="p-4 border-b border-line">
+                                    <span class="zone-code block mb-1">${stageCount} 个关卡</span>
+                                    <span class="zone-name">${it.name}</span>
+                                </div>
+                                <div class="panel" data-panel="${gi}-${ii}">
+                                    <div class="p-4 flex flex-wrap gap-2">${(it.stages || []).map(s => `
+                                        <a class="stage-chip" href="stage.html?code=${encodeURIComponent(s.code)}">${s.code}<span class="sol">·${s.solutions}解</span></a>`).join('') || '<span class="zone-tag">暂无收录关卡</span>'}
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+                } else {
+                    // 名称类：直接卡片链接
+                    g.items.forEach(it => {
+                        const vids = findVideosFor(it, items);
+                        const count = vids.length;
+                        const href = count > 0 ? `stage.html?name=${encodeURIComponent(it.name)}` : 'javascript:void(0)';
+                        const img = it.img ? `<div class="thumb"><img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.style.display='none'" referrerpolicy="no-referrer" /></div>` : '';
+                        html += `
+                            <a href="${href}" class="zone-card block ${count > 0 ? '' : 'opacity-50'}">
+                                <span class="zone-code">${count > 0 ? count + ' 个视频' : '暂无攻略'}</span>
+                                <span class="zone-name">${it.name}</span>
+                            </a>`;
+                    });
+                }
+                html += `</div></div>`;
+            });
+            wrap.innerHTML = html;
+            // 活动类点击展开
+            document.querySelectorAll('.act-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.stage-chip')) return;
+                    const panel = card.querySelector('.panel');
+                    panel.classList.toggle('open');
+                });
+            });
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.reveal-up').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('visible'), 50 + i * 60);
+                });
+            });
+        }
+
+        (async function init() {
+            const [modeData, latest] = await Promise.all([fetchJSON(MODES_URLS), fetchJSON(DATA_URLS)]);
+            if (modeData && modeData.modes) {
+                renderMode(modeData, latest && latest.data || []);
+            } else {
+                document.getElementById('modeWrap').innerHTML = '<div class="text-center py-20 border border-line/50"><p class="text-sm text-muted">数据加载失败</p></div>';
+            }
+        })();
+
+        const dot = document.getElementById('cursorDot');
+        const ring = document.getElementById('cursorRing');
+        let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            dot.style.left = mouseX - 4 + 'px'; dot.style.top = mouseY - 4 + 'px';
+        });
+        function animateRing() {
+            ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+            ring.style.left = ringX - 20 + 'px'; ring.style.top = ringY - 20 + 'px';
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+    </script>
+</body>
+</html>

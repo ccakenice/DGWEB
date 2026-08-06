@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统一画幅对比</title>
+<style>
+  body{background:#111;color:#eee;font-family:sans-serif;margin:0;padding:24px}
+  h1{font-size:15px;color:#f4c430;letter-spacing:.15em}
+  .sec{margin:26px 0}
+  .sec>h2{font-size:13px;color:#999;border-bottom:1px solid #333;padding-bottom:6px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .tip{font-size:11px;color:#777;margin:4px 0 0;font-family:monospace}
+  .tag{font-size:10px;color:#f4c430;background:#222;display:inline-block;padding:1px 6px;border-radius:3px;margin-bottom:4px}
+</style>
+</head>
+<body>
+<h1>统一画幅对比 · 方案A 2.05:1 cover / 方案B 3.12:1 cover / 方案C 原比 contain</h1>
+
+<div class="sec"><h2>主线 — 章节横幅_第十七章 (3.12 宽幅)</h2><div class="grid _dock" data-f="章节横幅_第十七章.jpg" data-r="3.12"></div></div>
+<div class="sec"><h2>剿灭 — 章节横幅_剿灭作战 (3.12 宽幅)</h2><div class="grid _dock" data-f="章节横幅_剿灭作战.jpg" data-r="3.12"></div></div>
+<div class="sec"><h2>活动 — 涤墨作战 (2.05)</h2><div class="grid _dock" data-f="活动名称_涤墨作战.png" data-r="2.05"></div></div>
+<div class="sec"><h2>引航者 — 试炼06 (2.02)</h2><div class="grid _dock" data-f="活动名称_引航者试炼_06.png" data-r="2.02"></div></div>
+<div class="sec"><h2>资源 — 训练场 (2.05)</h2><div class="grid _dock" data-f="活动名称_训练场.png" data-r="2.05"></div></div>
+<div class="sec"><h2>故事集 — 丛林症结 (2.05)</h2><div class="grid _dock" data-f="活动名称_丛林症结.png" data-r="2.05"></div></div>
+
+<script>
+const BASE = 'images/modes/';
+const PLANS = [
+  {ratio:'2.05', fit:'cover', pos:'center center', label:'A: 2.05:1 cover'},
+  {ratio:'3.12', fit:'cover', pos:'center 20%', label:'B: 3.12:1 cover 偏上'},
+  {ratio:'',      fit:'contain', pos:'center center', label:'C: 原比 contain'}
+];
+document.querySelectorAll('.grid._dock').forEach(dock=>{
+  const f = dock.getAttribute('data-f');
+  const r = dock.getAttribute('data-r');
+  dock.innerHTML = PLANS.map(p=>{
+    const ratio = p.ratio || r;
+    return `<div><span class="tag">${p.label}</span><div><img loading="lazy" style="width:100%;aspect-ratio:${ratio}/1;object-fit:${p.fit};object-position:${p.pos};background:#000" src="${BASE+encodeURIComponent(f)}"></div></div>`;
+  }).join('');
+});
+</script>
+</body>
+</html>
