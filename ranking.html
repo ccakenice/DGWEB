@@ -378,6 +378,11 @@ function isMiePart(part) {
     return false;
 }
 
+// 排除「发展队」相关视频（分P名或标题含该词）
+function isDevTeamPart(text) {
+    return text.indexOf('发展队') >= 0;
+}
+
 function stageKey(part, title) {
     for (const txt of [part, title]) {
         const m = STAGE_RE.exec(txt);
@@ -428,6 +433,8 @@ function buildStats() {
             if (isPlotPart(part)) continue;
             // 排除旧版/初版等过时关卡
             if (isOldPart(part)) continue;
+            // 排除「发展队」系列视频
+            if (isDevTeamPart(part) || isDevTeamPart(v.title || '')) continue;
             // 只统计含单核/单挂的攻略关（单P视频并查主标题）；剿灭关豁免
             const danheText = isMulti ? part : part + ' ' + (v.title || '');
             const isMie = isMiePart(part) || isMiePart(v.title || '');
