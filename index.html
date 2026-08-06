@@ -112,7 +112,7 @@
             background:linear-gradient(100deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.55) 34%, rgba(0,0,0,.18) 62%, rgba(0,0,0,.42) 100%),
                        linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,.6) 100%); }
         .pv-frame { position:absolute; inset:-5%; }
-        .pv-frame iframe { display:block; width:100%; height:100%; border:0; pointer-events:none; }
+        .pv-frame iframe, .pv-frame video { display:block; width:100%; height:100%; border:0; pointer-events:none; object-fit:cover; background:#000; }
         @media (max-width:768px) {
             .pv-stage::after { background:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.45) 40%, rgba(0,0,0,.82) 100%); }
             .pv-frame { inset:-10%; }
@@ -216,6 +216,7 @@
         <div class="hero-mark" aria-hidden="true">LOWCOST</div>
         <div id="pvStage" class="pv-stage" aria-hidden="true">
             <div class="pv-frame">
+                <video id="pvVideo" muted playsinline preload="auto" style="display:none;"></video>
                 <iframe id="pvFrame" title="明日方舟官方先导PV" allow="autoplay" scrolling="no" frameborder="0"></iframe>
             </div>
         </div>
@@ -412,17 +413,56 @@
             return src;
         }
 
+        function pvVideoTick() {
+            const v = document.getElementById('pvVideo');
+            if (!v || v.dataset.playing !== '1') return;
+            if (v.duration && v.currentTime >= pvDuration() - 5) {
+                v.currentTime = pvStart;
+            }
+        }
+
+        function pvVideoError() {
+            const v = document.getElementById('pvVideo');
+            const f = document.getElementById('pvFrame');
+            if (!v) return;
+            v.dataset.playing = '0';
+            v.style.display = 'none';
+            v.removeAttribute('src');
+            if (pv) pv.stream = null;
+            if (f) f.style.display = 'block';
+            pvRender(pvMuted);
+        }
+
         function pvRender(muted) {
+            clearTimeout(pvTimer);
             const f = document.getElementById('pvFrame');
             if (!f || !pv) return;
-            clearTimeout(pvTimer);
             const mutedState = muted === undefined ? (pvMuted || !pvInit) : muted;
-            f.src = pvBuildSrc(pvStart, mutedState);
             pvMuted = mutedState;
-            pvTimer = setTimeout(() => {
-                pvStart = pvRandomStart();
-                pvRender(pvMuted);
-            }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
+            const v = document.getElementById('pvVideo');
+            if (v && pv.stream && pv.stream.url) {
+                if (v.dataset.playing !== '1') {
+                    v.dataset.playing = '1';
+                    v.muted = mutedState;
+                    v.src = pv.stream.url;
+                    v.currentTime = pvStart;
+                    v.style.display = 'block';
+                    f.style.display = 'none';
+                    f.removeAttribute('src');
+                    v.play().catch(() => {});
+                } else {
+                    v.muted = mutedState;
+                    if (!mutedState) v.play().catch(() => {});
+                }
+            } else {
+                if (v) { v.dataset.playing = '0'; v.style.display = 'none'; v.removeAttribute('src'); }
+                f.style.display = 'block';
+                f.src = pvBuildSrc(pvStart, mutedState);
+                pvTimer = setTimeout(() => {
+                    pvStart = pvRandomStart();
+                    pvRender(pvMuted);
+                }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
+            }
         }
 
         function pvUnlock() {
@@ -453,6 +493,11 @@
             if (!video || !stage) return;
             pv = video;
             pvStart = pvRandomStart();
+            const pvVideo = document.getElementById('pvVideo');
+            if (pvVideo) {
+                pvVideo.addEventListener('timeupdate', pvVideoTick);
+                pvVideo.addEventListener('error', pvVideoError);
+            }
             document.body.addEventListener('pointerdown', pvUnlock, { once: false });
             document.body.addEventListener('keydown', pvUnlock, { once: false });
             document.body.addEventListener('touchstart', pvUnlock, { once: false });
