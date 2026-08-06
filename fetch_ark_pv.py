@@ -131,30 +131,41 @@ def fetch_playurl(bvid, cid, quality='112'):
                'Accept': 'application/json, text/plain, */*'}
     if cookie_str: headers['Cookie'] = cookie_str
     last = 'unknown'
+    mixin = None
+    try:
+        mixin = get_mixin_key(cookie_str)
+    except Exception as e:
+        last = 'mixin:' + str(e)
     for qn in (quality, '80', '64', '32'):
-        try:
-            url = ('https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s'
-                   '&fnval=4048&fnver=0&fourk=1&qn=%s') % (bvid, cid, qn)
-            raw = http_get(url, headers)
-            d = json.loads(raw)
-            if d.get('code') != 0:
-                last = f"code={d.get('code')} {d.get('message','')}"
-                continue
-            data = d.get('data') or {}
-            durls = data.get('durl') or []
-            if durls:
-                return {'type': 'durl', 'quality': data.get('quality'),
-                        'url': durls[0].get('url', ''), 'backup': [x.get('url') for x in durls[1:] or []],
-                        'size': durls[0].get('size')}
-            dash = data.get('dash') or {}
-            vids = dash.get('video') or []
-            if vids:
-                best = max(vids, key=lambda x: x.get('id', 0))
-                return {'type': 'dash', 'quality': best.get('id'),
-                        'url': best.get('baseUrl', ''), 'backup': best.get('backupUrl') or [],
-                        'bandwidth': best.get('bandwidth')}
-        except Exception as e:
-            last = str(e)
+        endpoints = []
+        if mixin:
+            params = {'bvid': bvid, 'cid': cid, 'fnval': '4048', 'fnver': 0, 'fourk': 1, 'qn': qn}
+            endpoints.append('https://api.bilibili.com/x/player/wbi/playurl?' + sign(params, mixin))
+        endpoints.append('https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s'
+                         '&fnval=4048&fnver=0&fourk=1&qn=%s' % (bvid, cid, qn))
+        for url in endpoints:
+            try:
+                raw = http_get(url, headers)
+                d = json.loads(raw)
+                if d.get('code') != 0:
+                    last = f"code={d.get('code')} {d.get('message','')}"
+                    continue
+                data = d.get('data') or {}
+                durls = data.get('durl') or []
+                if durls:
+                    return {'type': 'durl', 'quality': data.get('quality'),
+                            'url': durls[0].get('url', ''), 'backup': [x.get('url') for x in durls[1:] or []],
+                            'size': durls[0].get('size')}
+                dash = data.get('dash') or {}
+                vids = dash.get('video') or []
+                if vids:
+                    best = max(vids, key=lambda x: x.get('id', 0))
+                    return {'type': 'dash', 'quality': best.get('id'),
+                            'url': best.get('baseUrl', ''), 'backup': best.get('backupUrl') or [],
+                            'bandwidth': best.get('bandwidth')}
+            except Exception as e:
+                last = str(e)
+        time.sleep(1)
     print('playurl failed:', last)
     return None
 
