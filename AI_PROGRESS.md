@@ -6,7 +6,7 @@
 - **GitHub 仓库**: `ccakenice/DGWEB`（CF Pages 自动部署，改完上传即上线）
 - **技术栈**: 纯静态 HTML/CSS/JS（原生 ES6 + Tailwind CDN），无构建工具
 - **数据来源**: B 站视频数据（bili-sync 同步）、PRTS Wiki、B 站 Wiki (biligame)
-- **版本管理**: V0.10/V0.11/V0.12 已定格，当前草稿版本 **V0.13**
+- **版本管理**: V0.10~V0.20 已定格，当前版本 **V0.20**（最新定格）
 - **本地预览**: `serve_preview.py`（端口 8844，服务 Default Project 目录）
 
 ## 核心页面结构
@@ -85,14 +85,16 @@
 | 版本 | 状态 | 说明 |
 |------|------|------|
 | V0.10 / V0.11 / V0.12 | 🔒 定格 | 历史存档，不再修改 |
-| **V0.13** | 🟢 **草稿** | 当前开发分支，**唯一可写入版本** |
+| V0.13 ~ V0.16 | 🔒 定格 | 历史存档 |
+| **V0.17** | 🔒 定格 | 核心使用率/模式/主题/彩蛋/性能优化 |
+| **V0.20** | 🔒 定格 | 备份修复 + 全量 git 同步 + CDN 缓存刷新 |
 
 **同步流程**：
 1. 主目录 (`E:\WebProjects\DGWEB`) 修改
-2. 同步到 `E:\WebProjects\versions\DGWEB_V0.13\`
+2. 同步到 `E:\WebProjects\versions\DGWEB_V0.20\`
 3. 上传 GitHub → CF Pages 自动部署（1~3 分钟）
 4. 线上验证（网络波动时多轮重试）
-5. 更新 `V0.13\版本说明.txt`
+5. 更新 `V0.20\版本说明.txt`
 
 **版本变更历史（自动汇总）**：
 - 管理器「理解AI」每次点击时，自动扫描 versions 下**所有已定格版本**的版本说明.txt，
@@ -108,7 +110,13 @@
 5. **中文交流**: 与用户交流一律简体中文
 6. **文档同步**: 每次重大改动后更新 `AI_PROGRESS.md` 和 `版本说明.txt`
 
-## 当前进度 (2026-08-05)
+## 当前进度 (2026-08-06)
+
+### ✅ V0.17~V0.20
+- [x] 模式入口/数据完好性核对（12 模式、CDN 缓存 purge）
+- [x] versions 备份目录修复（V0.17~V0.19 补全）
+- [x] git 全量历史合并与安全配置（.gitignore 排除 token 文件）
+- [x] 创建 V0.20 完整备份
 
 ### ✅ 已完成
 - [x] 泛用榜 ranking.html（总榜+年榜+详情面板+统计规则折叠）
@@ -132,6 +140,7 @@
 | 图片显示差异/暗淡 | 优先检查是否浏览器缓存旧 CSS（强刷验证）；本站无覆盖层/遮罩，图片原样渲染 |
 | 图片加载慢 | CF CDN 缓存、懒加载 |
 | 模式列表不显示新模式 | 检查 modes.json ORDER 数组、THUMBS 映射 |
+| 模式入口“消失/数据不变” | 浏览器 localStorage 缓存（TTL 3h）或 jsDelivr CDN 缓存旧版；console 执行 localStorage.removeItem('dgdata_modesjson') 或 purge.jsdelivr.net |
 | 详情页跳转 404 | 检查 mode-{key}.html 是否存在、MODE_KEY 是否匹配 |
 | CF Pages 线上验证超时 | 网络波动，多轮重试或改用 playwright 本地渲染验证 |
 
@@ -149,15 +158,15 @@
 
 ## 部署流程
 ```
-1. 主目录修改 → 同步到 versions\DGWEB_V0.13\
+1. 主目录修改 → 同步到 versions\DGWEB_V0.20\
 2. python upload_all.py（批量）或 upload_single.py 文件名（单文件）
 3. 等 CF 构建（1~3 分钟），多轮重试验证 https://dgwebq.pages.dev/
 ```
 
 ## 后续 AI 接手指引
-1. 先读 `AI_PROGRESS.md`、`ai_handoff/` 同步副本、`V0.13\版本说明.txt`
+1. 先读 `AI_PROGRESS.md`、`ai_handoff/` 同步副本、`V0.20\版本说明.txt`
 2. 本地预览 `serve_preview.py`（8844，注意服务的是 Default Project 目录，验证前需先复制页面过去）
 3. 改动前遵守项目规范（不扩大范围、先局部后全局）
-4. 改完同步 V0.13 → 上传 → 验证 → 更新文档
+4. 改完同步 V0.20 → 上传 → 验证 → 更新文档
 
 > **核心原则**：小步快跑，先局部后全局，不扩大问题范围，保留原有设计意图。
