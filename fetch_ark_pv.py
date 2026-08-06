@@ -124,6 +124,40 @@ def fetch_latest_pv():
         time.sleep(1.5)
     raise RuntimeError('搜索失败: ' + last_err)
 
+def fetch_playurl(bvid, cid, quality='112'):
+    """抓取视频直链（登录态可拿高清；游客降级）。quality: 112=1080P+ / 80=1080P / 64=720P / 32=480P"""
+    cookie_str = build_cookie_str()
+    headers = {'User-Agent': UA, 'Referer': 'https://www.bilibili.com/video/' + bvid,
+               'Accept': 'application/json, text/plain, */*'}
+    if cookie_str: headers['Cookie'] = cookie_str
+    last = 'unknown'
+    for qn in (quality, '80', '64', '32'):
+        try:
+            url = ('https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s'
+                   '&fnval=4048&fnver=0&fourk=1&qn=%s') % (bvid, cid, qn)
+            raw = http_get(url, headers)
+            d = json.loads(raw)
+            if d.get('code') != 0:
+                last = f"code={d.get('code')} {d.get('message','')}"
+                continue
+            data = d.get('data') or {}
+            durls = data.get('durl') or []
+            if durls:
+                return {'type': 'durl', 'quality': data.get('quality'),
+                        'url': durls[0].get('url', ''), 'backup': [x.get('url') for x in durls[1:] or []],
+                        'size': durls[0].get('size')}
+            dash = data.get('dash') or {}
+            vids = dash.get('video') or []
+            if vids:
+                best = max(vids, key=lambda x: x.get('id', 0))
+                return {'type': 'dash', 'quality': best.get('id'),
+                        'url': best.get('baseUrl', ''), 'backup': best.get('backupUrl') or [],
+                        'bandwidth': best.get('bandwidth')}
+        except Exception as e:
+            last = str(e)
+    print('playurl failed:', last)
+    return None
+
 def main():
     try:
         v = fetch_latest_pv()
@@ -137,6 +171,15 @@ def main():
                           'duration': p.get('duration', 0), 'cid': p.get('cid', 0)} for p in (d.get('data') or [])]
         except Exception:
             pass
+        # 抓直链（用第一个 P 的 cid）
+        stream = None
+        if pages:
+            try:
+                stream = fetch_playurl(v['bvid'], pages[0]['cid'])
+                if stream:
+                    print('stream OK: quality=%s type=%s' % (stream.get('quality'), stream.get('type')))
+            except Exception as e:
+                print('stream failed:', e)
         video = {
             'bvid': v['bvid'],
             'aid': v.get('aid', 0),
@@ -146,6 +189,7 @@ def main():
             'media': {'thumbnail': v.get('pic', '')},
             'duration': v.get('duration', 0),
             'pages': pages,
+            'stream': stream,
         }
         content = json.dumps({'code': 0, 'video': video, 'updated': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
                               'keyword': KEYWORD, 'uid': UID}, ensure_ascii=False, indent=2)
