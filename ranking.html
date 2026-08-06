@@ -447,7 +447,7 @@ function buildStats() {
             const hits = collectHits(text);
             // 分P名同时含「关卡代码 + 干员名」（如 SS-1 娜仁图亚）也收录
             const stageInPart = STAGE_RE.test(part);
-            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0 && !isNumPeople && !(stageInPart && hits.length > 0)) continue;
+            if (!isMie && danheText.indexOf('单核') < 0 && danheText.indexOf('单挂') < 0 && danheText.indexOf('0练') < 0 && danheText.indexOf('零练') < 0 && !isNumPeople && !(stageInPart && hits.length > 0)) continue;
             // 排除高配/多核/双核方案、剪辑版
             if (danheText.indexOf('高配') >= 0 || danheText.indexOf('多核') >= 0 || danheText.indexOf('双核') >= 0 || danheText.indexOf('剪辑') >= 0) continue;
             const sk = stageKey(part, v.title || '');
