@@ -226,8 +226,8 @@
                 <video id="pvVideo" muted playsinline preload="auto"></video>
                 <iframe id="pvFrame" title="明日方舟官方先导PV" allow="autoplay" scrolling="no" frameborder="0"></iframe>
             </div>
-            <div class="pv-progress" id="pvProgress" aria-hidden="true"><span></span></div>
         </div>
+        <div class="pv-progress" id="pvProgress" aria-hidden="true"><span></span></div>
         <div class="max-w-[1400px] mx-auto w-full">
             <div class="reveal-up" style="transition-delay:0.2s;">
                 <span class="mono text-xs text-muted tracking-[0.3em] uppercase block mb-8">Arknights Strategy Group / Est. 2023</span>
@@ -462,13 +462,10 @@
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
             if (v.classList.contains('pv-video-on')) return;
-            const dur = v.duration;
-            if (!(dur && v.buffered && v.buffered.length > 0)) return;
-            let end = 0;
-            try { end = v.buffered.end(v.buffered.length - 1); } catch (_) {}
-            // 缓冲覆盖播放起点，且已能流畅播放
-            const ok = v.readyState >= 4 && end >= pvStart + Math.min(6, dur || 0);
-            if (!ok) return;
+            if (!v.duration || !(v.duration > 0)) return;
+            // CF 代理转发的 buffered 报告不可靠(常停在小值)，以 readyState 为准：
+            // readyState>=4 即已能流畅播放，立即开播
+            if (v.readyState < 4) return;
             if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
             const bar = document.getElementById('pvProgress');
             if (bar) bar.classList.remove('loading');
@@ -535,6 +532,7 @@
                 if (v) { v.dataset.playing = '0'; v.classList.remove('pv-video-on'); v.removeAttribute('src'); }
                 if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
                 f.style.display = 'block';
+                if (bar) bar.classList.add('loading');
                 if (f.src.indexOf('player.bilibili.com') === -1 || f.dataset.t !== String(pvStart)) {
                     f.dataset.t = String(pvStart);
                     f.src = pvBuildSrc(pvStart, mutedState);
