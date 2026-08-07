@@ -477,42 +477,28 @@
             const mutedState = muted === undefined ? (pvMuted || !pvInit) : muted;
             pvMuted = mutedState;
             const v = document.getElementById('pvVideo');
-            if (v && pv.stream && pv.stream.url) {
-                if (v.dataset.playing !== '1') {
-                    v.dataset.playing = '1';
-                    v.muted = mutedState;
-                    v.classList.remove('pv-video-on');
-                    v.classList.remove('pv-fade-out');
-                    v.src = '/pv?url=' + encodeURIComponent(pv.stream.url);
-                    f.style.display = 'none';
-                    f.removeAttribute('src');
-                    v.muted = mutedState;
-                    v.play().catch(() => {});
-                    if (pvReadyTimer) clearTimeout(pvReadyTimer);
-                    pvReadyTimer = setTimeout(pvVideoFallback, 60000);
-                } else {
-                    v.muted = mutedState;
-                    if (v.classList.contains('pv-video-on') && !mutedState) v.play().catch(() => {});
-                }
-            } else {
-                if (v) { v.dataset.playing = '0'; v.classList.remove('pv-video-on'); v.removeAttribute('src'); }
-                if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
-                f.classList.remove('pv-fade-out');
-                f.style.display = 'block';
+            // 统一走官方 iframe 播放器（player.bilibili.com）。
+            // 直链 /pv 代理在本环境会触发 ERR_HTTP2_PROTOCOL_ERROR / 403，故弃用。
+            if (v) { v.dataset.playing = '0'; v.classList.remove('pv-video-on'); v.removeAttribute('src'); }
+            if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
+            f.classList.remove('pv-fade-out');
+            f.style.display = 'block';
+            if (f.src.indexOf('player.bilibili.com') === -1 || f.dataset.t !== String(pvStart)) {
+                f.dataset.t = String(pvStart);
                 f.src = pvBuildSrc(pvStart, mutedState);
-                if (pvStageTimer) clearTimeout(pvStageTimer);
-                pvStageTimer = setTimeout(pvStageShow, 12000);
-                pvTimer = setTimeout(() => {
-                    f.classList.add('pv-fade-out');
-                    setTimeout(() => {
-                        pvStart = pvRandomStart();
-                        setTimeout(() => {
-                            pvRender(pvMuted);
-                            f.classList.remove('pv-fade-out');
-                        }, 2000);
-                    }, 850);
-                }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
             }
+            if (pvStageTimer) clearTimeout(pvStageTimer);
+            pvStageTimer = setTimeout(pvStageShow, 12000);
+            pvTimer = setTimeout(() => {
+                f.classList.add('pv-fade-out');
+                setTimeout(() => {
+                    pvStart = pvRandomStart();
+                    setTimeout(() => {
+                        pvRender(pvMuted);
+                        f.classList.remove('pv-fade-out');
+                    }, 2000);
+                }, 850);
+            }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
         }
 
         function pvUnlock() {
