@@ -69,6 +69,17 @@
     readyState=4，本站无 requestfailed
 27. 提交：19c213d
 
+修复进度条不可见与视频不播放：
+28. 根因1：进度条位于 .pv-stage 内部，而 stage 默认 opacity:0（待 ready），
+    加载期间整层透明 → 进度条肉眼不可见
+    根因2：播放条件要求 buffered.end >= pvStart+6，但 CF 代理转发的 buffered
+    报告常停在小值(13s)且 pvStart 随机远离起点 → 条件永不满足，视频卡死 loading
+29. 修复：进度条移到 hero 独立层(不受 stage opacity 影响)；
+    开播条件放宽为 readyState>=4(已能流畅播放)立即播放；
+    iframe 分支同样显示进度条
+30. 验证：线上 buff=151/151、barWidth=100%、ct=63s paused=false 正常播放
+31. 提交：a203466
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
