@@ -533,11 +533,26 @@
                 chunks.push(await r0.arrayBuffer());
                 let done = chunks[0].byteLength;
                 if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
+                // 段下载失败(ERR_CONNECTION_CLOSED等)不立即放弃：段内重试+整体 stalled 上限，
+                // 避免进度条中途消失、已下载进度丢弃
+                let stalled = 0;
                 while (done < total && v.dataset.blobStop !== '1') {
                     const end = Math.min(total - 1, done + PV_CHUNK - 1);
-                    const buf = await pvBlobFetch(url, 'bytes=' + done + '-' + end);
-                    chunks.push(buf);
-                    done += buf.byteLength;
+                    let buf = null;
+                    for (let t = 0; t < 3 && !buf; t++) {
+                        try { buf = await pvBlobFetch(url, 'bytes=' + done + '-' + end); }
+                        catch (e) { await new Promise(r => setTimeout(r, 1500 * (t + 1))); }
+                    }
+                    if (buf && buf.byteLength) {
+                        chunks.push(buf);
+                        done += buf.byteLength;
+                        stalled = 0;
+                    } else {
+                        stalled++;
+                        if (stalled >= 4) throw new Error('chunk stalled too many times');
+                        await new Promise(r => setTimeout(r, 2000));
+                        continue;
+                    }
                     if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
                 }
                 if (v.dataset.blobStop === '1') return;
