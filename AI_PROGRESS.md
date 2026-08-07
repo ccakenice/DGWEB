@@ -78,13 +78,25 @@
 - **跨域限制已知**：B 站 iframe 禁止 postMessage 实时进度回传（已实测不可行），因此「续播」=记住上次播放的 P，非秒级进度
 - **播放器优化已验证**：分P切换 / URL同步 / autoplay 均已生效
 
-### 9. 主页 hero 官方先导PV 副屏 (index.html) 【2026-08-06 V0.22】
+### 9. 主页 hero 官方先导PV 全屏背景 (index.html) 【2026-08-06 V0.22】
 - **数据抓取** `fetch_ark_pv.py`：WBI 签名 + BILI_SESSDATA 搜索 UP 主 UID 161775300（明日方舟官方）带「先导PV」关键词的最新视频 → `ark_pv.json`（含 bvid/title/duration/pages/cid），本地运行上传 bili-sync + DGWEB 两仓库，Actions 中只写本地由 workflow commit
-- **hero iframe 播放器**：`https://player.bilibili.com/player.html?bvid=..&page=1&danmaku=0&high_quality=1&autoplay=1&muted=1&t=随机`
+- **全屏背景 iframe 播放器**：`https://player.bilibili.com/player.html?bvid=..&page=1&danmaku=0&high_quality=1&autoplay=1&muted=1&t=随机`
+- **无 UI 沉浸式**：`.pv-stage` 覆盖整个 hero 区（inset:0，z-index:-1 位于内容之下），无按钮/标签/边框/进度条（iframe pointer-events:none + 暗色渐变遮罩保证文字可读）
 - **随机起点**：每次打开在 0:07~2:30（t=7~150 秒）随机开始；按视频时长 `setTimeout` 重载模拟循环（每次重载重新随机 t）
-- **静音策略**：默认 `muted=1` 自动静音播放（浏览器策略），监听首次 `pointerdown/keydown/touchstart` 后重建 iframe 去掉 muted（自动开声）；静音按钮 `#pvMute` 手动切换（重建 iframe）
-- **边缘艺术效果**：`.pv-frame` 用 `mask-image: radial-gradient` 羽化边缘（无方形边框）+ drop-shadow 发光；iframe 高度放大 + 上移裁掉 B 站自有控制条/标题（无进度条等交互控件，pointer-events:none）
+- **静音策略**：默认 `muted=1` 自动静音播放（浏览器策略），监听首次 `pointerdown/keydown/touchstart` 后重建 iframe 去掉 muted（自动开声）
+- **移动端适配**：保留全屏背景（inset:-10% 放大裁边），遮罩改为上下渐变
+- **light 模式适配**：hero 内文字/统计/装饰强制浅色（#hero 范围覆写），保证深色视频背景下可读
 - **数据回退**：`/ark_pv.json` > jsdelivr(bili-sync) > GitHub raw，与 latest.json 加载逻辑一致
+- **画质升级（V0.22b）**：`fetch_ark_pv.py` 新增 `fetch_playurl()`——B 站游客只给 480P（dash [16,32]，iframe 源仅 640×294），登录态（Actions BILI_SESSDATA）可拿 1080P+ 直链，写入 `ark_pv.json` 的 `video.stream`（type/quality/url/backup）；直链经实测无 Referer 防盗链（任意站点返回 206）
+- **前端高清直链分支**：`pvRender()` 优先 `<video id="pvVideo">` 播放 `stream.url`（muted+playsinline 自动播、`currentTime=pvStart` 随机起点、`timeupdate` 到 `dur-5` 时 seek 回起点模拟循环、交互开声同 iframe 策略）；`video` error（直链过期）自动回退 iframe 分支，iframe 分支逻辑不变（定时提前 6s 重载）
+- **循环定时器修复**：原 `Math.max(6000, 秒) * 1000` 单位错误（下限≈100 分钟，播完停在 B 站选视频界面），改为 `Math.max(3000, (dur - t - 6) * 1000)` 提前 6 秒重载
+- **高清直链落地（本机定时抓取）**：B 站对 GitHub Actions 数据中心 IP 的 playurl 接口 412 封禁（wbi/plain/intl 三端点实测均不通），改用**本机计划任务 DGArkPVSync 每小时跑 `run_ark_pv.py`**（读 `deploy-config.json` 的 BILI_SESSDATA/GH_TOKEN，运行 fetch_ark_pv.py 抓 1080P 直链 + api.github.com 双仓库上传）；直链约 2 小时有效，每小时刷新保持持续高清，前端 video error 自动回退 iframe
+- **CDN 防盗链与代理**：B 站标准 CDN（bilivideo.com/upos-*）只认 `*.bilibili.com` Referer，页面 `<video>` 直接引用必 403（ERR_BLOCKED_BY_ORB）→ 新增 **CF Pages Function `functions/pv.js`（`/pv?url=` 代理）**：Worker 侧代发请求带 B 站 Referer + 转发 Range/206/Content-Type，页面同源播放；线上已验证 1080P（1920×886）正常播放、循环 seek、交互开声全部正常
+- **本地实测**：带 SESSDATA 抓取 quality=80（1080P dash），游客仅 32（480P）；mcdn.bilivideo.cn 部分节点不查 Referer（本地 480P 曾直连可播），标准 CDN 必查
+- **缓存完成才显示**：`<video>` 以 opacity:0 隐藏（display:none 会被浏览器暂停，无法后台缓冲）+ muted 静音自动 play 触发下载；监听 progress/canplaythrough，`buffered.end >= duration-1`（缓存至片尾可连续播完）才 `pv-video-on` 显示并 seek 到随机起点；60 秒兜底显示防弱网永久黑屏；交互开声后未显示时仅切换静音态，显示时自动有声
+- **黑底延迟出现（light 兼容）**：`.pv-stage` 黑底与 `pv-active` 文字浅色覆写不再随 fetch 成功立即出现，改为 `pvStageShow()`（视频缓存完成 / iframe load / 12s 兜底）时触发——视频未加载前 stage 透明、hero 保持白底黑字（light）或默认深色；修复原 `.pv-stage + .max-w` 选择器不匹配（实际类名 `max-w-[1400px]`）导致 light 覆写失效的问题，改用 `body.pv-active` 类控制（线上验证：加载中白底黑字 rgb(20,20,20)，显示后黑底浅字 rgb(244,244,242)）
+- **循环黑场过渡**：循环点（dur-6 秒）不再瞬时 seek 跳变——video/iframe 先加 `pv-fade-out`（0.85s 淡出到黑场），黑场停驻 **2 秒**，seek 到新随机起点后移除类淡入（0.8s），整体约 3 秒过渡（线上实测：dur 150.9 时 cur 145.3 淡出 → 黑停 2s → cur 101.2 淡入新起点）
+- **计划任务 DGArkPVSync 曾失败**（Result 2147946720）：重建为`可复用 SYSTEM 账户 ServiceAccount + 最高权限`后 Result 0 恢复正常，且 CF Pages 对已有静态 json 有 CDN 缓存（更新时间约延迟 1-2 分钟，实际延迟因 CDN 而定）；直链过期会导致 video error → 自动回退 iframe
 
 ## 数据源与素材库
 | 文件 | 说明 |
@@ -138,7 +150,7 @@
 - [x] 静音按钮手动切换 + 边缘 mask 羽化 + 控制条裁剪（无进度条）
 - [x] daily.yml 增加 fetch_ark_pv.py 步骤（Actions 定时 04:30 抓取）
 - [x] playwright 本地验证：加载/随机t/交互开声/按钮切换全部通过
-- [ ] 同步 V0.22 + 上传 GitHub + 线上验证
+- [x] 同步 V0.22 + 上传 GitHub + 线上验证通过（git push 网络受阻，改用 api.github.com Contents API 上传）
 
 ### ✅ V0.21（已定格）
 - [x] 视频详情页分 P 播放器优化（p-nav 翻P + iframe src 同步 + URL `?p=N` + autoplay=1）

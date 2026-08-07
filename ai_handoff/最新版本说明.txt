@@ -5,10 +5,16 @@
 来源：V0.21（已定格）
 
 改动说明：
-1. 主页 hero 副屏新增明日方舟官方最新「先导PV」循环播放（fetch_ark_pv.py 每日抓取明日方舟官方空间 UID 161775300 带「先导PV」关键词最新视频 → ark_pv.json）
-2. 播放特性：静音自动播放 + 首次交互自动开声、0:07–2:30 随机起点（t 参数）、JS 定时重载模拟循环、CSS mask 边缘羽化（无方形边框）、静音按钮
+1. 主页 hero 全屏背景播放明日方舟官方最新「先导PV」循环视频（fetch_ark_pv.py 每日抓取明日方舟官方空间 UID 161775300 带「先导PV」关键词最新视频 → ark_pv.json）
+2. 播放特性：无 UI 沉浸式背景（无按钮/标签/边框/进度条）、静音自动播放 + 首次交互自动开声、0:07–2:30 随机起点（t 参数）、JS 定时重载模拟循环、暗色渐变遮罩保证文字可读
 3. GitHub Actions daily.yml 增加 fetch_ark_pv.py 步骤（复用 BILI_SESSDATA secret）
 
+4. 画质升级（本机定时抓取）：B 站游客 iframe/playurl 仅 480P（iframe 源 640×294 被拉伸发糊）；fetch_ark_pv.py 用 SESSDATA 抓 1080P dash 直链写入 ark_pv.json 的 video.stream；前端优先 <video> 播放直链（无 UI、随机起点、seek 循环、交互开声），直链失效（约 2h）自动回退 iframe；GitHub Actions 数据中心 IP 被 B 站 playurl 412 封禁，改用本机计划任务 DGArkPVSync 每小时跑 run_ark_pv.py 刷新直链上传 GitHub。
+5. B 站 CDN 防盗链解决：直链只认 *.bilibili.com Referer，页面 <video> 直接引用必 403；新增 CF Pages Function functions/pv.js（/pv?url= 代理）代发请求，页面同源播放，线上已验证 1080P（1920×886）清晰播放。本机计划任务 DGArkPVSync 每小时刷新直链。
+6. 缓存完成才显示：视频以 opacity:0 隐藏 + 静音自动播放触发后台下载，缓存至片尾（buffered.end >= duration-1）才显示并 seek 到随机起点，60 秒兜底防黑屏。
+7. 发光模式兼容：视频未加载出时黑底不显示（stage 透明），hero 保持白底黑字；视频缓存完成才显示黑底+浅色文字（body.pv-active 控制）。
+8. 循环黑场过渡：循环点前 5 秒淡出到黑场，seek 新随机起点后淡入，无画面跳变。
+9. 黑场延时 2 秒：淡出 0.85s → 黑沢停驻 2s → 淡入 0.8s，过渡整体约 3 秒。
 文件清单（204 个）：
 .github\workflows\daily.yml
 .gitignore
