@@ -223,7 +223,7 @@
         <div class="hero-mark" aria-hidden="true">LOWCOST</div>
         <div id="pvStage" class="pv-stage" aria-hidden="true">
             <div class="pv-frame">
-                <video id="pvVideo" muted playsinline preload="auto"></video>
+                <video id="pvVideo" muted playsinline preload="metadata"></video>
                 <iframe id="pvFrame" title="明日方舟官方先导PV" allow="autoplay" scrolling="no" frameborder="0"></iframe>
             </div>
         </div>
@@ -1073,7 +1073,9 @@
         });
 
         loadLatest(true);
-        initPVStage();
+        // PV 视频改在首页资源全部加载完成后再启动下载，
+        // 避免几十MB的分段下载与首屏数据/图片并发抢带宽拖慢加载
+        window.addEventListener('load', () => setTimeout(initPVStage, 800));
     </script>
 
     <style>
