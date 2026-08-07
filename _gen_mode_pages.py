@@ -22,8 +22,12 @@ PAGES = [
 ]
 
 for key, en, name, desc in PAGES:
-    html = TPL.replace('{{KEY}}', key).replace('{{EN}}', en).replace('{{NAME}}', name).replace('{{DESC}}', desc).replace('{{TITLE}}', name)
     path = os.path.join(OUT, f'mode-{key}.html')
+    # 保护模式：mode 页面是手工维护的完整内容，若已存在则跳过覆盖
+    if os.path.exists(path):
+        print('跳过(已存在)', path)
+        continue
+    html = TPL.replace('{{KEY}}', key).replace('{{EN}}', en).replace('{{NAME}}', name).replace('{{DESC}}', desc).replace('{{TITLE}}', name)
     with open(path, 'w', encoding='utf-8') as f:
         f.write(html)
     print('生成', path, len(html), 'bytes')
