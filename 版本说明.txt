@@ -124,7 +124,7 @@ PV 播放窗口裁剪（去掉开头/结尾 LOGO）：
     - pvVideoCard 卡顿续播上限限入窗口
     - pvRandomStart 起点限制 [9, 139]，避免落在 LOGO 区间
 50. 验证：线上首播起点 9.4s，回绕检测到 150→9.9s，min/max ct=9.4~150
-51. 提交：8920152
+51. 提交：8920152（结尾由 02:29 调整为 02:28，PW_WIN_END=148，提交 2bf64ec）
 
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
