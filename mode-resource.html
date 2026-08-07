@@ -171,8 +171,8 @@
         ];
         const MODE_KEY = 'resource';
 
-        var CACHE_TTL = 3 * 60 * 60 * 1000;
-        function cacheKey(urls) { return 'dgdata_' + ((urls && urls[0]) || 'x').replace(/[^a-z0-9]/gi, ''); }
+        var CACHE_TTL = 10 * 60 * 1000;
+        function cacheKey(urls) { return 'dgdata_v12_' + ((urls && urls[0]) || 'x').replace(/[^a-z0-9]/gi, ''); }
         async function fetchJSON(urls) {
             var ck = cacheKey(urls);
             try {
