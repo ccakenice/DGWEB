@@ -649,7 +649,8 @@
             if (pvInit) return;
             pvInit = true;
             pvStart = pvRandomStart();
-            pvRender(false);
+            // 全程静音：不再随首次交互开声，避免视频未加载完突然出声
+            pvRender(true);
             document.body.removeEventListener('pointerdown', pvUnlock);
             document.body.removeEventListener('keydown', pvUnlock);
             document.body.removeEventListener('touchstart', pvUnlock);
