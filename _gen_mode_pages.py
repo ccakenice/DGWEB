@@ -19,6 +19,9 @@ PAGES = [
     ('resource', 'Resource', '资源收集', '物资筹备与芯片搜索关卡，长期开放。'),
     ('paradox-sim', 'Paradox Simulation', '悖论模拟', '干员悖论模拟关卡，按职业分类。'),
     ('annihilation', 'Annihilation', '剿灭作战', '长期委托与轮换委托剿灭关卡。'),
+    ('integrated-strategies', 'Integrated Strategies', '集成战略', '集成战略（肉鸽）历代主题。'),
+    ('stationary-security', 'Stationary Security', '保全派驻', '保全派驻模式（常驻玩法）。'),
+    ('reclamation-algorithm', 'Reclamation Algorithm', '生息演算', '生息演算模式（生存经营）。'),
 ]
 
 for key, en, name, desc in PAGES:
