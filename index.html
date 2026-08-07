@@ -372,7 +372,7 @@
             if (!url.startsWith('http')) return url;
             if (url.includes('images.weserv.nl') || url.includes('i3.wp.com')) return url;
             if (url.includes('hdslb.com')) {
-                return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=400&h=225&fit=cover`;
+                return url;
             }
             return url;
         }
