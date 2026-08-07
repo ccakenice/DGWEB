@@ -45,6 +45,14 @@
 16. 验证：Playwright 干净渲染 11 网格卡 + 1 featured 卡（=12 模式）、旧 9 模式 key 不再读取
 17. 提交：637dc73
 
+修复白昼模式 PV 黑块遮挡：
+18. 根因：.pv-stage/.pv-frame iframe 背景写死 #000，且 pvRender 设 12s 强制
+    显示兜底（不等 iframe 真正 load）→ 白昼下视频未加载完先露出黑块盖住白底
+19. 修复：stage/iframe 背景改 transparent（透出主题背景，白昼显白/黑夜显黑），
+    移除 12s 强制显示，仅由 iframe load 事件触发 show
+20. 验证：Playwright 白昼未 ready 时 stage bg=rgba(0,0,0,0)，无黑块
+21. 提交：750cb85
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
