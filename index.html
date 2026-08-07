@@ -429,17 +429,26 @@
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
             if (pvLooping) return;
-            if (v.duration && v.currentTime >= pvDuration() - 6) {
+            // blob 线性播放，到尾 seek 回 0 循环（避免跨段 seek 卡顿）
+            if (v.duration && v.currentTime >= v.duration - 6) {
                 pvLooping = true;
                 v.classList.add('pv-fade-out');
                 setTimeout(() => {
-                    v.currentTime = pvStart;
+                    v.currentTime = 0;
                     setTimeout(() => {
                         v.classList.remove('pv-fade-out');
                         setTimeout(() => { pvLooping = false; }, 1000);
                     }, 2000);
                 }, 850);
             }
+        }
+
+        function pvVideoCard() {
+            const v = document.getElementById('pvVideo');
+            if (!v || v.dataset.playing !== '1' || v.paused) return;
+            // blob 播放中若卡在 waiting（seek/解码），超时后强制跳到下一位置续播
+            if (v.duration && v.currentTime >= v.duration - 1) return;
+            v.currentTime = Math.min(v.currentTime + 0.15, (v.duration || 0) - 1);
         }
 
         function pvProgressTick() {
@@ -469,7 +478,7 @@
             if (window.__pvBlobLoading) return;
             const bar = document.getElementById('pvProgress');
             if (bar) bar.classList.remove('loading');
-            v.currentTime = pvStart;
+            v.currentTime = 0;
             v.classList.add('pv-video-on');
             pvStageShow();
             v.play().catch(() => {});
@@ -538,7 +547,7 @@
                 v.src = objUrl;
                 if (bar) bar.classList.remove('loading');
                 window.__pvBlobLoading = false;
-                v.currentTime = pvStart;
+                v.currentTime = 0; // blob 线性播放：从头开始，避免跨段 seek 卡顿
                 v.classList.add('pv-video-on');
                 pvStageShow();
                 await v.play().catch(() => {});
@@ -660,6 +669,16 @@
                 if (bar) bar.classList.remove('loading');
                 pvStageShow();
             });
+            // blob 播放卡顿保险：waiting>3s 强制续播
+            const pvVideoEl = document.getElementById('pvVideo');
+            if (pvVideoEl) {
+                let waitTimer = null;
+                pvVideoEl.addEventListener('waiting', () => {
+                    if (waitTimer) clearTimeout(waitTimer);
+                    waitTimer = setTimeout(() => { pvVideoCard(); waitTimer = null; }, 3000);
+                });
+                pvVideoEl.addEventListener('playing', () => { if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; } });
+            }
             pvRender(true);
         }
 
