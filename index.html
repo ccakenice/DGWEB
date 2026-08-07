@@ -410,8 +410,9 @@
 
         function pvRandomStart() {
             const dur = pvDuration();
-            const lo = 7;
-            const hi = Math.max(lo, Math.min(150, dur - 10));
+            // 限制在裁剪窗口 [9, 149] 内，避免起点落在 LOGO 区间
+            const lo = PV_WIN_START;
+            const hi = Math.max(lo, Math.min(PV_WIN_END - 10, dur - 10));
             return lo + Math.floor(Math.random() * (hi - lo + 1));
         }
 
@@ -424,17 +425,21 @@
         }
 
         let pvLooping = false;
+        // 播放窗口裁剪：开头截 0~9s LOGO、结尾截 02:29(149s) 之后 LOGO，仅循环播放 [9,149]
+        const PV_WIN_START = 9;
+        const PV_WIN_END = 149;
+        function pvWinEnd(v) { return Math.min(PV_WIN_END, (v && v.duration && v.duration > 0) ? v.duration - 1 : PV_WIN_END); }
 
         function pvVideoTick() {
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
             if (pvLooping) return;
-            // blob 线性播放，到尾 seek 回 0 循环（避免跨段 seek 卡顿）
-            if (v.duration && v.currentTime >= v.duration - 6) {
+            if (v.currentTime < PV_WIN_START) { v.currentTime = PV_WIN_START; return; }
+            if (v.currentTime >= pvWinEnd(v)) {
                 pvLooping = true;
                 v.classList.add('pv-fade-out');
                 setTimeout(() => {
-                    v.currentTime = 0;
+                    v.currentTime = PV_WIN_START;
                     setTimeout(() => {
                         v.classList.remove('pv-fade-out');
                         setTimeout(() => { pvLooping = false; }, 1000);
@@ -447,8 +452,8 @@
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1' || v.paused) return;
             // blob 播放中若卡在 waiting（seek/解码），超时后强制跳到下一位置续播
-            if (v.duration && v.currentTime >= v.duration - 1) return;
-            v.currentTime = Math.min(v.currentTime + 0.15, (v.duration || 0) - 1);
+            if (v.currentTime >= pvWinEnd(v)) return;
+            v.currentTime = Math.min(v.currentTime + 0.15, pvWinEnd(v));
         }
 
         function pvProgressTick() {
@@ -562,7 +567,7 @@
                 v.src = objUrl;
                 if (bar) bar.classList.remove('loading');
                 window.__pvBlobLoading = false;
-                v.currentTime = 0; // blob 线性播放：从头开始，避免跨段 seek 卡顿
+                v.currentTime = PV_WIN_START; // blob 窗口内播放：从 9s 起，跳过开头 LOGO
                 v.classList.add('pv-video-on');
                 pvStageShow();
                 await v.play().catch(() => {});
