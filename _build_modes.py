@@ -3,6 +3,15 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # 工作目录：优先环境变量 DGWEB_DIR（CI 中设为 GITHUB_WORKSPACE），否则本地路径
 BASE = os.environ.get('DGWEB_DIR', r'E:\WebProjects\DGWEB')
+
+# ============ 保护模式 ============
+# modes.json 是手工维护的数据（含完整 stages 聚合与 12 个模式），
+# 自动构建只抓取近期视频，重建会丢失手工数据。若已存在则跳过重建。
+EXISTING = os.path.join(BASE, 'modes.json')
+if os.path.exists(EXISTING):
+    print('modes.json 已存在（手工维护），跳过自动重建')
+    sys.exit(0)
+
 latest = json.load(open(os.path.join(BASE, 'latest.json'), encoding='utf-8'))
 items = latest['data']
 
@@ -325,6 +334,40 @@ MODES = {
       ]},
     ]
   },
+  'integrated-strategies': {
+    'name': '集成战略', 'code': 'integrated-strategies',
+    'desc': '集成战略（肉鸽）历代主题。',
+    'groups': [
+      {'name': '历届主题', 'items': [
+        {'name': '傀影与猩红孤钻', 'img': 'images/modes/活动名称_傀影与猩红孤钻.png', 'year': 2021},
+        {'name': '水月与深蓝之树', 'img': 'images/modes/活动名称_水月与深蓝之树.png', 'year': 2022},
+        {'name': '探索者的银凇止境', 'img': 'images/modes/活动名称_探索者的银凇止境.png', 'year': 2023},
+        {'name': '萨卡兹的无终奇语', 'img': 'images/modes/活动名称_萨卡兹的无终奇语.png', 'year': 2024},
+        {'name': '岁的界园志异', 'img': 'images/modes/活动名称_岁的界园志异.png', 'year': 2025},
+        {'name': '沉沦者的黑流树海', 'img': 'images/modes/活动名称_沉沦者的黑流树海.png', 'year': 2026},
+      ]},
+    ]
+  },
+  'stationary-security': {
+    'name': '保全派驻', 'code': 'stationary-security',
+    'desc': '保全派驻模式（常驻玩法）。',
+    'groups': [
+      {'name': '保全派驻', 'items': [
+        {'code': 'SS', 'name': '保全派驻', 'img': 'images/modes/保全派驻_头图.png'},
+      ]},
+    ]
+  },
+  'reclamation-algorithm': {
+    'name': '生息演算', 'code': 'reclamation-algorithm',
+    'desc': '生息演算模式（生存经营）。',
+    'groups': [
+      {'name': '历届主题', 'items': [
+        {'code': 'RA', 'name': '沙中之火', 'img': 'images/modes/图标_沙中之火.png'},
+        {'code': 'RA', 'name': '沙洲遗闻', 'img': 'images/modes/图标_沙洲遗闻.png'},
+        {'code': 'RA', 'name': '重启锚点', 'img': 'images/modes/图标_重启锚点.png'},
+      ]},
+    ]
+  },
 }
 
 # ============ 从 B 站数据聚合每个活动代号的关卡 ============
@@ -371,7 +414,7 @@ for mode_key, mode in MODES.items():
     for g in mode['groups']:
         items_out = []
         for it in g['items']:
-            it_code = it['code']
+            it_code = it.get('code', '')
             # 主线：章节号（数字）-> 匹配 15-1 / 17-10 这类
             if it_code.isdigit():
                 stages = []
@@ -405,7 +448,11 @@ for mode_key, mode in MODES.items():
                 items_out.append({'name': it['name'], 'img': it['img'], 'stages': stages})
                 continue
             # 其余（剿灭/合约/资源/悖论/引航者/矢量）：按名称匹配视频数，stages 留空
-            items_out.append({'name': it['name'], 'img': it['img'], 'stages': []})
+            item_out = {'name': it['name'], 'img': it['img'], 'stages': []}
+            # 集成战略保留 year（modes.html 据此自动同步最新主题封面）
+            if 'year' in it:
+                item_out['year'] = it['year']
+            items_out.append(item_out)
         groups.append({'name': g['name'], 'items': items_out})
     out['modes'].append({'key': mode_key, 'name': mode['name'], 'desc': mode['desc'], 'groups': groups})
 
