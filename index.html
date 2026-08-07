@@ -445,40 +445,28 @@
         function pvProgressTick() {
             const v = document.getElementById('pvVideo');
             const bar = document.getElementById('pvProgress');
-            if (!v || !bar || v.dataset.playing !== '1') return;
+            if (!v || !bar) return;
+            if (window.__pvBlobLoading) return; // 分段下载模式下无需 buffered 进度
+            if (v.dataset.playing !== '1') return;
             const dur = v.duration;
             if (!dur || !(dur > 0)) return;
             let end = 0;
             try { if (v.buffered && v.buffered.length) end = v.buffered.end(v.buffered.length - 1); } catch (_) {}
             const pct = Math.min(100, Math.max(0, end / dur * 100));
             if (bar.firstElementChild) bar.firstElementChild.style.width = pct.toFixed(1) + '%';
-            // 缓冲到播放起点 + 足够播放量即开始
-            if (v.readyState >= 3 || (end >= pvStart && end - pvStart >= Math.min(15, dur))) {
-                /* 交由 pvVideoShow 播放，这里仅更新进度 */
-            }
         }
 
-        function pvVideoShow() {
-            const v = document.getElementById('pvVideo');
-            if (!v || v.dataset.playing !== '1') return;
-            if (v.classList.contains('pv-video-on')) return;
-            if (!v.duration || !(v.duration > 0)) return;
-            // CF 代理转发的 buffered 报告不可靠(常停在小值)，以 readyState 为准：
-            // readyState>=4 即已能流畅播放，立即开播
-            if (v.readyState < 4) return;
-            if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
+        function pvProgressSet(pct) {
             const bar = document.getElementById('pvProgress');
-            if (bar) bar.classList.remove('loading');
-            v.currentTime = pvStart;
-            v.classList.add('pv-video-on');
-            pvProgressTick();
-            pvStageShow();
-            v.play().catch(() => {});
+            if (!bar || !bar.firstElementChild) return;
+            bar.firstElementChild.style.width = Math.min(100, Math.max(0, pct)).toFixed(1) + '%';
         }
 
         function pvVideoFallback() {
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
+            // blob 分段下载模式下，等待 pvBlobLoad 完成（其自会播放）；仅处理已设 src 的降级
+            if (window.__pvBlobLoading) return;
             const bar = document.getElementById('pvProgress');
             if (bar) bar.classList.remove('loading');
             v.currentTime = pvStart;
@@ -490,6 +478,7 @@
         function pvVideoError() {
             const bar = document.getElementById('pvProgress');
             if (bar) bar.classList.remove('loading');
+            window.__pvBlobLoading = false;
             const v = document.getElementById('pvVideo');
             const f = document.getElementById('pvFrame');
             if (!v) return;
@@ -499,6 +488,55 @@
             if (pv) pv.stream = null;
             if (f) f.style.display = 'block';
             pvRender(pvMuted);
+        }
+
+        // 分段下载 B站流（经 /pv 代理，同源无 CORS）→ 真实下载字节进度条 → 满100% 播放
+        const PV_CHUNK = 2 * 1024 * 1024; // 2MB/段
+        async function pvBlobLoad(v, streamUrl) {
+            if (!v) return;
+            const bar = document.getElementById('pvProgress');
+            window.__pvBlobLoading = true;
+            try {
+                const url = '/pv?url=' + encodeURIComponent(streamUrl);
+                // 第一段：同时获取总长
+                const r0 = await fetch(url, { headers: { 'Range': 'bytes=0-' + (PV_CHUNK - 1) }, signal: AbortSignal.timeout(15000) });
+                if (!r0.ok) throw new Error('HTTP ' + r0.status);
+                const cr = r0.headers.get('Content-Range') || '';
+                const total = parseInt((cr.match(/\/(\d+)\s*$/) || [])[1], 10);
+                if (!total || total <= 0) throw new Error('no content-length');
+                const chunks = [];
+                chunks.push(await r0.arrayBuffer());
+                let done = chunks[0].byteLength;
+                if (bar) {
+                    if (bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
+                }
+                // 循环后续分段
+                while (done < total && !v.dataset.blobDone) {
+                    const end = Math.min(total - 1, done + PV_CHUNK - 1);
+                    const r = await fetch(url, { headers: { 'Range': 'bytes=' + done + '-' + end }, signal: AbortSignal.timeout(15000) });
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const buf = await r.arrayBuffer();
+                    chunks.push(buf);
+                    done += buf.byteLength;
+                    if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
+                }
+                if (v.dataset.blobDone) return;
+                const mime = 'video/mp4';
+                const blob = new Blob(chunks, { type: mime });
+                const objUrl = URL.createObjectURL(blob);
+                v.src = objUrl;
+                if (bar) bar.classList.remove('loading');
+                window.__pvBlobLoading = false;
+                v.currentTime = pvStart;
+                v.classList.add('pv-video-on');
+                pvStageShow();
+                await v.play().catch(() => {});
+            } catch (e) {
+                window.__pvBlobLoading = false;
+                v.dataset.blobDone = 1;
+                console.error('PV 分段下载失败，回退 iframe:', e.message);
+                pvVideoError();
+            }
         }
 
         function pvRender(muted) {
@@ -519,11 +557,10 @@
                     v.dataset.playing = '1';
                     v.muted = mutedState;
                     v.classList.remove('pv-fade-out');
-                    v.src = '/pv?url=' + encodeURIComponent(pv.stream.url);
                     if (bar) bar.classList.add('loading');
-                    v.load();
+                    pvBlobLoad(v, pv.stream.url);
                     if (pvReadyTimer) clearTimeout(pvReadyTimer);
-                    pvReadyTimer = setTimeout(pvVideoFallback, 60000);
+                    pvReadyTimer = setTimeout(pvVideoFallback, 90000);
                 } else {
                     v.muted = mutedState;
                     if (v.classList.contains('pv-video-on') && !mutedState) v.play().catch(() => {});
@@ -600,8 +637,6 @@
             if (pvVideo) {
                 pvVideo.addEventListener('timeupdate', pvVideoTick);
                 pvVideo.addEventListener('error', pvVideoError);
-                pvVideo.addEventListener('canplaythrough', pvVideoShow);
-                pvVideo.addEventListener('progress', pvProgressTick);
             }
             document.body.addEventListener('pointerdown', pvUnlock, { once: false });
             document.body.addEventListener('keydown', pvUnlock, { once: false });
