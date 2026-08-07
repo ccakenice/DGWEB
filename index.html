@@ -106,8 +106,8 @@
         @keyframes spin { to { transform:rotate(360deg); } }
         .stale-badge { position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.7); border:1px solid var(--line); color:var(--muted); font-size:10px; padding:2px 8px; letter-spacing:0.1em; z-index:2; }
         /* ===== V0.22 hero 官方先导PV 全屏背景 ===== */
-        .pv-stage { position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; opacity:0; transition:opacity 1.6s ease; background:transparent; }
-        .pv-stage.ready { opacity:1; }
+        .pv-stage { position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; opacity:0; visibility:hidden; background:transparent; }
+        .pv-stage.ready { opacity:1; visibility:visible; transition:opacity 1.6s ease; }
         .pv-stage::after { content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
             background:linear-gradient(100deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.55) 34%, rgba(0,0,0,.18) 62%, rgba(0,0,0,.42) 100%),
                        linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,.6) 100%); }
@@ -688,7 +688,9 @@
             if (pvFrame) pvFrame.addEventListener('load', () => {
                 const bar = document.getElementById('pvProgress');
                 if (bar) bar.classList.remove('loading');
-                pvStageShow();
+                // 方案2：iframe 页面 load 不代表视频画面已呈现，
+                // 延迟淡入，避免遮罩透到底色形成灰雾
+                setTimeout(pvStageShow, 1200);
             });
             // blob 播放卡顿保险：waiting>3s 强制续播
             const pvVideoEl = document.getElementById('pvVideo');
