@@ -28,6 +28,15 @@
 8. 验证：本地 Playwright index 512 张全 LQIP、weserv 请求 0；search 搜索后 350/352 张 LQIP、weserv 0
 9. 提交：36a2663
 
+修复 PV 直链代理 SSL/HTTP2 错误：
+10. 根因：V0.22 官方先导 PV 用 /pv?url= 直链让 CF Pages 代抓 B 站视频流(m4s)，
+    B 站校验 IP/时效签名 + CF 侧 HTTP2 握手失败 → 线上 403 / ERR_HTTP2_PROTOCOL_ERROR / 520
+11. 修复：index.html 的 pvRender 弃用 video 直链，统一走官方 iframe 播放器
+    player.bilibili.com/player.html?bvid=..&muted=1&t=<随机起点>（静音+随机时刻循环），
+    删除 /pv 请求逻辑
+12. 验证：本地 Playwright pvFrame src=player.bilibili.com 正常、console error=0
+13. 提交：a6bd35d
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
