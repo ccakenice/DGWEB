@@ -117,6 +117,10 @@
         .pv-frame video { opacity:0; }
         .pv-frame video.pv-video-on { opacity:1; }
         .pv-frame iframe.pv-fade-out, .pv-frame video.pv-fade-out { opacity:0; }
+        .pv-progress { position:absolute; left:0; right:0; bottom:0; height:2px; z-index:3; overflow:hidden; opacity:0; transition:opacity .4s ease; }
+        .pv-progress.loading { opacity:1; }
+        .pv-progress span { display:block; width:35%; height:100%; background:var(--acc); animation:pvLoad 1.2s ease-in-out infinite; }
+        @keyframes pvLoad { 0% { transform:translateX(-110%); } 100% { transform:translateX(320%); } }
         @media (max-width:768px) {
             .pv-stage::after { background:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.45) 40%, rgba(0,0,0,.82) 100%); }
             .pv-frame { inset:-10%; }
@@ -222,6 +226,7 @@
                 <video id="pvVideo" muted playsinline preload="auto"></video>
                 <iframe id="pvFrame" title="明日方舟官方先导PV" allow="autoplay" scrolling="no" frameborder="0"></iframe>
             </div>
+            <div class="pv-progress" id="pvProgress" aria-hidden="true"><span></span></div>
         </div>
         <div class="max-w-[1400px] mx-auto w-full">
             <div class="reveal-up" style="transition-delay:0.2s;">
@@ -485,6 +490,8 @@
             f.classList.remove('pv-fade-out');
             f.style.display = 'block';
             if (f.src.indexOf('player.bilibili.com') === -1 || f.dataset.t !== String(pvStart)) {
+                const bar = document.getElementById('pvProgress');
+                if (bar) bar.classList.add('loading');
                 f.dataset.t = String(pvStart);
                 f.src = pvBuildSrc(pvStart, mutedState);
             }
@@ -543,7 +550,11 @@
             document.body.addEventListener('keydown', pvUnlock, { once: false });
             document.body.addEventListener('touchstart', pvUnlock, { once: false });
             const pvFrame = document.getElementById('pvFrame');
-            if (pvFrame) pvFrame.addEventListener('load', () => pvStageShow());
+            if (pvFrame) pvFrame.addEventListener('load', () => {
+                const bar = document.getElementById('pvProgress');
+                if (bar) bar.classList.remove('loading');
+                pvStageShow();
+            });
             pvRender(true);
         }
 
