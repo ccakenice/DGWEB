@@ -483,7 +483,7 @@
             const f = document.getElementById('pvFrame');
             if (!v) return;
             if (v.dataset.prevObjUrl) { try { URL.revokeObjectURL(v.dataset.prevObjUrl); } catch (_) {} v.dataset.prevObjUrl = ''; }
-            v.dataset.blobDone = '0';
+            v.dataset.blobStop = '0';
             v.dataset.playing = '0';
             v.classList.remove('pv-video-on');
             v.removeAttribute('src');
@@ -524,14 +524,14 @@
                 chunks.push(await r0.arrayBuffer());
                 let done = chunks[0].byteLength;
                 if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
-                while (done < total && !v.dataset.blobDone) {
+                while (done < total && v.dataset.blobStop !== '1') {
                     const end = Math.min(total - 1, done + PV_CHUNK - 1);
                     const buf = await pvBlobFetch(url, 'bytes=' + done + '-' + end);
                     chunks.push(buf);
                     done += buf.byteLength;
                     if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
                 }
-                if (v.dataset.blobDone) return;
+                if (v.dataset.blobStop === '1') return;
                 const blob = new Blob(chunks, { type: 'video/mp4' });
                 const objUrl = URL.createObjectURL(blob);
                 v.dataset.prevObjUrl = objUrl;
@@ -544,7 +544,7 @@
                 await v.play().catch(() => {});
             } catch (e) {
                 window.__pvBlobLoading = false;
-                v.dataset.blobDone = 1;
+                v.dataset.blobStop = '1';
                 console.error('PV 分段下载失败，回退 iframe:', e.message);
                 pvVideoError();
             }
@@ -569,7 +569,7 @@
                     v.muted = mutedState;
                     v.classList.remove('pv-fade-out');
                     if (v.dataset.prevObjUrl) { try { URL.revokeObjectURL(v.dataset.prevObjUrl); } catch (_) {} v.dataset.prevObjUrl = ''; }
-                    v.dataset.blobDone = '0';
+                    v.dataset.blobStop = '0';
                     if (bar) bar.classList.add('loading');
                     pvBlobLoad(v, pv.stream.url);
                     if (pvReadyTimer) clearTimeout(pvReadyTimer);
