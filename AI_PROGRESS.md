@@ -6,7 +6,7 @@
 - **GitHub 仓库**: `ccakenice/DGWEB`（CF Pages 自动部署，改完上传即上线）
 - **技术栈**: 纯静态 HTML/CSS/JS（原生 ES6 + Tailwind CDN），无构建工具
 - **数据来源**: B 站视频数据（bili-sync 同步）、PRTS Wiki、B 站 Wiki (biligame)
-- **版本管理**: V0.10~V0.21 已定格，当前版本 **V0.22**（草稿，功能开发中）
+- **版本管理**: V0.10~V0.23 已定格，当前版本 **V0.24**（草稿，功能开发中）
 - **本地预览**: `serve_preview.py`（端口 8844，服务 Default Project 目录）
 
 ## 核心页面结构
@@ -118,14 +118,15 @@
 | **V0.20** | 🔒 定格 | 备份修复 + 全量 git 同步 + CDN 缓存刷新 |
 | **V0.21** | 🔒 定格 | 详情页分P/续播 + 搜索高亮 + 干员筛选 + 移动端补强 |
 | **V0.22** | 🔒 定格 | 主页 hero 官方先导PV 全屏背景（缓存完成后随机起点循环播放+静音交互+每日抓取） |
-| **V0.23** | 🧪 草稿 | 全站图片低清占位(LQIP)加速：站内154+外部647张低清图 + manifest 统一清单 + img-progressive.js（低清→高清淡入替换） |
+| **V0.23** | 🔒 定格 | 全站图片低清占位(LQIP)加速：站内154+外部647张低清图 + manifest 统一清单 + img-progressive.js（低清→高清淡入替换） |
+| **V0.24** | 🧪 草稿 | 修复自动构建覆盖 modes：_build_modes.py/_gen_mode_pages.py 加保护，恢复 12 模式与完整模式页面 |
 
 **同步流程**：
 1. 主目录 (`E:\WebProjects\DGWEB`) 修改
-2. 同步到 `E:\WebProjects\versions\DGWEB_V0.23\`
+2. 同步到 `E:\WebProjects\versions\DGWEB_V0.24\`
 3. 上传 GitHub → CF Pages 自动部署（1~3 分钟）
 4. 线上验证（网络波动时多轮重试）
-5. 更新 `V0.23\版本说明.txt`
+5. 更新 `V0.24\版本说明.txt`
 
 **版本变更历史（自动汇总）**：
 - 管理器「理解AI」每次点击时，自动扫描 versions 下**所有已定格版本**的版本说明.txt，

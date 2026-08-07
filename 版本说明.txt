@@ -1,24 +1,27 @@
 ﻿项目：DGWEB
-版本：V0.23
+版本：V0.24
 日期：2026-08-07
-状态：正式（已定格）
+状态：草稿
+来源：V0.23（已定格）
 
-改动说明（低清占位 LQIP 加速加载）：
-1. 全站图片低清占位 + 后台高清替换：
-   - 生成 scripts/gen_lowres.py：站内 154 张图片（images/modes 148 PNG + 6 JPG）低清化 → images/lowres/（JPG 转 q72 progressive / PNG 缩放+量化，max 宽 480px，跳过 <25KB 小图）
-   - 外部资源本地化 download_ext.py：B站视频封面 506 张 + PRTS 干员头像 239 张下载至 images/ext/（covers + avatars，647 成功）
-   - 对 ext 再生成低清版 + gen_unified_manifest.py 合并统一清单 images/lowres/manifest.json（1448 条：外部 URL/本地图片 → hi/lo 映射）
-2. 加载脚本 js/img-progressive.js：
-   - 异步拉取 manifest，将 <img> 切换到低清（lo）快速显示，后台 new Image() 预载原图（hi），就绪后淡入替换
-   - MutationObserver 覆盖全部动态渲染场景（index.html JS 卡片、modes.html THUMBS 对象等）
-   - 支持 weserv 代理 URL 还原为原始 hdslb 命中本地高清
-   - 低清与高清同宽高比，配合原有 object-fit CSS，显示尺寸与原图一致
-3. 全站注入：29 个 html 页面统一注入 <script src="js/img-progressive.js">（inject_lq.py）
-4. 效果：原图站内 ~20MB → 低清 ~3.4MB，首屏加载大幅提速；外部封面 647 张脱离 B站/CDN 直接依赖
-5. 端到端验证：本地 Playwright 验证 modes.html（11/11 LQ 命中 + 高清替换）与 index.html（512 封面 LQ 命中）；线上 dgwebq.pages.dev 复测通过（脚本注入、fade 替换、无页面错误）
-6. 同步：主目录（git 提交 d79c925）→ versions\DGWEB_V0.23 全量同步 → GitHub push → CF Pages 自动部署 + 线上验证
+改动说明（修复自动构建覆盖模式数据）：
+1. 根因：.github/workflows/daily.yml 每日定时任务运行 _build_modes.py + _gen_mode_pages.py，
+   旧版脚本把线上 modes.json 从 12 模式减为 9（缺集成战略/保全派驻/生息演算），
+   并覆盖 9 个模式详情页为精简模板版（删 3448 行）。
+2. 修复 _build_modes.py：
+   - MODES 补齐 3 个缺失模式（集成战略含 year 字段 / 保全派驻 / 生息演算）
+   - 集成战略 items 处理 year 保留（it.get 容错缺 code）
+   - 新增保护逻辑：modes.json 已存在（手工维护含完整 stages 聚合）则跳过自动重建
+3. 修复 _gen_mode_pages.py：
+   - PAGES 补全 12 模式（含 3 个手工模式页）
+   - 新增保护逻辑：mode-*.html 已存在则跳过覆盖（避免覆盖手工详情页）
+4. 恢复被 3a0a4a2 破坏的文件（从 d79c925 检出）：
+   - modes.json（12 模式，714 条 stages 聚合）
+   - 9 个 mode-*.html 完整详情页（恢复 3431 行）
+5. 验证：线上 dgwebq.pages.dev modes.html 渲染 12 模式卡片，
+   3 个详情页（integrated-strategies / stationary-security / reclamation-algorithm）200 完整
+6. 提交：79a3ad3 / 02e38a3 / ba092aa / d1b2651
 
-文件清单（约 1330 个）：
-新增：js/img-progressive.js、gen_lowres.py、download_ext.py、gen_unified_manifest.py、inject_lq.py、images/ext/*（covers+avatars 647 张）、images/lowres/*（644 张 + manifest.json + lowres.json）
-修改：29 个 html 注入脚本；AI_PROGRESS.md、AI_DOCS.md、ai_handoff/*、版本说明.txt
-其余同 V0.22（index.html 全屏 PV、modes.json、latest.json 等）
+文件清单：
+修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
+其余同 V0.23（V0.23 内容 + 模式修复）
