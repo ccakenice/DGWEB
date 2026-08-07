@@ -482,6 +482,8 @@
             const v = document.getElementById('pvVideo');
             const f = document.getElementById('pvFrame');
             if (!v) return;
+            if (v.dataset.prevObjUrl) { try { URL.revokeObjectURL(v.dataset.prevObjUrl); } catch (_) {} v.dataset.prevObjUrl = ''; }
+            v.dataset.blobDone = '0';
             v.dataset.playing = '0';
             v.classList.remove('pv-video-on');
             v.removeAttribute('src');
@@ -492,14 +494,28 @@
 
         // 分段下载 B站流（经 /pv 代理，同源无 CORS）→ 真实下载字节进度条 → 满100% 播放
         const PV_CHUNK = 2 * 1024 * 1024; // 2MB/段
+        async function pvBlobFetch(url, range) {
+            let lastErr;
+            for (let tryN = 0; tryN < 3; tryN++) {
+                try {
+                    const r = await fetch(url, { headers: { 'Range': range }, signal: AbortSignal.timeout(30000) });
+                    if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
+                    const buf = await r.arrayBuffer();
+                    if (!buf.byteLength) { lastErr = new Error('empty chunk'); continue; }
+                    return buf;
+                } catch (e) {
+                    lastErr = e;
+                }
+            }
+            throw lastErr || new Error('fetch failed');
+        }
         async function pvBlobLoad(v, streamUrl) {
             if (!v) return;
             const bar = document.getElementById('pvProgress');
             window.__pvBlobLoading = true;
             try {
                 const url = '/pv?url=' + encodeURIComponent(streamUrl);
-                // 第一段：同时获取总长
-                const r0 = await fetch(url, { headers: { 'Range': 'bytes=0-' + (PV_CHUNK - 1) }, signal: AbortSignal.timeout(15000) });
+                const r0 = await fetch(url, { headers: { 'Range': 'bytes=0-' + (PV_CHUNK - 1) }, signal: AbortSignal.timeout(30000) });
                 if (!r0.ok) throw new Error('HTTP ' + r0.status);
                 const cr = r0.headers.get('Content-Range') || '';
                 const total = parseInt((cr.match(/\/(\d+)\s*$/) || [])[1], 10);
@@ -507,23 +523,18 @@
                 const chunks = [];
                 chunks.push(await r0.arrayBuffer());
                 let done = chunks[0].byteLength;
-                if (bar) {
-                    if (bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
-                }
-                // 循环后续分段
+                if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
                 while (done < total && !v.dataset.blobDone) {
                     const end = Math.min(total - 1, done + PV_CHUNK - 1);
-                    const r = await fetch(url, { headers: { 'Range': 'bytes=' + done + '-' + end }, signal: AbortSignal.timeout(15000) });
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
-                    const buf = await r.arrayBuffer();
+                    const buf = await pvBlobFetch(url, 'bytes=' + done + '-' + end);
                     chunks.push(buf);
                     done += buf.byteLength;
                     if (bar && bar.firstElementChild) bar.firstElementChild.style.width = (done / total * 100).toFixed(1) + '%';
                 }
                 if (v.dataset.blobDone) return;
-                const mime = 'video/mp4';
-                const blob = new Blob(chunks, { type: mime });
+                const blob = new Blob(chunks, { type: 'video/mp4' });
                 const objUrl = URL.createObjectURL(blob);
+                v.dataset.prevObjUrl = objUrl;
                 v.src = objUrl;
                 if (bar) bar.classList.remove('loading');
                 window.__pvBlobLoading = false;
@@ -557,6 +568,8 @@
                     v.dataset.playing = '1';
                     v.muted = mutedState;
                     v.classList.remove('pv-fade-out');
+                    if (v.dataset.prevObjUrl) { try { URL.revokeObjectURL(v.dataset.prevObjUrl); } catch (_) {} v.dataset.prevObjUrl = ''; }
+                    v.dataset.blobDone = '0';
                     if (bar) bar.classList.add('loading');
                     pvBlobLoad(v, pv.stream.url);
                     if (pvReadyTimer) clearTimeout(pvReadyTimer);
