@@ -8,6 +8,7 @@
 - **数据来源**: B 站视频数据（bili-sync 同步）、PRTS Wiki、B 站 Wiki (biligame)
 - **版本管理**: V0.10~V0.24 已定格，当前版本 **V0.25**（草稿，功能开发中）
 - **本地预览**: `serve_preview.py`（端口 8844，服务 Default Project 目录）
+- **目录说明（2026-08-07 迁移）**: 原 C 盘项目管理文件 `C:\DGWEB`（管理器/日志/配置/脚本/备份）已全部迁至 `E:\WebProjects\DGWEB\c_drive_mirror\`，与源码同盘；该目录已加入 .gitignore，不会上传
 
 ## 核心页面结构
 | 页面 | 功能 | 状态 |
@@ -215,6 +216,8 @@
 | PV 代理 | `functions/pv.js`（CF Pages Function，`/pv?url=` 带 B 站 Referer 代发 Range） |
 | 模式构建保护 | `_build_modes.py` / `_gen_mode_pages.py`（自动构建不覆盖） |
 | 本地预览 | `serve_preview.py` (端口 8844) |
+| **项目管理器/日志/配置** | `c_drive_mirror\manager.ps1` + `c_drive_mirror\projects.json` + `c_drive_mirror\logs\DGWEB.md`（2026-08-07 由 C:\DGWEB 迁入） |
+| **计划任务脚本** | `c_drive_mirror\run_local_task.ps1`（DGWEB_DataFetchHourly 每日抓取上传） |
 
 ## 部署流程
 ```
