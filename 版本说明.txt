@@ -98,6 +98,14 @@
 38. 验证：线上完整 0→100%、src=blob:、正常播放，中途无回落
 39. 提交：8c1d4b6 / f981722
 
+修复播放中途随机卡住：
+40. 根因：blob 播放时 seek 到 pvStart(随机 7~150s)大范围跨段，浏览器
+    解码/seek 偶发永久卡住(视频不动、paused 保持 false 但 currentTime 不推进)
+41. 修复：blob 改为线性从头播放(尾段 seek 回 0 循环，无跨段大跳)，新增
+    pvVideoCard()：waiting 事件>3s 强制 currentTime+0.15 续播兜底
+42. 验证：线上连续观察约46s 播放 0 次卡住，currentTime 0→57.8 paused=false
+43. 提交：e04a484
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
