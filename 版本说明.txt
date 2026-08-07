@@ -58,6 +58,17 @@
     iframe 未加载完成时显示，iframe load 事件触发后隐藏（平滑淡出）
 23. 提交：7b9f97c
 
+进度条改为真实视频缓存进度：
+24. 背景：/pv 代理(CF fetch 带 B站 Referer)经实测可正常返回 206 video/mp4
+    (此前 403 系签名过期与 IP 校验)，video 直连播放可行
+25. 实现：pvRender 恢复 video 直链分支(/pv?url=)，
+    progress 事件驱动 #pvProgress 宽度=buffered/duration 真实缓存百分比，
+    缓冲覆盖播放起点+readyState>=4 即播并淡出进度条，
+    video error 时自动回退官方 iframe 播放器
+26. 验证：线上 Playwright buff=13.4s/dur=150.9s → barWidth=8.9% 真实缓存进度，
+    readyState=4，本站无 requestfailed
+27. 提交：19c213d
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
