@@ -6,7 +6,7 @@
 - **GitHub 仓库**: `ccakenice/DGWEB`（CF Pages 自动部署，改完上传即上线）
 - **技术栈**: 纯静态 HTML/CSS/JS（原生 ES6 + Tailwind CDN），无构建工具
 - **数据来源**: B 站视频数据（bili-sync 同步）、PRTS Wiki、B 站 Wiki (biligame)
-- **版本管理**: V0.10~V0.23 已定格，当前版本 **V0.24**（草稿，功能开发中）
+- **版本管理**: V0.10~V0.24 已定格，当前版本 **V0.25**（草稿，功能开发中）
 - **本地预览**: `serve_preview.py`（端口 8844，服务 Default Project 目录）
 
 ## 核心页面结构
@@ -93,9 +93,15 @@
 - **高清直链落地（本机定时抓取）**：B 站对 GitHub Actions 数据中心 IP 的 playurl 接口 412 封禁（wbi/plain/intl 三端点实测均不通），改用**本机计划任务 DGArkPVSync 每小时跑 `run_ark_pv.py`**（读 `deploy-config.json` 的 BILI_SESSDATA/GH_TOKEN，运行 fetch_ark_pv.py 抓 1080P 直链 + api.github.com 双仓库上传）；直链约 2 小时有效，每小时刷新保持持续高清，前端 video error 自动回退 iframe
 - **CDN 防盗链与代理**：B 站标准 CDN（bilivideo.com/upos-*）只认 `*.bilibili.com` Referer，页面 `<video>` 直接引用必 403（ERR_BLOCKED_BY_ORB）→ 新增 **CF Pages Function `functions/pv.js`（`/pv?url=` 代理）**：Worker 侧代发请求带 B 站 Referer + 转发 Range/206/Content-Type，页面同源播放；线上已验证 1080P（1920×886）正常播放、循环 seek、交互开声全部正常
 - **本地实测**：带 SESSDATA 抓取 quality=80（1080P dash），游客仅 32（480P）；mcdn.bilivideo.cn 部分节点不查 Referer（本地 480P 曾直连可播），标准 CDN 必查
-- **缓存完成才显示**：`<video>` 以 opacity:0 隐藏（display:none 会被浏览器暂停，无法后台缓冲）+ muted 静音自动 play 触发下载；监听 progress/canplaythrough，`buffered.end >= duration-1`（缓存至片尾可连续播完）才 `pv-video-on` 显示并 seek 到随机起点；60 秒兜底显示防弱网永久黑屏；交互开声后未显示时仅切换静音态，显示时自动有声
+- **缓存完成才显示（V0.22 方案，已由 V0.24 blob 分段下载取代）**：`<video>` 以 opacity:0 隐藏（display:none 会被浏览器暂停，无法后台缓冲）+ muted 静音自动 play 触发下载；监听 progress/canplaythrough，`buffered.end >= duration-1`（缓存至片尾可连续播完）才 `pv-video-on` 显示并 seek 到随机起点；60 秒兜底显示防弱网永久黑屏；交互开声后未显示时仅切换静音态，显示时自动有声
 - **黑底延迟出现（light 兼容）**：`.pv-stage` 黑底与 `pv-active` 文字浅色覆写不再随 fetch 成功立即出现，改为 `pvStageShow()`（视频缓存完成 / iframe load / 12s 兜底）时触发——视频未加载前 stage 透明、hero 保持白底黑字（light）或默认深色；修复原 `.pv-stage + .max-w` 选择器不匹配（实际类名 `max-w-[1400px]`）导致 light 覆写失效的问题，改用 `body.pv-active` 类控制（线上验证：加载中白底黑字 rgb(20,20,20)，显示后黑底浅字 rgb(244,244,242)）
 - **循环黑场过渡**：循环点（dur-6 秒）不再瞬时 seek 跳变——video/iframe 先加 `pv-fade-out`（0.85s 淡出到黑场），黑场停驻 **2 秒**，seek 到新随机起点后移除类淡入（0.8s），整体约 3 秒过渡（线上实测：dur 150.9 时 cur 145.3 淡出 → 黑停 2s → cur 101.2 淡入新起点）
+- **【V0.24 定制】分段下载+blob 播放（当前线上方案）**：前端 `pvBlobLoad()` 经 `/pv` 用 Range 每 2MB 分段 fetch 下载**全量** → 累积 bytes 驱动 `#pvProgress` 宽度=已下载/总长(%)，满 100% → `new Blob + createObjectURL` 赋给 `<video>` → `currentTime=9s` 窗口内从头线性播放（弃用 native buffered，因 CF 代理转发的 buffered 报告失真；播放不再随机 seek 跨段以免卡顿）
+- **【V0.24 定制】播放窗口裁剪**：`PV_WIN_START=9` / `PV_WIN_END=148`——跳过开头 0-9s LOGO 与结尾 02:28(148s) 之后 LOGO，仅循环 `[9s,148s]`；`pvVideoTick()` 到尾窗 `pvWinEnd()` 即 fade 回绕到 9s，`pvVideoCard()` 卡顿续播上限、`pvRandomStart()` 起点均受窗口约束
+- **【V0.24】段失败不退让**：段下载遇 ERR_CONNECTION_CLOSED 等瞬时错误→段内 3 次重试(1.5s/3s/4.5s 退避)+整体 stalled 上限 4 次才放弃，**进度条不再中途消失**、不再丢弃已下字节重来
+- **【V0.24】卡顿兜底**：blob 播放时 `waiting` 事件>3s → `pvVideoCard()` 强制 `currentTime+0.15` 续播，播到尾窗回绕 9s；播放线性从头，消除随机起点跨段 seek 卡死
+- **【V0.24】白昼无黑块**：`.pv-stage/.pv-frame` 背景 `#000`→`transparent`（light 下透出白底黑字，night 下透出深色），移除 12s 强制显示兜底改 iframe load 触发
+- **【V0.24】白昼进度条可见**：进度条移到 hero 独立层（不进 .pv-stage，避免 stage opacity 遮挡），`html.light` 下轨道背景 rgba(127,127,127,.25)→rgba(0,0,0,.15)
 - **计划任务 DGArkPVSync 曾失败**（Result 2147946720）：重建为`可复用 SYSTEM 账户 ServiceAccount + 最高权限`后 Result 0 恢复正常，且 CF Pages 对已有静态 json 有 CDN 缓存（更新时间约延迟 1-2 分钟，实际延迟因 CDN 而定）；直链过期会导致 video error → 自动回退 iframe
 
 ## 数据源与素材库
@@ -119,14 +125,15 @@
 | **V0.21** | 🔒 定格 | 详情页分P/续播 + 搜索高亮 + 干员筛选 + 移动端补强 |
 | **V0.22** | 🔒 定格 | 主页 hero 官方先导PV 全屏背景（缓存完成后随机起点循环播放+静音交互+每日抓取） |
 | **V0.23** | 🔒 定格 | 全站图片低清占位(LQIP)加速：站内154+外部647张低清图 + manifest 统一清单 + img-progressive.js（低清→高清淡入替换） |
-| **V0.24** | 🧪 草稿 | 修复自动构建覆盖 modes：_build_modes.py/_gen_mode_pages.py 加保护，恢复 12 模式与完整模式页面 |
+| **V0.24** | 🔒 定格 | PV 播放链路全面修复+定制：模式缓存修复(9卡→12模式)、PV blob 分段下载进度条、白昼黑块/进度条中途消失修复、播放卡顿修复、播放窗口裁剪 9s~148s(去除首尾 LOGO) |
+| **V0.25** | 🧪 草稿 | 从 V0.24 拷贝新建，暂无改动 |
 
 **同步流程**：
 1. 主目录 (`E:\WebProjects\DGWEB`) 修改
-2. 同步到 `E:\WebProjects\versions\DGWEB_V0.24\`
+2. 同步到 `E:\WebProjects\versions\DGWEB_V0.25\`
 3. 上传 GitHub → CF Pages 自动部署（1~3 分钟）
 4. 线上验证（网络波动时多轮重试）
-5. 更新 `V0.24\版本说明.txt`
+5. 更新 `V0.25\版本说明.txt`
 
 **版本变更历史（自动汇总）**：
 - 管理器「理解AI」每次点击时，自动扫描 versions 下**所有已定格版本**的版本说明.txt，
@@ -143,16 +150,18 @@
 6. **中文交流**: 与用户交流一律简体中文
 7. **文档同步**: 每次重大改动后更新 `AI_PROGRESS.md` 和 `版本说明.txt`
 
-## 当前进度 (2026-08-06)
+## 当前进度 (2026-08-07)
 
-### 🧪 V0.22（草稿，开发中）
-- [x] 抓取脚本 fetch_ark_pv.py：明日方舟官方空间「先导PV」最新视频 → ark_pv.json（本地已验证抓到 BV1KN3M6wEm9「直到大地变成一颗酸橙」活动先导PV）
-- [x] 主页 hero 副屏播放器：iframe + t 随机起点(7~150s) + 定时重载循环 + 默认静音自动播
-- [x] 首次交互自动开声（pointerdown/keydown/touchstart 后重建 iframe）
-- [x] 静音按钮手动切换 + 边缘 mask 羽化 + 控制条裁剪（无进度条）
-- [x] daily.yml 增加 fetch_ark_pv.py 步骤（Actions 定时 04:30 抓取）
-- [x] playwright 本地验证：加载/随机t/交互开声/按钮切换全部通过
-- [x] 同步 V0.22 + 上传 GitHub + 线上验证通过（git push 网络受阻，改用 api.github.com Contents API 上传）
+### ✅ V0.24（已定格） hero PV 播放链路全面修复+定制
+- [x] 模式入口缓存修复：modes.html + 12 个 mode-*.html 的 localStorage cache key 版本化 `dgdata_v12_` + TTL 3h→10min（旧 9 模式缓存作废，恢复 12 卡片）
+- [x] PV 播放方案演进：弃用官方 iframe 改 `/pv` 代理直链播放 → 实测 CF 代理 206 可用 → **分段下载+blob 播放**（Range 2MB/段全量下载→Blob→objectURL→video，满 100% 才播）
+- [x] 白昼模式 PV 黑块修复：`.pv-stage/.pv-frame` 背景 #000→transparent，移除 12s 强制显示兜底（改 iframe load 触发），light 下渐晕减淡
+- [x] 进度条真实下载进度：`#pvProgress`（hero 独立层）宽度=已下载/总长(%)，下载满 100% 淡出播放
+- [x] 进度条中途消失修复：后端段失败(ERR_CONNECTION_CLOSED)不再整体放弃——段内 3 次重试+退避 → stalled 上限 4 次，进度持续可见不重来
+- [x] 播放中途卡死修复：blob 线性从头播（尾段 seek 回起点循环，去掉随机跨段 seek）+ `waiting>3s` 强制续播兜底 `pvVideoCard()`
+- [x] **播放窗口裁剪**：跳过开头 0-9s LOGO + 结尾 02:28(148s) 之后 LOGO，仅循环播放 [9,148]；`pvRandomStart` 起点随之受限
+- [x] 线上验证全部通过（首播起点 9.4s、回绕 150→9.9s、blob 计重试/进度/卡顿均无异常）
+- [x] 版本已定格；功能提交 8920152 + 窗口结尾调整 2bf64ec，文档同步完成
 
 ### ✅ V0.21（已定格）
 - [x] 视频详情页分 P 播放器优化（p-nav 翻P + iframe src 同步 + URL `?p=N` + autoplay=1）
@@ -201,19 +210,23 @@
 | 页面组装脚本 | `build_ranking.py` / `gen_aliases_page.py` / `rebuild_is.py` |
 | 部署脚本 | `upload_all.py` / `upload_single.py` / `upload_mode_pages.py` |
 | 主题同步 | `sync_themes_auto.py` |
+| PV 数据抓取 | `fetch_ark_pv.py` / `run_ark_pv.py`（本机计划任务 DGArkPVSync 每小时跑） |
+| PV 播放逻辑 | `index.html`（pvRender/pvBlobLoad/pvVideoTick/pvVideoCard/pvWinEnd + PV_WIN_START/PV_WIN_END） |
+| PV 代理 | `functions/pv.js`（CF Pages Function，`/pv?url=` 带 B 站 Referer 代发 Range） |
+| 模式构建保护 | `_build_modes.py` / `_gen_mode_pages.py`（自动构建不覆盖） |
 | 本地预览 | `serve_preview.py` (端口 8844) |
 
 ## 部署流程
 ```
-1. 主目录修改 → 同步到 versions\DGWEB_V0.22\
+1. 主目录修改 → 同步到 versions\DGWEB_V0.25\
 2. python upload_all.py（批量）或 upload_single.py 文件名（单文件）
 3. 等 CF 构建（1~3 分钟），多轮重试验证 https://dgwebq.pages.dev/
 ```
 
 ## 后续 AI 接手指引
-1. 先读 `AI_PROGRESS.md`、`ai_handoff/` 同步副本、`V0.22\版本说明.txt`
+1. 先读 `AI_PROGRESS.md`、`ai_handoff/` 同步副本、`V0.25\版本说明.txt`
 2. 本地预览 `serve_preview.py`（8844，注意服务的是 Default Project 目录，验证前需先复制页面过去）
 3. 改动前遵守项目规范（不扩大范围、先局部后全局）
-4. 改完同步 V0.21 → 上传 → 验证 → 更新文档
+4. 改完同步 V0.25 → 上传 → 验证 → 更新文档
 
 > **核心原则**：小步快跑，先局部后全局，不扩大问题范围，保留原有设计意图。
