@@ -116,6 +116,16 @@
     完整0→100%正常播放
 47. 提交：114fe83
 
+PV 播放窗口裁剪（去掉开头/结尾 LOGO）：
+48. 需求：按 00:09-02:29 裁剪，跳过开头 0~9s 与结尾 02:29(149s) 之后
+49. 实现：新增 PV_WIN_START=9 / PV_WIN_END=149，
+    - blob 播放起点 currentTime=9s
+    - pvVideoTick 尾播到 pvWinEnd() 即 fade 回绕到 9s
+    - pvVideoCard 卡顿续播上限限入窗口
+    - pvRandomStart 起点限制 [9, 139]，避免落在 LOGO 区间
+50. 验证：线上首播起点 9.4s，回绕检测到 150→9.9s，min/max ct=9.4~150
+51. 提交：8920152
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
