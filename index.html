@@ -569,7 +569,8 @@
                 window.__pvBlobLoading = false;
                 v.currentTime = PV_WIN_START; // blob 窗口内播放：从 9s 起，跳过开头 LOGO
                 v.classList.add('pv-video-on');
-                pvStageShow();
+                // 等 video 真正触发 playing（画面已渲染）再显示 stage，
+                // 避免 src 已挂、画面未出时黑/灰场过渡暴露
                 await v.play().catch(() => {});
             } catch (e) {
                 window.__pvBlobLoading = false;
@@ -700,7 +701,7 @@
                     if (waitTimer) clearTimeout(waitTimer);
                     waitTimer = setTimeout(() => { pvVideoCard(); waitTimer = null; }, 3000);
                 });
-                pvVideoEl.addEventListener('playing', () => { if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; } });
+                pvVideoEl.addEventListener('playing', () => { if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; } pvStageShow(); });
             }
             pvRender(true);
         }
