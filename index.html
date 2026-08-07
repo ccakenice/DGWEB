@@ -572,7 +572,10 @@
                 v.currentTime = PV_WIN_START; // blob 窗口内播放：从 9s 起，跳过开头 LOGO
                 v.classList.add('pv-video-on');
                 // 等 video 真正触发 playing（画面已渲染）再显示 stage，
-                // 避免 src 已挂、画面未出时黑/灰场过渡暴露
+                // 避免 src 已挂、画面未出时黑/灰场过渡暴露；
+                // 兜底：若浏览器拒自动播放致 playing 不触发，4s 后仍点亮 stage（画面已就绪）
+                clearTimeout(pvStageTimer);
+                pvStageTimer = setTimeout(pvStageShow, 4000);
                 await v.play().catch(() => {});
             } catch (e) {
                 window.__pvBlobLoading = false;
@@ -589,7 +592,8 @@
             const mutedState = muted === undefined ? (pvMuted || !pvInit) : muted;
             pvMuted = mutedState;
             const bar = document.getElementById('pvProgress');
-            if (bar) { bar.classList.remove('loading'); if (bar.firstElementChild) bar.firstElementChild.style.width = '0%'; }
+            // blob 分段下载进行中不要重置/隐藏进度条（否则用户交互触发 pvRender 会让进度条凭空消失）
+            if (bar && !window.__pvBlobLoading) { bar.classList.remove('loading'); if (bar.firstElementChild) bar.firstElementChild.style.width = '0%'; }
             const v = document.getElementById('pvVideo');
             if (v && pv.stream && pv.stream.url) {
                 // 直链播放：经 /pv 代理（带 B站 Referer），progress 驱动真实缓存进度条
@@ -704,7 +708,7 @@
                     if (waitTimer) clearTimeout(waitTimer);
                     waitTimer = setTimeout(() => { pvVideoCard(); waitTimer = null; }, 3000);
                 });
-                pvVideoEl.addEventListener('playing', () => { if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; } pvStageShow(); });
+                pvVideoEl.addEventListener('playing', () => { if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; } clearTimeout(pvStageTimer); pvStageShow(); });
             }
             pvRender(true);
         }
