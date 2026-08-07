@@ -117,10 +117,10 @@
         .pv-frame video { opacity:0; }
         .pv-frame video.pv-video-on { opacity:1; }
         .pv-frame iframe.pv-fade-out, .pv-frame video.pv-fade-out { opacity:0; }
-        .pv-progress { position:absolute; left:0; right:0; bottom:0; height:2px; z-index:3; overflow:hidden; opacity:0; transition:opacity .4s ease; }
+        .pv-progress { position:absolute; left:0; right:0; bottom:0; height:2px; z-index:3; overflow:hidden; opacity:0; transition:opacity .4s ease; background:rgba(127,127,127,.25); }
         .pv-progress.loading { opacity:1; }
-        .pv-progress span { display:block; width:35%; height:100%; background:var(--acc); animation:pvLoad 1.2s ease-in-out infinite; }
-        @keyframes pvLoad { 0% { transform:translateX(-110%); } 100% { transform:translateX(320%); } }
+        .pv-progress span { display:block; width:0; height:100%; background:var(--acc); transition:width .5s ease; }
+        html.light .pv-progress { background:rgba(0,0,0,.15); }
         @media (max-width:768px) {
             .pv-stage::after { background:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.45) 40%, rgba(0,0,0,.82) 100%); }
             .pv-frame { inset:-10%; }
@@ -442,15 +442,39 @@
             }
         }
 
+        function pvProgressTick() {
+            const v = document.getElementById('pvVideo');
+            const bar = document.getElementById('pvProgress');
+            if (!v || !bar || v.dataset.playing !== '1') return;
+            const dur = v.duration;
+            if (!dur || !(dur > 0)) return;
+            let end = 0;
+            try { if (v.buffered && v.buffered.length) end = v.buffered.end(v.buffered.length - 1); } catch (_) {}
+            const pct = Math.min(100, Math.max(0, end / dur * 100));
+            if (bar.firstElementChild) bar.firstElementChild.style.width = pct.toFixed(1) + '%';
+            // 缓冲到播放起点 + 足够播放量即开始
+            if (v.readyState >= 3 || (end >= pvStart && end - pvStart >= Math.min(15, dur))) {
+                /* 交由 pvVideoShow 播放，这里仅更新进度 */
+            }
+        }
+
         function pvVideoShow() {
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
             if (v.classList.contains('pv-video-on')) return;
-            if (!(v.duration && v.buffered && v.buffered.length > 0 &&
-                  v.buffered.end(v.buffered.length - 1) >= v.duration - 1)) return;
+            const dur = v.duration;
+            if (!(dur && v.buffered && v.buffered.length > 0)) return;
+            let end = 0;
+            try { end = v.buffered.end(v.buffered.length - 1); } catch (_) {}
+            // 缓冲覆盖播放起点，且已能流畅播放
+            const ok = v.readyState >= 4 && end >= pvStart + Math.min(6, dur || 0);
+            if (!ok) return;
             if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
+            const bar = document.getElementById('pvProgress');
+            if (bar) bar.classList.remove('loading');
             v.currentTime = pvStart;
             v.classList.add('pv-video-on');
+            pvProgressTick();
             pvStageShow();
             v.play().catch(() => {});
         }
@@ -458,6 +482,8 @@
         function pvVideoFallback() {
             const v = document.getElementById('pvVideo');
             if (!v || v.dataset.playing !== '1') return;
+            const bar = document.getElementById('pvProgress');
+            if (bar) bar.classList.remove('loading');
             v.currentTime = pvStart;
             v.classList.add('pv-video-on');
             pvStageShow();
@@ -465,6 +491,8 @@
         }
 
         function pvVideoError() {
+            const bar = document.getElementById('pvProgress');
+            if (bar) bar.classList.remove('loading');
             const v = document.getElementById('pvVideo');
             const f = document.getElementById('pvFrame');
             if (!v) return;
@@ -482,30 +510,61 @@
             if (!f || !pv) return;
             const mutedState = muted === undefined ? (pvMuted || !pvInit) : muted;
             pvMuted = mutedState;
+            const bar = document.getElementById('pvProgress');
+            if (bar) { bar.classList.remove('loading'); if (bar.firstElementChild) bar.firstElementChild.style.width = '0%'; }
             const v = document.getElementById('pvVideo');
-            // 统一走官方 iframe 播放器（player.bilibili.com）。
-            // 直链 /pv 代理在本环境会触发 ERR_HTTP2_PROTOCOL_ERROR / 403，故弃用。
-            if (v) { v.dataset.playing = '0'; v.classList.remove('pv-video-on'); v.removeAttribute('src'); }
-            if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
-            f.classList.remove('pv-fade-out');
-            f.style.display = 'block';
-            if (f.src.indexOf('player.bilibili.com') === -1 || f.dataset.t !== String(pvStart)) {
-                const bar = document.getElementById('pvProgress');
-                if (bar) bar.classList.add('loading');
-                f.dataset.t = String(pvStart);
-                f.src = pvBuildSrc(pvStart, mutedState);
+            if (v && pv.stream && pv.stream.url) {
+                // 直链播放：经 /pv 代理（带 B站 Referer），progress 驱动真实缓存进度条
+                f.style.display = 'none';
+                f.removeAttribute('src');
+                if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
+                if (v.dataset.playing !== '1') {
+                    v.dataset.playing = '1';
+                    v.muted = mutedState;
+                    v.classList.remove('pv-fade-out');
+                    v.src = '/pv?url=' + encodeURIComponent(pv.stream.url);
+                    if (bar) bar.classList.add('loading');
+                    v.load();
+                    if (pvReadyTimer) clearTimeout(pvReadyTimer);
+                    pvReadyTimer = setTimeout(pvVideoFallback, 60000);
+                } else {
+                    v.muted = mutedState;
+                    if (v.classList.contains('pv-video-on') && !mutedState) v.play().catch(() => {});
+                }
+            } else {
+                if (v) { v.dataset.playing = '0'; v.classList.remove('pv-video-on'); v.removeAttribute('src'); }
+                if (pvReadyTimer) { clearTimeout(pvReadyTimer); pvReadyTimer = null; }
+                f.style.display = 'block';
+                if (f.src.indexOf('player.bilibili.com') === -1 || f.dataset.t !== String(pvStart)) {
+                    f.dataset.t = String(pvStart);
+                    f.src = pvBuildSrc(pvStart, mutedState);
+                }
             }
             if (pvStageTimer) clearTimeout(pvStageTimer);
             pvStageTimer = null;
             pvTimer = setTimeout(() => {
-                f.classList.add('pv-fade-out');
-                setTimeout(() => {
-                    pvStart = pvRandomStart();
+                if (v && v.dataset.playing === '1') {
+                    if (pvLooping) return;
+                    pvLooping = true;
+                    v.classList.add('pv-fade-out');
                     setTimeout(() => {
-                        pvRender(pvMuted);
-                        f.classList.remove('pv-fade-out');
-                    }, 2000);
-                }, 850);
+                        pvStart = pvRandomStart();
+                        setTimeout(() => {
+                            pvRender(pvMuted);
+                            v.classList.remove('pv-fade-out');
+                            setTimeout(() => { pvLooping = false; }, 1000);
+                        }, 2000);
+                    }, 850);
+                } else if (f.style.display !== 'none') {
+                    f.classList.add('pv-fade-out');
+                    setTimeout(() => {
+                        pvStart = pvRandomStart();
+                        setTimeout(() => {
+                            pvRender(pvMuted);
+                            f.classList.remove('pv-fade-out');
+                        }, 2000);
+                    }, 850);
+                }
             }, Math.max(3000, (pvDuration() - pvStart - 6) * 1000));
         }
 
@@ -544,7 +603,7 @@
                 pvVideo.addEventListener('timeupdate', pvVideoTick);
                 pvVideo.addEventListener('error', pvVideoError);
                 pvVideo.addEventListener('canplaythrough', pvVideoShow);
-                pvVideo.addEventListener('progress', pvVideoShow);
+                pvVideo.addEventListener('progress', pvProgressTick);
             }
             document.body.addEventListener('pointerdown', pvUnlock, { once: false });
             document.body.addEventListener('keydown', pvUnlock, { once: false });
