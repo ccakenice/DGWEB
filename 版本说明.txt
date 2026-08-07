@@ -1,18 +1,24 @@
 ﻿项目：DGWEB
-版本：V0.20
-日期：2026-08-06
+版本：V0.23
+日期：2026-08-07
 状态：正式（已定格）
 
-改动说明：
-1. 备份目录（versions）回归修复：V0.17/V0.18/V0.19 三个版本目录此前只生成「版本说明.txt」、缺少项目文件，已从主目录补全为完整项目副本（与当前项目一致）。
-2. 模式数据完整性核对：modes.json 12 模式齐全（集成战略 6 主题 / 保全派驻 1 项 / 生息演算 3 主题等），详情页 MODE_KEY 全匹配，线上渲染 12 卡片无缺失。
-3. 模式入口「消失」问题定位与修复：
-   - 根因一：浏览器 localStorage 缓存 modes.json（fetchJSON，dgdata_ 前缀，TTL 3 小时），刷新不更新
-   - 根因二：jsDelivr CDN 缓存旧版 bili-sync modes.json（9 模式），已通过 purge.jsdelivr.net 刷新为 12 模式
-   - 修复：CDN 缓存刷新 + 提供 localStorage 清理命令
-4. 「理解AI」文档全量更新：AI_PROGRESS.md（进度/版本 V0.20）、AI_DOCS.md（索引）、ai_handoff 三件套（版本变更历史/最新版本说明/项目日志）。
-5. git 全量同步：本地与 GitHub main 历史合并（保留远端提交记录），全站 20 页面 + 图片 + modes.json 纳入版本管理；.gitignore 排除 deploy-config.json（含 token）、__pycache__、本地日志。
-6. 四方一致性确认：本地 E:\WebProjects\DGWEB / versions\DGWEB_V0.20 / GitHub main / 线上 dgwebq.pages.dev 内容一致。
+改动说明（低清占位 LQIP 加速加载）：
+1. 全站图片低清占位 + 后台高清替换：
+   - 生成 scripts/gen_lowres.py：站内 154 张图片（images/modes 148 PNG + 6 JPG）低清化 → images/lowres/（JPG 转 q72 progressive / PNG 缩放+量化，max 宽 480px，跳过 <25KB 小图）
+   - 外部资源本地化 download_ext.py：B站视频封面 506 张 + PRTS 干员头像 239 张下载至 images/ext/（covers + avatars，647 成功）
+   - 对 ext 再生成低清版 + gen_unified_manifest.py 合并统一清单 images/lowres/manifest.json（1448 条：外部 URL/本地图片 → hi/lo 映射）
+2. 加载脚本 js/img-progressive.js：
+   - 异步拉取 manifest，将 <img> 切换到低清（lo）快速显示，后台 new Image() 预载原图（hi），就绪后淡入替换
+   - MutationObserver 覆盖全部动态渲染场景（index.html JS 卡片、modes.html THUMBS 对象等）
+   - 支持 weserv 代理 URL 还原为原始 hdslb 命中本地高清
+   - 低清与高清同宽高比，配合原有 object-fit CSS，显示尺寸与原图一致
+3. 全站注入：29 个 html 页面统一注入 <script src="js/img-progressive.js">（inject_lq.py）
+4. 效果：原图站内 ~20MB → 低清 ~3.4MB，首屏加载大幅提速；外部封面 647 张脱离 B站/CDN 直接依赖
+5. 端到端验证：本地 Playwright 验证 modes.html（11/11 LQ 命中 + 高清替换）与 index.html（512 封面 LQ 命中）；线上 dgwebq.pages.dev 复测通过（脚本注入、fade 替换、无页面错误）
+6. 同步：主目录（git 提交 d79c925）→ versions\DGWEB_V0.23 全量同步 → GitHub push → CF Pages 自动部署 + 线上验证
 
-文件清单（约 200 个）：
-index.html, modes.html, ranking.html, aliases.html, search.html, detail.html, stage.html, theme-videos.html, easter-egg.html, easter-storyteller.mp3, 13 个 mode-*.html, modes.json, latest.json, tailwind.css, worker.js, fetch_bili.py, deploy.ps1, sync_themes_auto.py, AI_PROGRESS.md, AI_DOCS.md, 版本说明.txt, images/*（含 images/modes 153 张）, ai_handoff/*, run.bat
+文件清单（约 1330 个）：
+新增：js/img-progressive.js、gen_lowres.py、download_ext.py、gen_unified_manifest.py、inject_lq.py、images/ext/*（covers+avatars 647 张）、images/lowres/*（644 张 + manifest.json + lowres.json）
+修改：29 个 html 注入脚本；AI_PROGRESS.md、AI_DOCS.md、ai_handoff/*、版本说明.txt
+其余同 V0.22（index.html 全屏 PV、modes.json、latest.json 等）
