@@ -37,6 +37,14 @@
 12. 验证：本地 Playwright pvFrame src=player.bilibili.com 正常、console error=0
 13. 提交：a6bd35d
 
+修复模式入口缓存回退为 9 卡片：
+14. 根因：modes.html/mode-*.html 的 fetchJSON 用 localStorage key 'dgdata_modesjson'
+    缓存 modes.json 达 3 小时，旧版本(修复前)写入的 9 模式数据在 TTL 内命中，
+    页面直接渲染旧 9 卡片，不做网络请求 → 线上明明是 12 模式却被渲染 9
+15. 修复：缓存 key 增加版本号 dgdata_v12_（旧 key 一律作废）+ TTL 从 3h 缩短为 10min
+16. 验证：Playwright 干净渲染 11 网格卡 + 1 featured 卡（=12 模式）、旧 9 模式 key 不再读取
+17. 提交：637dc73
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
