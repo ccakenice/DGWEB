@@ -80,6 +80,16 @@
 30. 验证：线上 buff=151/151、barWidth=100%、ct=63s paused=false 正常播放
 31. 提交：a203466
 
+进度条改为真实下载进度（分段下载 + blob 播放）：
+32. 根因：浏览器 native buffered 报告与 CF 代理实际下载脱节（曾停 1.8% 就播/或
+    61s 卡死），且加载太快进度条瞬间满不可见
+33. 实现：pvBlobLoad() 经 /pv 用 Range 每 2MB 分段 fetch 下载全量 → 累积 byte
+    实时更新 #pvProgress 宽度=已下载/总长(%)，满 100% → new Blob+createObjectURL
+    赋给 video → 设置随机起点播放 → 进度条淡出；失败回退 iframe
+34. 验证：线上进度条 22.3%→26.1%→…→96.8%→100%(约26s逐步增长)，满100%后
+    currentTime=98.8s 正常播放，src=blob:
+35. 提交：eee6915
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
