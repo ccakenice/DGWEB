@@ -425,9 +425,9 @@
         }
 
         let pvLooping = false;
-        // 播放窗口裁剪：开头截 0~9s LOGO、结尾截 02:29(149s) 之后 LOGO，仅循环播放 [9,149]
+        // 播放窗口裁剪：开头截 0~9s LOGO、结尾截 02:28(148s) 之后 LOGO，仅循环播放 [9,148]
         const PV_WIN_START = 9;
-        const PV_WIN_END = 149;
+        const PV_WIN_END = 148;
         function pvWinEnd(v) { return Math.min(PV_WIN_END, (v && v.duration && v.duration > 0) ? v.duration - 1 : PV_WIN_END); }
 
         function pvVideoTick() {
