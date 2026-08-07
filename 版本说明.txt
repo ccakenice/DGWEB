@@ -90,6 +90,14 @@
     currentTime=98.8s 正常播放，src=blob:
 35. 提交：eee6915
 
+修复进度条中途消失/加载一半停止：
+36. 根因：blobDone='0' 字符串为 truthy，循环条件 !v.dataset.blobDone 在
+    第二段即 false → 只下载 1 段(约3.7%)就退出 → 进度条停住(看似一半没了)
+37. 修复：改用 blobStop 标记(=== '1' 才停)，循环持续到下载满 100%；
+    另加每段 3 次重试+30s 超时、blob URL 释放避免内存泄漏
+38. 验证：线上完整 0→100%、src=blob:、正常播放，中途无回落
+39. 提交：8c1d4b6 / f981722
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
