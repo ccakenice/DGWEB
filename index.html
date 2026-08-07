@@ -689,9 +689,10 @@
             if (pvFrame) pvFrame.addEventListener('load', () => {
                 const bar = document.getElementById('pvProgress');
                 if (bar) bar.classList.remove('loading');
-                // 方案2：iframe 页面 load 不代表视频画面已呈现，
-                // 延迟淡入，避免遮罩透到底色形成灰雾
-                setTimeout(pvStageShow, 1200);
+                // 方案2：iframe 页面 load 不代表视频画面已呈现（B站白底加载页+黑渐变会成灰雾），
+                // 延迟淡入给播放器缓冲时间；真正播放开始前若仍停在加载页，兜底延时后显示
+                clearTimeout(pvStageTimer);
+                pvStageTimer = setTimeout(pvStageShow, 5000);
             });
             // blob 播放卡顿保险：waiting>3s 强制续播
             const pvVideoEl = document.getElementById('pvVideo');
