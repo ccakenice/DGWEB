@@ -53,6 +53,11 @@
 20. 验证：Playwright 白昼未 ready 时 stage bg=rgba(0,0,0,0)，无黑块
 21. 提交：750cb85
 
+新增 PV 视频加载进度条：
+22. 功能：pvStage 底部新增 2px 高 acc 色滑动动画进度条（#pvProgress），
+    iframe 未加载完成时显示，iframe load 事件触发后隐藏（平滑淡出）
+23. 提交：7b9f97c
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
