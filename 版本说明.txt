@@ -106,6 +106,16 @@
 42. 验证：线上连续观察约46s 播放 0 次卡住，currentTime 0→57.8 paused=false
 43. 提交：e04a484
 
+修复白昼模式进度条中途消失：
+44. 根因：/pv 分段下载某段遇 ERR_CONNECTION_CLOSED 等瞬时错误时，段内
+    重试3次耗尽即整体放弃 → pvVideoError 移除 loading 隐藏进度条并重来，
+    已下载几十%进度全部丢弃(白昼网络波动更易触发)，重来阶段进度条不可见
+45. 修复：段下载失败不立即放弃——段内3次重试(1.5s~4.5s退避) + 整体
+    stalled 上限4次才throw；进度条持续可见、已下载进度不丢弃
+46. 验证：压测3轮线上无中途回退(仅循环redisplay时100%→0重置属设计)，
+    完整0→100%正常播放
+47. 提交：114fe83
+
 文件清单：
 修改：_build_modes.py、_gen_mode_pages.py、modes.json、9 个 mode-*.html、AI_PROGRESS.md
 其余同 V0.23（V0.23 内容 + 模式修复）
