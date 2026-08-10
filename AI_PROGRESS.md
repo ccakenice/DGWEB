@@ -6,7 +6,7 @@
 - **GitHub 仓库**: `ccakenice/DGWEB`（CF Pages 自动部署，改完上传即上线）
 - **技术栈**: 纯静态 HTML/CSS/JS（原生 ES6 + Tailwind CDN），无构建工具
 - **数据来源**: B 站视频数据（bili-sync 同步）、PRTS Wiki、B 站 Wiki (biligame)
-- **版本管理**: V0.10~V0.24 已定格，当前版本 **V0.25**（草稿，功能开发中）
+- **版本管理**: V0.10~V0.24 已定格，当前版本 **V0.25**（🔒 已定格）
 - **本地预览**: `serve_preview.py`（端口 8844，服务 Default Project 目录）
 - **目录说明（2026-08-07 迁移）**: 原 C 盘项目管理文件 `C:\DGWEB`（管理器/日志/配置/脚本/备份）已全部迁至 `E:\WebProjects\DGWEB\c_drive_mirror\`，与源码同盘；该目录已加入 .gitignore，不会上传
 
@@ -101,6 +101,9 @@
 - **【V0.24 定制】播放窗口裁剪**：`PV_WIN_START=9` / `PV_WIN_END=148`——跳过开头 0-9s LOGO 与结尾 02:28(148s) 之后 LOGO，仅循环 `[9s,148s]`；`pvVideoTick()` 到尾窗 `pvWinEnd()` 即 fade 回绕到 9s，`pvVideoCard()` 卡顿续播上限、`pvRandomStart()` 起点均受窗口约束
 - **【V0.24】段失败不退让**：段下载遇 ERR_CONNECTION_CLOSED 等瞬时错误→段内 3 次重试(1.5s/3s/4.5s 退避)+整体 stalled 上限 4 次才放弃，**进度条不再中途消失**、不再丢弃已下字节重来
 - **【V0.24】卡顿兜底**：blob 播放时 `waiting` 事件>3s → `pvVideoCard()` 强制 `currentTime+0.15` 续播，播到尾窗回绕 9s；播放线性从头，消除随机起点跨段 seek 卡死
+- **【V0.25 定制】下载期无白屏 + 白昼白场过渡**：灰层根因=blob 完成瞬间 `pvStageShow()` 早于视频画面渲染（黑/灰场过渡）；改为 `pvBlobLoad` 完成后不再直接点亮 stage，由 `<video>` 的 `playing` 事件触发 `pvStageShow()`（画面已渲染才显示），**并加 4s `pvStageTimer` 兜底**（自动播放被拒/`playing` 不触发时也准时点亮），iframe 兜底延迟 1200ms→5000ms 避开 B 站白底加载页+黑遮罩成灰雾
+- **【V0.25】进度条消失回归修复**：诊断定位=用户交互（滚动/点击）触发 `pvUnlock→pvRender` 时其开头无条件重置 `#pvProgress`（清 loading + 宽 0%），且 stage 依赖 `playing` 事件在自动播放被拒时永不触发；修复=`pvRender` 重置进度条前判断 `window.__pvBlobLoading`（blob 分段下载中不重置），`playing` 监听里取消 `pvStageTimer`；线上验证（Playwright 模拟交互）：blob 下载中点击/滚动后进度条保持 loading 不归零，blob 满 100% 后 stage 点亮、视频实际播放无 error
+- **【V0.25】白昼过曝修复**：上一轮把白昼 `.pv-stage::after` 常驻遮罩也改成了 `rgba(244,244,242)` 白渐变(opacity:1)，该遮罩持续叠在视频画面上→画面被冲白=过曝且白字不可读；修复=移除白昼白色 `::after` 覆写，恢复黑渐变（`rgba(0,0,0,.86→.55→.18→.42)`）opacity .72，白场只保留在真正的过渡时刻（fade 期间遮罩透明、露出 `#f4f4f2` 背景）；线上 diag 验证=白昼下 `::after` 为黑渐变，画面中央像素 RGB(87,86,87)、亮度动态 0–255 无过曝
 - **【V0.24】白昼无黑块**：`.pv-stage/.pv-frame` 背景 `#000`→`transparent`（light 下透出白底黑字，night 下透出深色），移除 12s 强制显示兜底改 iframe load 触发
 - **【V0.24】白昼进度条可见**：进度条移到 hero 独立层（不进 .pv-stage，避免 stage opacity 遮挡），`html.light` 下轨道背景 rgba(127,127,127,.25)→rgba(0,0,0,.15)
 - **计划任务 DGArkPVSync 曾失败**（Result 2147946720）：重建为`可复用 SYSTEM 账户 ServiceAccount + 最高权限`后 Result 0 恢复正常，且 CF Pages 对已有静态 json 有 CDN 缓存（更新时间约延迟 1-2 分钟，实际延迟因 CDN 而定）；直链过期会导致 video error → 自动回退 iframe
@@ -127,11 +130,11 @@
 | **V0.22** | 🔒 定格 | 主页 hero 官方先导PV 全屏背景（缓存完成后随机起点循环播放+静音交互+每日抓取） |
 | **V0.23** | 🔒 定格 | 全站图片低清占位(LQIP)加速：站内154+外部647张低清图 + manifest 统一清单 + img-progressive.js（低清→高清淡入替换） |
 | **V0.24** | 🔒 定格 | PV 播放链路全面修复+定制：模式缓存修复(9卡→12模式)、PV blob 分段下载进度条、白昼黑块/进度条中途消失修复、播放卡顿修复、播放窗口裁剪 9s~148s(去除首尾 LOGO) |
-| **V0.25** | 🧪 草稿 | 从 V0.24 拷贝新建，暂无改动 |
+| **V0.25** | 🔒 定格 | PV 下载期无灰层（playing 才亮 stage + 4s 兜底）；进度条消失回归修复（blob 下载中不重置）；白昼过曝修复（遮罩恢复黑渐变） |
 
 **同步流程**：
 1. 主目录 (`E:\WebProjects\DGWEB`) 修改
-2. 同步到 `E:\WebProjects\versions\DGWEB_V0.25\`
+2. 同步到 `E:\WebProjects\versions\DGWEB\DGWEB_V0.25\`
 3. 上传 GitHub → CF Pages 自动部署（1~3 分钟）
 4. 线上验证（网络波动时多轮重试）
 5. 更新 `V0.25\版本说明.txt`
@@ -151,7 +154,17 @@
 6. **中文交流**: 与用户交流一律简体中文
 7. **文档同步**: 每次重大改动后更新 `AI_PROGRESS.md` 和 `版本说明.txt`
 
-## 当前进度 (2026-08-07)
+## 当前进度 (2026-08-08)
+
+### ✅ V0.25（已定格） PV 下载无灰层 + 播放回归修复 + 白昼过曝修复
+- [x] 灰层根因定位：A/B 独立禁用各元素证明灰非 iframe/video/进度条/网格——时间线（diag_timeline）t1s 白 244→t2s 灰 201，禁用 h1 恢复 240，误导指向 H1；后用户反馈「3 分钟干净后灰才出现」推翻 H1 论（H1 500ms 即显示）
+- [x] 真根因：blob 下载完成瞬间 `pvStageShow()` 早于视频画面渲染——`v.src` 已挂、画面未出，`.pv-stage` 黑底+渐变遮罩暴露 = 黑/灰场过渡（视频未加载完白底黑字 → 下载完瞬间变灰）
+- [x] 修复 1：`pvBlobLoad` 移除立即 `pvStageShow()`，改由 `<video>` `playing` 事件（index.html）触发——画面真正渲染后才点亮 stage；线上验证下载 0~215s 全程干净（active=false、stage 无 ready、无灰层），100% 时 active+readyState=4+currentTime=12s 同步点亮
+- [x] 修复 2（回归补强）：`playing` 依赖自动播放策略可能永不触发→`pvBlobLoad` 在 `v.src=objUrl` 后、`play()` 前加 `pvStageTimer=setTimeout(pvStageShow,4000)` 兜底，`playing` 事件里 `clearTimeout(pvStageTimer)`（能播时先去兜底）
+- [x] 修复 3：iframe 兜底 `pvStageShow` 延迟 1200ms→5000ms（index.html:694），避开 B 站白底加载页 + 黑渐变叠出的灰雾
+- [x] 修复 4（进度条消失回归）：诊断=用户交互（滚动/点击）触发 `pvUnlock→pvRender`，其开头无条件 `bar.classList.remove('loading')` + 宽 0% 重置；`pvRender` 改为先判断 `window.__pvBlobLoading`，blob 分段下载中不重置进度条。线上验证（diag_interact.py 模拟点击/滚轮）：blob 下载中进度条始终 loading、宽度不被清零，100% 后 stage 点亮视频播放（paused=false）
+- [x] 修复 5（白昼过曝回归）：白昼 `.pv-stage::after` 白渐变遮罩（rgba(244,244,242) opacity:1）持续叠在画面上→过曝；移除 `html.light` 白场 `::after` 覆写恢复黑渐变 opacity .72（白场只在 fade 过渡瞬间露出背景色）。线上 diag_light 验证=light 下 afterBg 为黑渐变、画面中央像素 RGB(87,86,87)、亮度 0–255
+- [x] 已上线：白昼遮罩修复 uploaded → CF Pages 构建 → 线上验证全部通过
 
 ### ✅ V0.24（已定格） hero PV 播放链路全面修复+定制
 - [x] 模式入口缓存修复：modes.html + 12 个 mode-*.html 的 localStorage cache key 版本化 `dgdata_v12_` + TTL 3h→10min（旧 9 模式缓存作废，恢复 12 卡片）
@@ -221,7 +234,7 @@
 
 ## 部署流程
 ```
-1. 主目录修改 → 同步到 versions\DGWEB_V0.25\
+1. 主目录修改 → 同步到 versions\DGWEB\DGWEB_V0.25\
 2. python upload_all.py（批量）或 upload_single.py 文件名（单文件）
 3. 等 CF 构建（1~3 分钟），多轮重试验证 https://dgwebq.pages.dev/
 ```
@@ -233,3 +246,9 @@
 4. 改完同步 V0.25 → 上传 → 验证 → 更新文档
 
 > **核心原则**：小步快跑，先局部后全局，不扩大问题范围，保留原有设计意图。
+
+## V0.27（草稿）  2026-08-09
+> api verification
+
+## V0.28（草稿）  2026-08-09
+> x

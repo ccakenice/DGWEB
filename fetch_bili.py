@@ -1,4 +1,52 @@
-import json, hashlib, time, urllib.request, urllib.parse, urllib.error, http.cookiejar, sys, os, base64, re
+import json, hashlib, time, urllib.request, urllib.parse, urllib.error, http.cookiejar, sys, os, base64, re, tempfile, ctypes
+
+LOCK_FILE = os.path.join(tempfile.gettempdir(), 'dgweb_fetch_bili.lock')
+
+def _pid_alive(pid):
+    """Windows 下检查进程是否存活（os.kill(pid,0) 在 Win 不支持）。"""
+    try:
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        h = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        if h:
+            ctypes.windll.kernel32.CloseHandle(h)
+            return True
+        return False
+    except Exception:
+        return False
+
+def acquire_lock():
+    """单实例锁：已有一个实例在跑则返回 None（本实例直接退出），否则返回锁描述符。"""
+    try:
+        fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        return fd
+    except FileExistsError:
+        # 检查持有者是否还活着（避免异常退出残留死锁）
+        try:
+            with open(LOCK_FILE) as f:
+                pid = int(f.read().strip())
+            if _pid_alive(pid):
+                return None
+        except (OSError, ValueError):
+            pass
+        try:
+            os.unlink(LOCK_FILE)
+        except OSError:
+            pass
+        try:
+            fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            return fd
+        except FileExistsError:
+            return None
+
+def release_lock(fd):
+    if fd is not None:
+        try:
+            os.close(fd)
+            os.unlink(LOCK_FILE)
+        except OSError:
+            pass
 
 UID = '3546373951588920'
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
@@ -235,6 +283,16 @@ def load_cache():
         return None
 
 def main():
+    lock_fd = acquire_lock()
+    if lock_fd is None:
+        print('another fetch_bili.py instance is running, skip')
+        sys.exit(0)
+    try:
+        _main_inner()
+    finally:
+        release_lock(lock_fd)
+
+def _main_inner():
     # 上次成功的数据作为兜底缓存
     cache = load_cache() or {}
     old_stats = cache.get('stats') or {}

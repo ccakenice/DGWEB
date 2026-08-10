@@ -4,7 +4,54 @@
 依赖：环境变量 BILI_SESSDATA（可选，建议提供以降低风控）
 输出：ark_pv.json { code:0, video:{...} } 或 { code:-1, message }
 """
-import json, hashlib, time, urllib.request, urllib.parse, urllib.error, http.cookiejar, sys, os, re, base64
+import json, hashlib, time, urllib.request, urllib.parse, urllib.error, http.cookiejar, sys, os, re, base64, tempfile, ctypes
+
+LOCK_FILE = os.path.join(tempfile.gettempdir(), 'dgweb_fetch_ark_pv.lock')
+
+def _pid_alive(pid):
+    """Windows 下检查进程是否存活（os.kill(pid,0) 在 Win 不支持）。"""
+    try:
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        h = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        if h:
+            ctypes.windll.kernel32.CloseHandle(h)
+            return True
+        return False
+    except Exception:
+        return False
+
+def acquire_lock():
+    """单实例锁：已有一个实例在跑则返回 None（本实例直接退出），否则返回锁描述符。"""
+    try:
+        fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        return fd
+    except FileExistsError:
+        try:
+            with open(LOCK_FILE) as f:
+                pid = int(f.read().strip())
+            if _pid_alive(pid):
+                return None
+        except (OSError, ValueError):
+            pass
+        try:
+            os.unlink(LOCK_FILE)
+        except OSError:
+            pass
+        try:
+            fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            return fd
+        except FileExistsError:
+            return None
+
+def release_lock(fd):
+    if fd is not None:
+        try:
+            os.close(fd)
+            os.unlink(LOCK_FILE)
+        except OSError:
+            pass
 
 UID = '161775300'  # 明日方舟官方
 KEYWORD = sys.argv[sys.argv.index('--keyword') + 1] if '--keyword' in sys.argv else '先导PV'
@@ -183,6 +230,16 @@ def fetch_playurl(bvid, cid, quality='112'):
     return None
 
 def main():
+    lock_fd = acquire_lock()
+    if lock_fd is None:
+        print('another fetch_ark_pv.py instance is running, skip')
+        sys.exit(0)
+    try:
+        _main_inner()
+    finally:
+        release_lock(lock_fd)
+
+def _main_inner():
     try:
         v = fetch_latest_pv()
         pages = []
@@ -204,6 +261,22 @@ def main():
                     print('stream OK: quality=%s type=%s' % (stream.get('quality'), stream.get('type')))
             except Exception as e:
                 print('stream failed:', e)
+        # 质量降级保护：新抓 quality 低于上次发布时，保留旧 stream 并醒目告警（避免线上突然变糊）
+        prev_stream = None
+        try:
+            prev_json = json.load(open(OUT, encoding='utf-8'))
+            prev_stream = (prev_json.get('video') or {}).get('stream')
+        except Exception:
+            pass
+        if prev_stream and prev_stream.get('url'):
+            new_q = (stream or {}).get('quality')
+            old_q = prev_stream.get('quality')
+            if stream and new_q is not None and old_q is not None and new_q < old_q:
+                print('!! WARNING: PV quality dropped %s -> %s, keep old stream (BILI_SESSDATA expired?)' % (old_q, new_q))
+                stream = prev_stream
+            elif not stream:
+                print('!! WARNING: PV stream fetch failed, keep old stream')
+                stream = prev_stream
         video = {
             'bvid': v['bvid'],
             'aid': v.get('aid', 0),
