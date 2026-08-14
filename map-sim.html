@@ -660,12 +660,12 @@
                         // 道具正确尺寸 = 敌人公式 ÷ 0.9（= ×1.111），即 19.2/anim.scale/0.9
                         const scl = 19.2 / anim.scale / 0.9;
                         sprite = makeFlatModel(tex, scl, true);
-                        sprite.position.set(tr.col + 0.5, modelBottomY(surfY, scl, anim.bodyBottom), tr.row + 0.5);
+                        sprite.position.set(tr.col + 0.5, modelBottomY(surfY, scl, anim.bodyBottom), tr.row + 0.5 + modelLeanShift(scl));
                     } else if (anim.imageUrl) {
                         const loader = new THREE.TextureLoader();
                         loader.setCrossOrigin('anonymous');
                         sprite = makeFlatModel(new THREE.Texture(), 0.9, true);
-                        sprite.position.set(tr.col + 0.5, modelBottomY(surfY, 0.9, 0.92), tr.row + 0.5);
+                        sprite.position.set(tr.col + 0.5, modelBottomY(surfY, 0.9, 0.92), tr.row + 0.5 + modelLeanShift(0.9));
                         loader.load(anim.imageUrl, t => {
                             t.encoding = THREE.sRGBEncoding;
                             sprite.material.map = t;
@@ -943,8 +943,7 @@
             if (currentMode === 'annihilation') {
                 // 剿灭直接全列，不做活动/分区选择
                 if (pickRow) pickRow.style.display = 'none';
-                const seen = new Set();
-                const all = [];
+                    const all = [];
                 zones.forEach(z => (z.stages || []).forEach(s => {
                     const k = s.id || s.code;
                     if (!seen.has(k)) { seen.add(k); all.push(Object.assign({}, s, { zoneName: z.name })); }
@@ -1250,8 +1249,7 @@
                 if (curr.row === tr && curr.col === tc) {
                     const raw = [];
                     let node = curr;
-                    const seen = new Set();
-                    while (node) {
+                            while (node) {
                         const kk = node.row + ',' + node.col;
                         if (seen.has(kk)) break; // 父链成环兜底，避免无限循环
                         seen.add(kk);
@@ -2051,6 +2049,11 @@
         function modelBottomY(surfY, scl, bodyBottom) {
             const bb = bodyBottom || 0.5;
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT) - GROUND_SINK;
+
+        // 身体后仰补偿（参考站 -0.15 深度偏移同思路）
+        function modelLeanShift(scl) {
+            return -0.45 * scl * Math.sin(ENEMY_MODEL_TILT);
+        }
         }
 
         function makeEnemySprite(id, color, scale) {
@@ -2189,7 +2192,7 @@
                             if (pts.length) {
                                 const p0 = pts[0];
                                 const surfY = tileSurfaceY(level, Math.round(p0.row), Math.round(p0.col));
-                                sprite.position.set(p0.col + 0.5, modelBottomY(surfY, scale, 0.97), p0.row + 0.5);
+                                sprite.position.set(p0.col + 0.5, modelBottomY(surfY, scale, 0.97), p0.row + 0.5 + modelLeanShift(scale));
                                 shadow.position.set(p0.col + 0.5 + (shadow.userData.off ? shadow.userData.off.x : 0), surfY - 0.03, p0.row + 0.5 + (shadow.userData.off ? shadow.userData.off.z : 0));
                             }
                             state.scene.add(sprite);
@@ -2436,10 +2439,9 @@
             state.groundRefs.forEach(m => { if (m.parent) m.parent.remove(m); });
             state.groundRefs = [];
             if (!state.groundRefVisible || !state.scene || !state.level) return;
-            const seen = new Set();
             (state.enemies || []).forEach(en => {
                 if (!en.mesh || !en.mesh.visible) return;
-                if (seen.has(en.id)) return; seen.add(en.id);
+                
                 const r = Math.round(en.mesh.position.z - 0.5);
                 const c = Math.round(en.mesh.position.x - 0.5);
                 const surfY = tileSurfaceY(state.level, r, c);
@@ -2488,7 +2490,7 @@
                         const scl = (en.mesh.scale && en.mesh.scale.x) || 1;
                         const anim = state.spineData[en.id];
                         const foot = anim && anim.bodyBottom ? anim.bodyBottom : 0.5;
-                        en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5);
+                        en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5 + modelLeanShift(scl));
                         if (en.shadow) {
                             en.shadow.position.set(
                                 p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0),
@@ -2565,7 +2567,7 @@
                 // 准点绑定：身体脚底（Spine 帧实测）严格贴地
                 const anim = state.spineData[en.id];
                 const foot = anim && anim.bodyBottom ? anim.bodyBottom : 0.5;
-                en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5);
+                en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5 + modelLeanShift(scl));
                 if (en.shadow) en.shadow.position.set(p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0), surfY - 0.03, p.row + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.z : 0));
                 // 面朝移动方向：Sprite 水平镜像（Spine 帧默认朝右，朝左时翻转贴图）
                 if (en.mesh.userData && en.mesh.userData.flip) {
