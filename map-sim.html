@@ -658,7 +658,7 @@
                         (anim.textures = anim.textures || []).push(tex);
                         // 按参考站：敌人网格乘 z1（默认 0.9），道具不乘缩放（1.0）
                         // 道具正确尺寸 = 敌人公式 ÷ 0.9（= ×1.111），即 19.2/anim.scale/0.9
-                        const scl = 19.2 / anim.scale / 0.9;
+                        const scl = 19.2 / anim.scale / 0.9 * MODEL_SCALE_MULT;
                         sprite = makeFlatModel(tex, scl, true);
                         sprite.position.set(tr.col + 0.5, modelBottomY(surfY, scl, anim.bodyBottom), tr.row + 0.5 + modelLeanShift(scl));
                     } else if (anim.imageUrl) {
@@ -2048,6 +2048,8 @@
         // GROUND_SINK：脚底轻微压入格子表面，压住跑动帧脚底抬起产生的视觉空隙
         // （0.045：最低帧脚底微入地面由贴图层吸收，不出现明显压扁；0.08 会切脚）
         const GROUND_SINK = 0.045;
+        // ???????????????????? 57.5? ?????????1.55 ?????????
+        const MODEL_SCALE_MULT = 1.55;
         function modelBottomY(surfY, scl, bodyBottom) {
             const bb = bodyBottom || 0.5;
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT) - GROUND_SINK;
@@ -2129,7 +2131,7 @@
                 // 骨骼原始宽 = bodyW / canvasScale → 贴图缩放 = 0.9*128/(6*canvasScale) = 19.2/canvasScale
                 if (en.mesh && !en.mesh.userData.sized) {
                     const z1 = ENEMY_SCALE_OVERRIDES[normalizeEnemyKey(en.id)] || 0.9;
-                    const scl = 19.2 / anim.scale * (z1 / 0.9);
+                    const scl = 19.2 / anim.scale * (z1 / 0.9) * MODEL_SCALE_MULT;
                     en.mesh.scale.set(scl, scl, 1);
                     en.mesh.userData.sized = true;
                 }
@@ -2176,7 +2178,7 @@
                     (frag.actions || []).forEach(a => {
                         if (a.actionType !== 'SPAWN') return;
                         // 完全复刻官方/参考站：模型缩放默认 0.9，个别敌人走特例表
-                        const scale = ENEMY_SCALE_OVERRIDES[normalizeEnemyKey(a.key)] || 0.9;
+                        const scale = (ENEMY_SCALE_OVERRIDES[normalizeEnemyKey(a.key)] || 0.9) * MODEL_SCALE_MULT;
                         const routeIdx = a.routeIndex != null ? a.routeIndex : 0;
                         const motion = (level.routes[routeIdx] && (level.routes[routeIdx].motionMode || '').toUpperCase() === 'FLY') ? 'FLY' : 'WALK';
                         const count = Math.max(1, a.count || 1);
