@@ -2049,7 +2049,7 @@
         // （0.045：最低帧脚底微入地面由贴图层吸收，不出现明显压扁；0.08 会切脚）
         const GROUND_SINK = 0.045;
         // ???????????????????? 57.5? ?????????1.55 ?????????
-        const MODEL_SCALE_MULT = 1.55;
+        const MODEL_SCALE_MULT = 1.3;
         function modelBottomY(surfY, scl, bodyBottom) {
             const bb = bodyBottom || 0.5;
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT) - GROUND_SINK;
