@@ -1880,12 +1880,13 @@
                 camera.position.set(midC + (view[0] || 0), -(view[2] || 0), midR - (view[1] || 0));
                 camera.lookAt(midC, 0.2, midR);
             }
-            // ????????????45???????? 57.5? ????????????????
+            // ????????????40????????????????????? 0.52 ???????????????
             const camTgt = new THREE.Vector3(midC, 0.2, midR);
             const camDxz = Math.hypot(camera.position.x - camTgt.x, camera.position.z - camTgt.z);
             const camDirXZ = new THREE.Vector2(camera.position.x - camTgt.x, camera.position.z - camTgt.z).normalize();
-            const camDist = camDxz * 1.35;
-            camera.position.set(camTgt.x + camDirXZ.x * camDist, camTgt.y + camDist, camTgt.z + camDirXZ.y * camDist);
+            const camPitchRad = 40 * Math.PI / 180;
+            const camDist = camDxz * 1.35 * (Math.sin(Math.PI / 4) / Math.sin(camPitchRad));
+            camera.position.set(camTgt.x + camDirXZ.x * camDist, camTgt.y + camDist * Math.tan(camPitchRad), camTgt.z + camDirXZ.y * camDist);
             camera.lookAt(camTgt);
             camera.updateProjectionMatrix();
             const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
