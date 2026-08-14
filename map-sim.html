@@ -33,6 +33,7 @@
         .wait-cd { position:absolute; transform:translate(-50%,-100%); font-family:'Space Grotesk',monospace; font-size:12px; color:#ffd76a; background:rgba(10,13,18,.82); border:1px solid rgba(255,215,106,.45); padding:1px 7px; border-radius:6px; white-space:nowrap; pointer-events:none; line-height:1.4; }
         .wait-cd.wait-cd-min { font-size:10px; color:#9fe8c8; border-color:rgba(159,232,200,.4); }
         #mapCanvas { display:block; width:100%; height:100%; }
+        #mapWrap:fullscreen { width:100vw; height:100vh; background:#000 !important; }
         #mapOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:.5; pointer-events:none; z-index:1; }
         #mapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.15em; color:var(--muted); z-index:2; }
         #hint3d { position:absolute; left:12px; bottom:10px; z-index:2; pointer-events:none; font-size:10px; letter-spacing:.12em; color:var(--muted); font-family:'Space Grotesk',monospace; }
@@ -144,6 +145,7 @@
                             <button id="waitCdBtn" class="btn" title="显示/隐藏敌人罚站倒计时">罚站倒计时</button>
                         <button id="groundRefBtn" class="btn" title="诊断：显示地面高度参考环">地面参考</button>
                         <button id="zoomBtn" class="btn" title="开启/关闭地图缩放（默认锁定）">缩放:锁</button>
+                        <button id="fullscreenBtn" class="btn" title="全屏/退出全屏关卡">全屏</button>
                             <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
                                 透明度
                                 <input type="range" id="overlayOpacity" min="5" max="100" step="1" value="35" style="width:90px;accent-color:var(--acc)" />
@@ -2511,6 +2513,17 @@
             }
         }
 
+        function toggleFullscreen() {
+            const wrap = $('mapWrap');
+            if (!document.fullscreenElement) {
+                if (wrap.requestFullscreen) wrap.requestFullscreen();
+                else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+        }
+
         function updateEnemyPositions(delta) {
             if (!state.level) return;
             let kills = 0;
@@ -2818,6 +2831,20 @@
             $('tabRoutes').innerHTML = routesHtml;
         }
 
+        document.addEventListener('fullscreenchange', () => {
+            setTimeout(() => {
+                if (!state.renderer || !state.camera) return;
+                const wrap = $('mapWrap');
+                state.renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+                state.camera.aspect = wrap.clientWidth / Math.max(1, wrap.clientHeight);
+                state.camera.updateProjectionMatrix();
+                const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
+                state.camera.projectionMatrix.multiply(mirror);
+            }, 60);
+            const btn = $('fullscreenBtn');
+            if (btn) btn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+        });
+
         window.addEventListener('resize', () => {
             if (!state.renderer || !state.camera) return;
             const wrap = $('mapWrap');
@@ -2834,6 +2861,8 @@
             if (gb) gb.addEventListener('click', toggleGroundRef);
             const zb = document.getElementById('zoomBtn');
             if (zb) zb.addEventListener('click', toggleZoomLock);
+            const fsb = document.getElementById('fullscreenBtn');
+            if (fsb) fsb.addEventListener('click', toggleFullscreen);
         });
     </script>
 
