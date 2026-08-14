@@ -943,7 +943,8 @@
             if (currentMode === 'annihilation') {
                 // 剿灭直接全列，不做活动/分区选择
                 if (pickRow) pickRow.style.display = 'none';
-                    const all = [];
+                    const seen = new Set();
+            const all = [];
                 zones.forEach(z => (z.stages || []).forEach(s => {
                     const k = s.id || s.code;
                     if (!seen.has(k)) { seen.add(k); all.push(Object.assign({}, s, { zoneName: z.name })); }
@@ -1241,6 +1242,7 @@
             const start = grid[sr][sc];
             const dest = grid[tr][tc];
             const openList = [start];
+            const seen = new Set();
             start.open = true;
             while (openList.length) {
                 openList.sort((a, b) => a.total - b.total);
