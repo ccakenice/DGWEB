@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
@@ -2051,13 +2051,12 @@
         function modelBottomY(surfY, scl, bodyBottom) {
             const bb = bodyBottom || 0.5;
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT) - GROUND_SINK;
+        }
 
         // 身体后仰补偿（参考站 -0.15 深度偏移同思路）
         function modelLeanShift(scl) {
             return -0.45 * scl * Math.sin(ENEMY_MODEL_TILT);
         }
-        }
-
         function makeEnemySprite(id, color, scale) {
             const canvas = document.createElement('canvas');
             canvas.width = 128;
