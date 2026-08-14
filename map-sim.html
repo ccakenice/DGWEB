@@ -1010,7 +1010,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length;
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260814f';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
