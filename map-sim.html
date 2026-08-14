@@ -2043,8 +2043,9 @@
         }
 
         // 脚底贴地时的模型 Y：底边 = surfY - (1-bodyBottom)*scl*cos(tilt)，模型脚（贴图底部附近）正好落在格面
-        // GROUND_SINK：脚底贴住格子表面（0.02 仅为消除 1~2px 视觉空隙；过大脚部会被格子贴图遮挡显得压扁）
-        const GROUND_SINK = 0.02;
+        // GROUND_SINK：脚底轻微压入格子表面，压住跑动帧脚底抬起产生的视觉空隙
+        // （0.045：最低帧脚底微入地面由贴图层吸收，不出现明显压扁；0.08 会切脚）
+        const GROUND_SINK = 0.045;
         function modelBottomY(surfY, scl, bodyBottom) {
             const bb = bodyBottom || 0.5;
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT) - GROUND_SINK;
