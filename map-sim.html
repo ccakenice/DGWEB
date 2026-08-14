@@ -397,6 +397,17 @@
             return names.find(n => /idle/i.test(n)) || names[0] || 'Default';
         }
 
+        // 参考站同款：待机动画优先 Idle / Idile（官方数据里偶尔有 "Idile" 拼写）
+        function pickIdleAnimation(skeletonData) {
+            const names = (skeletonData.animations || []).map(a => a.name);
+            for (const want of ['Idle', 'Idile']) {
+                if (names.includes(want)) return want;
+                const hit = names.find(n => n.includes(want));
+                if (hit) return hit;
+            }
+            return names[0] || 'Default';
+        }
+
         function pickTrapAnimation(skeletonData) {
             // 参考站（lutonada）同款：道具优先 Idle / Sleep / Default
             const names = (skeletonData.animations || []).map(a => a.name);
@@ -458,7 +469,9 @@
                         const skeletonData = reader.readSkeletonData(binary);
                         const skeleton = new spine.Skeleton(skeletonData);
                         const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
-                        animationState.setAnimation(0, pickEnemyAnimation(skeletonData), true);
+                        const _moveAnim = pickEnemyAnimation(skeletonData);
+                        const _idleAnim = pickIdleAnimation(skeletonData);
+                        animationState.setAnimation(0, _moveAnim, true);
                         skeleton.x = 0;
                         skeleton.y = 0;
                         skeleton.scaleX = 1;
@@ -479,7 +492,7 @@
                         texture.premultiplyAlpha = false;
                         texture.minFilter = THREE.LinearFilter;
                         texture.magFilter = THREE.LinearFilter;
-                        byId[id] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY };
+                        byId[id] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, _moveAnim, _idleAnim, _animName: _moveAnim };
                     } catch (e) {
                         console.warn('Spine setup failed', id, e);
                     }
@@ -2603,6 +2616,31 @@
                         map.offset.x = flip ? 1 : 0;
                         map.needsUpdate = true;
                     }
+                }
+            });
+            // 罚站时切换待机动画：WAIT 检查点（含移速 0 原地罚站）期间播 Idle，恢复移动播移动动画
+            Object.keys(state.spineData).forEach(id => {
+                const anim = state.spineData[id];
+                if (!anim || !anim.animationState || !anim._moveAnim) return;
+                const enemies = state.enemies.filter(e => e.id === id && !e.done && state.time >= e.spawnAt);
+                if (!enemies.length) return;
+                const allWaiting = enemies.every(e => {
+                    if (e.immobile) return true;
+                    const pts = state.routes[e.route];
+                    const waits = (pts && pts.waits) || [];
+                    if (!waits.length) return false;
+                    const t = state.time - e.spawnAt;
+                    const dur = e.dur || 1;
+                    for (const w of waits) {
+                        const arrive = routeProgressToTime(pts, dur, w.frac);
+                        if (t >= arrive && t < arrive + Math.max(0, w.time)) return true;
+                    }
+                    return false;
+                });
+                const want = allWaiting ? anim._idleAnim : anim._moveAnim;
+                if (want && want !== anim._animName) {
+                    anim.animationState.setAnimation(0, want, true);
+                    anim._animName = want;
                 }
             });
             // 击杀数按当前时间重算，拖拽前进/倒退实时同步
