@@ -283,8 +283,8 @@
         const ROUTE_COLORS = [0xe08f00, 0x35a6e0, 0x53c36b, 0xe0567a, 0xb07de0, 0xe0c23a, 0x4bc3b3, 0xe0782f];
         // 参考站 MAP_ROTATION=0.5，但模拟器相机俯仰约 -57.5°（更陡），需反向倾斜 -0.5：
         // 平面面向相机、模型从屏幕竖直向后仰 28.65°，底部锚定格子中心，与影子对齐
-        // -0.35：比 -0.5 更竖直，减少纸片后仰造成的飘移观感（仍朝向相机可见）
-        const ENEMY_MODEL_TILT = -0.35;
+        // -0.5：恢复原始倾斜，避免模型被压扁（身体后仰由 modelLeanShift 前移补偿，不影响对齐）
+        const ENEMY_MODEL_TILT = -0.5;
         const HL_URLS = [
             'data/highland_colors.json',
             'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/highland_colors.json',
