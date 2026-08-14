@@ -289,6 +289,33 @@
             'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/highland_colors.json'
         ];
         const SPINE_BASE = location.protocol === 'https:' ? '/spine/' : 'http://152.136.189.98:3000/';
+        // 线上 Spine 资源直接走 GitHub 公开仓库（参考站后端源码 serine-qing/MapSimulatorBackend 的 public/），
+        // 避免 CF Worker 出口被 jsDelivr/raw 的 WAF 拦截（error 1010）以及参考站防盗链（Host 白名单）。
+        // 本地 http 预览仍直连参考站后端。
+        const SPINE_ASSET_BASES = location.protocol === 'https:'
+            ? [
+                'https://cdn.jsdelivr.net/gh/serine-qing/MapSimulatorBackend@master/public',
+                'https://raw.githubusercontent.com/serine-qing/MapSimulatorBackend/master/public',
+            ]
+            : ['http://152.136.189.98:3000'];
+
+        // 依次尝试各资源源加载 Spine atlas + skel；返回 atlas/binary
+        async function loadSpineAssetPair(relAtlas, relSkel) {
+            let lastErr = null;
+            for (const base of SPINE_ASSET_BASES) {
+                const manager = new spine.webgl.AssetManager(getSharedSpineRenderer().context, base);
+                try {
+                    await Promise.all([
+                        new Promise((res, rej) => manager.loadTextureAtlas(relAtlas, () => res(), (_, m) => rej(m))),
+                        new Promise((res, rej) => manager.loadBinary(relSkel, () => res(), (_, m) => rej(m)))
+                    ]);
+                    return { atlas: manager.get(relAtlas), binary: manager.get(relSkel) };
+                } catch (e) {
+                    lastErr = e;
+                }
+            }
+            throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
+        }
         const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false };
 
         const $ = id => document.getElementById(id);
@@ -419,15 +446,10 @@
                         output.width = 128;
                         output.height = 128;
                         const outCtx = output.getContext('2d');
-                        const manager = new spine.webgl.AssetManager(shared.context, SPINE_BASE);
-                        const atlasPath = spineAssetPath(key, entry.atlas);
-                        const skelPath = spineAssetPath(key, entry.skel);
-                        await Promise.all([
-                            new Promise((res, rej) => manager.loadTextureAtlas(atlasPath, () => res(), (_, m) => rej(m))),
-                            new Promise((res, rej) => manager.loadBinary(skelPath, () => res(), (_, m) => rej(m)))
-                        ]);
-                        const atlas = manager.get(atlasPath);
-                        const binary = manager.get(skelPath);
+                        const { atlas, binary } = await loadSpineAssetPair(
+                            'spine/' + key + '/' + entry.atlas,
+                            'spine/' + key + '/' + entry.skel
+                        );
                         const loader = new spine.AtlasAttachmentLoader(atlas);
                         const reader = new spine.SkeletonBinary(loader);
                         reader.scale = 0.019;
@@ -574,16 +596,10 @@
                             output.width = 128;
                             output.height = 128;
                             const outCtx = output.getContext('2d');
-                            const manager = new spine.webgl.AssetManager(shared.context, SPINE_BASE);
-                            // AssetManager 会自行拼接 baseUrl（SPINE_BASE），只能传相对路径，避免 URL 重复
-                            const atlasPath = 'trap/spine/' + entry.atlas + '/' + entry.atlas + '.atlas';
-                            const skelPath = 'trap/spine/' + entry.skel + '/' + entry.skel + '.skel';
-                            await Promise.all([
-                                new Promise((res, rej) => manager.loadTextureAtlas(atlasPath, () => res(), (_, m) => rej(m))),
-                                new Promise((res, rej) => manager.loadBinary(skelPath, () => res(), (_, m) => rej(m)))
-                            ]);
-                            const atlas = manager.get(atlasPath);
-                            const binary = manager.get(skelPath);
+                            const { atlas, binary } = await loadSpineAssetPair(
+                                'trap/spine/' + entry.atlas + '/' + entry.atlas + '.atlas',
+                                'trap/spine/' + entry.skel + '/' + entry.skel + '.skel'
+                            );
                             const loader = new spine.AtlasAttachmentLoader(atlas);
                             const reader = new spine.SkeletonBinary(loader);
                             reader.scale = 0.019;
@@ -616,7 +632,7 @@
                             console.warn('Trap spine setup failed', key, e);
                         }
                     } else if (imageMap[key]) {
-                        byKey[key] = { imageUrl: SPINE_BASE + 'trap/image/' + imageMap[key].image + '.png' };
+                        byKey[key] = { imageUrl: SPINE_ASSET_BASES[0] + '/trap/image/' + imageMap[key].image + '.png' };
                     }
                 }));
                 state.trapSpines = byKey;
