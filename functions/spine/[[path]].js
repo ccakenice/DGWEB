@@ -63,7 +63,10 @@ async function socketFetch(method, path, reqHeaders, bodyText) {
         }
         const headText = new TextDecoder().decode(all.subarray(0, 65536));
         const sep = headText.indexOf('\r\n\r\n');
-        if (sep < 0) throw new Error('bad response: no header separator');
+        if (sep < 0) {
+            throw new Error('bad response: no header separator, got ' + size + 'B: ' +
+                new TextDecoder().decode(all.subarray(0, 160)).replace(/[\r\n]/g, ' ') + '...');
+        }
         const lines = headText.slice(0, sep).split('\r\n');
         const status = parseInt((lines[0] || '').split(' ')[1], 10) || 502;
         const out = new Headers();
