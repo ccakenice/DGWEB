@@ -85,10 +85,48 @@ async function socketFetch(method, path, reqHeaders, bodyText) {
     }
 }
 
+async function socketProbe(target) {
+    const [host, portStr] = target.split(':');
+    const port = parseInt(portStr || '80', 10);
+    try {
+        const socket = connect({ hostname: host, port });
+        const writer = socket.writable.getWriter();
+        await writer.write(new TextEncoder().encode(
+            'GET / HTTP/1.1\r\nHost: ' + host + '\r\nConnection: close\r\n\r\n'));
+        try { await writer.close(); } catch (e) { /* ignore */ }
+        const reader = socket.readable.getReader();
+        const chunks = [];
+        let size = 0;
+        const timer = setTimeout(() => { try { socket.close(); } catch (e) { /* ignore */ } }, 8000);
+        for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            size += value.length;
+        }
+        clearTimeout(timer);
+        const all = new Uint8Array(size);
+        let off = 0;
+        for (const c of chunks) { all.set(c, off); off += c.length; }
+        return JSON.stringify({
+            target, size,
+            head: new TextDecoder().decode(all.subarray(0, 200)).replace(/[\r\n]/g, ' '),
+        });
+    } catch (e) {
+        return JSON.stringify({ target, error: String((e && e.message) || e) });
+    }
+}
+
 export async function onRequest(context) {
     const { request } = context;
     const url = new URL(request.url);
     const suffix = url.pathname.replace(/^\/spine\//, '');
+    if (suffix.startsWith('__dbg/')) {
+        return new Response(await socketProbe(suffix.slice(6)), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
     let path;
     if (suffix === 'assets/getMeshsKey' || suffix === 'assets/getTrapsKey' || suffix === 'assets/getTokenCards') {
         path = '/' + suffix;
