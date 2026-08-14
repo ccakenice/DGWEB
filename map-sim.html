@@ -34,6 +34,8 @@
         .wait-cd.wait-cd-min { font-size:10px; color:#9fe8c8; border-color:rgba(159,232,200,.4); }
         #mapCanvas { display:block; width:100%; height:100%; }
         #mapWrap:fullscreen { width:100vw; height:100vh; background:#000 !important; }
+        #fsArea:fullscreen { height:100vh; display:flex; flex-direction:column; gap:12px; padding:14px 18px 18px; background:#000 !important; overflow:auto; box-sizing:border-box; }
+        #fsArea:fullscreen #mapWrap { flex:1; height:auto; min-height:300px; }
         #mapOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:.5; pointer-events:none; z-index:1; }
         #mapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.15em; color:var(--muted); z-index:2; }
         #hint3d { position:absolute; left:12px; bottom:10px; z-index:2; pointer-events:none; font-size:10px; letter-spacing:.12em; color:var(--muted); font-family:'Space Grotesk',monospace; }
@@ -125,6 +127,7 @@
             <div id="summary" style="display:none;margin-bottom:20px"></div>
             <div style="display:grid;grid-template-columns:1fr;gap:22px">
                 <div>
+                    <div id="fsArea">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap">
                         <div style="display:flex;gap:8px;align-items:center">
                             <span class="chip" id="stageCode">--</span>
@@ -195,6 +198,7 @@
                         <div id="edDesc" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.75;max-height:110px;overflow:auto;border-left:2px solid var(--line);padding-left:10px"></div>
                         <div id="edStats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px"></div>
                         <div id="edExtra" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
+                    </div>
                     </div>
                     <div id="legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px"></div>
                 </div>
@@ -2514,7 +2518,7 @@
         }
 
         function toggleFullscreen() {
-            const wrap = $('mapWrap');
+            const wrap = $('fsArea') || $('mapWrap');
             if (!document.fullscreenElement) {
                 if (wrap.requestFullscreen) wrap.requestFullscreen();
                 else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
