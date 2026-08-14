@@ -166,6 +166,7 @@
   - 【2026-08-14 敌人模型修复】Spine 资源源改从 GitHub 公开仓库（参考站后端 serine-qing/MapSimulatorBackend 的 public/）经 jsDelivr / raw.githubusercontent 直接加载（敌人 spine/<key>/*、道具 trap/*）；/spine 代理仅保留数据接口（getMeshsKey/getTrapsKey）。原因：CF Worker 不能 fetch 裸 IP（1003）、sslip/nip 域名被参考站防盗链按 Host 白名单拦截、socket 在本项目不可用。线上验证：默祷圣祠 401/401 敌人应用 Spine 模型、0-1 11/11，资源全部 200
   - 【2026-08-14 回退占位贴地】Spine 资源加载失败时的回退占位（敌人头像/圆形标记）原为居中贴在 1:1 平面上导致悬浮；改为内容底部对齐画布底部（bottomAlignAvatar + 圆标下移），缓存命中路径同步修复；Spine 模型不受影响（实测仍 401/401 贴地）
   - 【2026-08-14 头像回退移除】按用户要求：Spine 加载失败时不再显示头像立绘（动作立绘易显悬浮），只保留位置标记（底部对齐圆标 + 阴影）；makeEnemySprite 移除 TextureLoader 头像加载与 bottomAlignAvatar；Spine 正常路径不变（401/401 贴地）
+  - 【2026-08-14 脚底锚点改全程最低点】跑动/弹跳动画的脚底最低点会上下浮动，原锚定首帧导致模型大部分帧悬空；改为动画循环内持续取全程最低点（跑完 1.3 圈锁定，与参考站根节点锚地等价）。0-1 验证：剑士 bodyBottom 0.855→0.891、史莱姆 0.773 不变；GROUND_SINK 调至 0.02 防压扁
 - 新增 `map-sim.html` 3D 关卡地图模拟：支持 `?id=关卡代号`，Three.js 地形 + 路线 + 敌人波次动画，数据源 ArknightsGameData，本地索引 `data/stage_index.json/.js` / `data/enemy_index.json/.js`
 - 接入官方美术资源：关卡「官方地图」预览与敌人头像，源为 yuanyan3060/ArknightsGameResource，fexli/ArknightsResource 兜底
 - 3D 视觉精致化：ACES 色调映射、软阴影、半球光/轮廓光、路线点阵光带、敌人 Sprite 贴图
