@@ -429,8 +429,8 @@
         function getSharedSpineRenderer() {
             if (state.spineShared && state.spineShared.renderer) return state.spineShared;
             const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
+            canvas.width = 256;
+            canvas.height = 256;
             const context = new spine.webgl.ManagedWebGLRenderingContext(canvas, {
                 alpha: true,
                 premultipliedAlpha: false,
