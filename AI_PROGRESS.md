@@ -163,6 +163,7 @@
 
 ### V0.29（草稿）
 - 【2026-08-14 部署上线】V0.29 全量上线：map-sim.html / enemy.html / data 索引与 36 个剿灭关卡本地数据 / functions/spine 代理 / Spine 库 / 官方地图贴图；补齐 camp_r_20、camp_r_23 本地关卡 JSON（此前 0 字节）；单次提交推送 GitHub，CF Pages 自动构建
+  - 【2026-08-14 敌人模型修复】Spine 资源源改从 GitHub 公开仓库（参考站后端 serine-qing/MapSimulatorBackend 的 public/）经 jsDelivr / raw.githubusercontent 直接加载（敌人 spine/<key>/*、道具 trap/*）；/spine 代理仅保留数据接口（getMeshsKey/getTrapsKey）。原因：CF Worker 不能 fetch 裸 IP（1003）、sslip/nip 域名被参考站防盗链按 Host 白名单拦截、socket 在本项目不可用。线上验证：默祷圣祠 401/401 敌人应用 Spine 模型、0-1 11/11，资源全部 200
 - 新增 `map-sim.html` 3D 关卡地图模拟：支持 `?id=关卡代号`，Three.js 地形 + 路线 + 敌人波次动画，数据源 ArknightsGameData，本地索引 `data/stage_index.json/.js` / `data/enemy_index.json/.js`
 - 接入官方美术资源：关卡「官方地图」预览与敌人头像，源为 yuanyan3060/ArknightsGameResource，fexli/ArknightsResource 兜底
 - 3D 视觉精致化：ACES 色调映射、软阴影、半球光/轮廓光、路线点阵光带、敌人 Sprite 贴图
@@ -173,7 +174,7 @@
 - 敌人动画：场景内敌人从静态头像改为官方 Spine 3.8 动画，WebGL 离屏渲染后贴入 3D 场景，加载失败自动回退头像
 - 修复动画透明/闪烁：WebGL 帧经 `readPixels` 快照到 2D 画布，并按加载时固定比例和中心渲染，避免动画过程中忽大忽小
 - 修复模型垂直翻转：动画贴图恢复默认 `flipY`，敌人头朝上显示
-- HTTPS 适配：新增 `functions/spine/[[path]].js` 同源代理，线上通过 `/spine/` 访问参考站动画资源，避免混合内容拦截
+- HTTPS 适配：`functions/spine/[[path]].js` 同源代理仅代理数据接口（getMeshsKey/getTrapsKey/getTokenCards）；敌人/道具 Spine 资源由页面直接加载 GitHub 公开仓库 serine-qing/MapSimulatorBackend 的 public/（jsDelivr 主 + raw 兜底），避免混合内容拦截与参考站防盗链
 - 官方地图预览保留在独立弹窗；「叠图」改为与地图格子严格对齐的示意底图，不再把透视截图的官方地图平铺到 3D 地面
 - 修复 3D 模型与底图错位：地形/路线/敌人坐标统一到地图坐标系
 - 相机锁定旋转与平移，仅保留缩放

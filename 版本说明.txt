@@ -10,6 +10,7 @@
 2026-08-14 部署上线：
 - V0.29 全量部署上线（单次提交推送 GitHub main，CF Pages 自动构建）：map-sim.html 3D 地图模拟 / enemy.html 敌人图鉴 / data 全部索引与 36 个剿灭关卡本地 JSON / functions/spine/[[path]].js 同源代理 / js/spine 3.8 库 / images/map 官方地图贴图 / data/highland_colors.json 高台配色
 - 补齐 camp_r_20（千嶂边城）、camp_r_23（燃烧街区）本地关卡 JSON（此前为 0 字节空文件，本地优先加载会失败，CDN 兜底）
+- 敌人模型修复：Spine 资源改从 GitHub 公开仓库 serine-qing/MapSimulatorBackend 的 public/ 经 jsDelivr/raw 直接加载（map-sim.html 新增 SPINE_ASSET_BASES + loadSpineAssetPair 多源兜底）；/spine 代理仅保留数据接口。线上验证默祷圣祠 401/401、0-1 11/11 敌人应用模型
 
 2026-08-13 敌人详情页：
 - 新增 enemy.html 敌人图鉴详情页（?id= 直达，支持 ID/名称搜索），展示头像/名称/ID/官方描述/能力列表/基本信息/技能（prefabKey + 冷却 + blackboard 参数）/天赋（talentBlackboard 参数）/各等级属性
