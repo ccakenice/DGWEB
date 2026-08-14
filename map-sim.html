@@ -143,6 +143,7 @@
                             <button id="deployBtn" class="btn" title="高亮可部署地块">部署格</button>
                             <button id="waitCdBtn" class="btn" title="显示/隐藏敌人罚站倒计时">罚站倒计时</button>
                         <button id="groundRefBtn" class="btn" title="诊断：显示地面高度参考环">地面参考</button>
+                        <button id="zoomBtn" class="btn" title="开启/关闭地图缩放（默认锁定）">缩放:锁</button>
                             <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
                                 透明度
                                 <input type="range" id="overlayOpacity" min="5" max="100" step="1" value="35" style="width:90px;accent-color:var(--acc)" />
@@ -318,7 +319,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1887,7 +1888,7 @@
             controls.dampingFactor = 0.08;
             controls.enableRotate = false;
             controls.enablePan = false;
-            controls.enableZoom = true;
+            controls.enableZoom = state.zoomEnabled; // 默认锁定缩放，点「缩放」按钮开启
             controls.mouseButtons.LEFT = null;
             controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
             controls.mouseButtons.RIGHT = null;
@@ -2500,6 +2501,16 @@
             if (btn) btn.classList.toggle('active', state.groundRefVisible);
         }
 
+        function toggleZoomLock() {
+            state.zoomEnabled = !state.zoomEnabled;
+            if (state.controls) state.controls.enableZoom = state.zoomEnabled;
+            const btn = $('zoomBtn');
+            if (btn) {
+                btn.textContent = state.zoomEnabled ? '缩放:开' : '缩放:锁';
+                btn.classList.toggle('active', state.zoomEnabled);
+            }
+        }
+
         function updateEnemyPositions(delta) {
             if (!state.level) return;
             let kills = 0;
@@ -2821,6 +2832,8 @@
             init();
             const gb = document.getElementById('groundRefBtn');
             if (gb) gb.addEventListener('click', toggleGroundRef);
+            const zb = document.getElementById('zoomBtn');
+            if (zb) zb.addEventListener('click', toggleZoomLock);
         });
     </script>
 
