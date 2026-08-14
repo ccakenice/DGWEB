@@ -1,38 +1,43 @@
-// CF Pages Function：Spine 动画资源同源代理（resolveOverride 版）
+// CF Pages Function：Spine 动画资源同源代理
+// 参考站动画资源位于 HTTP 后端，HTTPS 页面直接 fetch 会被浏览器拦截，
+// 本函数把 /spine/* 转发到参考站资源服务。
 //
-// 链路约束（2026-08-14 排查结论）：
-//  1. Workers fetch 不允许裸 IP URL（1003）；
-//  2. 后端防盗链按 Host 白名单放行，仅接受 152.136.189.98 / localhost，
-//     其它域名 Host 一律 302 到腾讯云域名拦截页；
-//  3. Workers fetch 的 Host 头由 URL 决定，无法覆盖；
-//  4. cloudflare:sockets 在本 Pages 项目下收不到任何数据（0 字节）。
-// 方案：URL 用 http://localhost:3000（Host 头为 localhost:3000，被后端放行），
-//       再通过 cf.resolveOverride 把 DNS 解析强制指向 152.136.189.98。
-const BACKEND_IP = '152.136.189.98';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36';
+// 2026-08-14 修复：Cloudflare Workers 子请求不允许直接 fetch 裸 IP
+// （会返回 403 "error code: 1003" Direct IP Access Not Allowed），
+// 必须使用域名。sslip.io / nip.io 通配 DNS 会把 IP 形式的子域解析回原 IP，
+// 因此改用 http://152-136-189-98.sslip.io:3000 作为主源。
+const BACKEND_HOSTS = [
+    'http://152-136-189-98.sslip.io:3000',
+    'http://152-136-189-98.nip.io:3000',
+    'http://152.136.189.98:3000', // 兜底：裸 IP 在 Workers 中会被 CF 拒绝，仅本地 wrangler dev 可用
+];
 
 async function fetchBackend(path, method, bodyText, contentType) {
-    const url = 'http://localhost:3000/' + path;
-    const headers = {
-        'User-Agent': UA,
-        'Accept': '*/*',
-        'Accept-Encoding': 'identity',
-    };
-    const init = {
-        method,
-        headers,
-        cf: { resolveOverride: BACKEND_IP },
-    };
-    if (method === 'POST') {
-        headers['Content-Type'] = contentType || 'application/json';
-        init.body = bodyText;
+    let lastErr = null;
+    for (const base of BACKEND_HOSTS) {
+        const target = base + '/' + path;
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+        };
+        try {
+            if (method === 'POST') {
+                headers['Content-Type'] = contentType || 'application/json';
+                const resp = await fetch(target, { method: 'POST', headers, body: bodyText });
+                const out = new Headers(resp.headers);
+                out.set('Access-Control-Allow-Origin', '*');
+                return new Response(resp.body, { status: resp.status, headers: out });
+            }
+            const resp = await fetch(target, { headers });
+            const out = new Headers();
+            out.set('Content-Type', resp.headers.get('Content-Type') || 'application/octet-stream');
+            out.set('Cache-Control', 'public, max-age=3600');
+            out.set('Access-Control-Allow-Origin', '*');
+            return new Response(resp.body, { status: resp.status, headers: out });
+        } catch (e) {
+            lastErr = e;
+        }
     }
-    const resp = await fetch(url, init);
-    const out = new Headers(resp.headers);
-    out.set('Access-Control-Allow-Origin', '*');
-    out.delete('Set-Cookie');
-    out.delete('set-cookie');
-    return new Response(resp.body, { status: resp.status, headers: out });
+    return new Response('spine proxy error: ' + (lastErr && lastErr.message ? lastErr.message : 'unknown'), { status: 502 });
 }
 
 export async function onRequest(context) {
@@ -41,19 +46,15 @@ export async function onRequest(context) {
     const suffix = url.pathname.replace(/^\/spine\//, '');
     let path;
     if (suffix === 'assets/getMeshsKey' || suffix === 'assets/getTrapsKey' || suffix === 'assets/getTokenCards') {
+        // 参考站数据接口（POST JSON）
         path = suffix;
     } else if (suffix.startsWith('trap/')) {
+        // 道具 Spine / 贴图资源（trap/spine/...、trap/image/...）
         path = suffix;
     } else {
+        // 敌人 Spine 资源（spine/<key>/...）
         path = 'spine/' + suffix;
     }
     const bodyText = request.method === 'POST' ? await request.text() : null;
-    try {
-        return await fetchBackend(path, request.method, bodyText, request.headers.get('Content-Type'));
-    } catch (e) {
-        return new Response('spine proxy error: ' + ((e && e.message) || e), {
-            status: 502,
-            headers: { 'Access-Control-Allow-Origin': '*' },
-        });
-    }
+    return fetchBackend(path, request.method, bodyText, request.headers.get('Content-Type'));
 }
