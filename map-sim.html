@@ -297,6 +297,12 @@
             'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/highland_colors.json',
             'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/highland_colors.json'
         ];
+        // 官方地块固有色（tile_colors.json：参考站硬编码固有色 + 官方地图图集采样）
+        const TILE_COLOR_URLS = [
+            'data/tile_colors.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/tile_colors.json',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/tile_colors.json'
+        ];
         const SPINE_BASE = location.protocol === 'https:' ? '/spine/' : 'http://152.136.189.98:3000/';
         // 线上 Spine 资源直接走 GitHub 公开仓库（参考站后端源码 serine-qing/MapSimulatorBackend 的 public/），
         // 避免 CF Worker 出口被 jsDelivr/raw 的 WAF 拦截（error 1010）以及参考站防盗链（Host 白名单）。
@@ -1032,7 +1038,15 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260814g';
+            // 官方固有色覆盖默认深色表；红蓝门/绿门用官方描边色保持可见（v.border 优先）
+            const tileColorData = await fetchJSON(TILE_COLOR_URLS) || {};
+            if (tileColorData && tileColorData.tiles) {
+                for (const [k, v] of Object.entries(tileColorData.tiles)) {
+                    const hex = (v && (v.border || v.color)) || '';
+                    if (/^#[0-9a-f]{6}$/i.test(hex)) TILE_COLORS[k] = parseInt(hex.slice(1), 16);
+                }
+            }
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815a';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
