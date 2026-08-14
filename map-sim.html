@@ -1880,6 +1880,14 @@
                 camera.position.set(midC + (view[0] || 0), -(view[2] || 0), midR - (view[1] || 0));
                 camera.lookAt(midC, 0.2, midR);
             }
+            // ????????????45???????? 57.5? ????????????????
+            const camTgt = new THREE.Vector3(midC, 0.2, midR);
+            const camDxz = Math.hypot(camera.position.x - camTgt.x, camera.position.z - camTgt.z);
+            const camDirXZ = new THREE.Vector2(camera.position.x - camTgt.x, camera.position.z - camTgt.z).normalize();
+            const camDist = camDxz * 1.35;
+            camera.position.set(camTgt.x + camDirXZ.x * camDist, camTgt.y + camDist, camTgt.z + camDirXZ.y * camDist);
+            camera.lookAt(camTgt);
+            camera.updateProjectionMatrix();
             const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
             camera.projectionMatrix.multiply(mirror);
             state.controls = controls;
@@ -2049,7 +2057,7 @@
         // （0.045：最低帧脚底微入地面由贴图层吸收，不出现明显压扁；0.08 会切脚）
         const GROUND_SINK = 0.045;
         // ???????????????????? 57.5? ?????????1.55 ?????????
-        const MODEL_SCALE_MULT = 1.3;
+        const MODEL_SCALE_MULT = 1.0;
         function modelBottomY(surfY, scl, bodyBottom) {
             const bb = bodyBottom || 0.5;
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT) - GROUND_SINK;
