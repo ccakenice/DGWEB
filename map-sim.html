@@ -142,6 +142,7 @@
                             <button id="mapOverlayBtn" class="btn">叠图</button>
                             <button id="deployBtn" class="btn" title="高亮可部署地块">部署格</button>
                             <button id="waitCdBtn" class="btn" title="显示/隐藏敌人罚站倒计时">罚站倒计时</button>
+                        <button id="groundRefBtn" class="btn" title="诊断：显示地面高度参考环">地面参考</button>
                             <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
                                 透明度
                                 <input type="range" id="overlayOpacity" min="5" max="100" step="1" value="35" style="width:90px;accent-color:var(--acc)" />
@@ -282,7 +283,8 @@
         const ROUTE_COLORS = [0xe08f00, 0x35a6e0, 0x53c36b, 0xe0567a, 0xb07de0, 0xe0c23a, 0x4bc3b3, 0xe0782f];
         // 参考站 MAP_ROTATION=0.5，但模拟器相机俯仰约 -57.5°（更陡），需反向倾斜 -0.5：
         // 平面面向相机、模型从屏幕竖直向后仰 28.65°，底部锚定格子中心，与影子对齐
-        const ENEMY_MODEL_TILT = -0.5;
+        // -0.35：比 -0.5 更竖直，减少纸片后仰造成的飘移观感（仍朝向相机可见）
+        const ENEMY_MODEL_TILT = -0.35;
         const HL_URLS = [
             'data/highland_colors.json',
             'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/highland_colors.json',
@@ -316,7 +318,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -2410,6 +2412,7 @@
             }
             // 暂停/拖拽时也更新敌人位置，支持进度条前进/倒退观察
             updateEnemyPositions(delta);
+            if (state.groundRefVisible) updateGroundRefs();
             $('simTime').textContent = fmtTime(state.time);
             const pct = state.maxTime ? Math.min(100, state.time / state.maxTime * 100) : 0;
             if (!state.scrubbing) $('timeSlider').value = pct;
@@ -2426,6 +2429,37 @@
             }
             if (state.controls) state.controls.update();
             if (state.renderer && state.scene && state.camera) state.renderer.render(state.scene, state.camera);
+        }
+
+        // 临时诊断：地面参考环（画在敌人所在格子的真实地面高度，用于肉眼核对是否悬浮）
+        function updateGroundRefs() {
+            state.groundRefs.forEach(m => { if (m.parent) m.parent.remove(m); });
+            state.groundRefs = [];
+            if (!state.groundRefVisible || !state.scene || !state.level) return;
+            const seen = new Set();
+            (state.enemies || []).forEach(en => {
+                if (!en.mesh || !en.mesh.visible) return;
+                if (seen.has(en.id)) return; seen.add(en.id);
+                const r = Math.round(en.mesh.position.z - 0.5);
+                const c = Math.round(en.mesh.position.x - 0.5);
+                const surfY = tileSurfaceY(state.level, r, c);
+                const ring = new THREE.Mesh(
+                    new THREE.RingGeometry(0.26, 0.34, 32),
+                    new THREE.MeshBasicMaterial({ color: 0xffd76a, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false })
+                );
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.set(c + 0.5, surfY + 0.008, r + 0.5);
+                ring.renderOrder = 30;
+                state.scene.add(ring);
+                state.groundRefs.push(ring);
+            });
+        }
+
+        function toggleGroundRef() {
+            state.groundRefVisible = !state.groundRefVisible;
+            updateGroundRefs();
+            const btn = $('groundRefBtn');
+            if (btn) btn.classList.toggle('active', state.groundRefVisible);
         }
 
         function updateEnemyPositions(delta) {
@@ -2720,7 +2754,11 @@
             state.camera.projectionMatrix.multiply(mirror);
         });
 
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            const gb = document.getElementById('groundRefBtn');
+            if (gb) gb.addEventListener('click', toggleGroundRef);
+        });
     </script>
 
     <script>
