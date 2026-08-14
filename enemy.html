@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>低配挂机研讨会 — 敌人详情</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; --paper:#fff; --charcoal:#333; --smoke:#555; --graphite:#1a1a1a; --fog:#0a0a0a; --ash:#888; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:0; line-height:.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:.05em; }
+        .card { border:1px solid var(--line); background:var(--graphite); }
+        .chip { border:1px solid var(--line); padding:3px 9px; font-size:10px; color:var(--muted); font-family:'Space Grotesk',monospace; letter-spacing:.08em; }
+        .btn { border:1px solid var(--line); background:transparent; color:var(--fg); padding:8px 14px; font-family:'Noto Sans SC',sans-serif; font-size:12px; cursor:pointer; transition:all .25s; text-decoration:none; display:inline-block; }
+        .btn:hover { border-color:var(--acc); color:var(--acc); }
+        .input { background:var(--fog); border:1px solid var(--line); color:var(--fg); padding:11px 14px; font-size:14px; outline:none; width:100%; transition:border-color .25s; }
+        .input:focus { border-color:var(--acc); }
+        html.light { --bg:#f4f4f2; --fg:#141414; --muted:#787878; --line:#e2e2df; --paper:#141414; --charcoal:#c6c6c3; --smoke:#6a6a68; --graphite:#ececea; --fog:#efefed; --ash:#8a8a88; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        html.light body::before { filter:invert(1); opacity:.5; }
+        #themeToggle { position:fixed; right:20px; bottom:96px; width:44px; height:44px; z-index:60; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--line); background:var(--fg); color:var(--bg); cursor:pointer; transition:transform .3s ease, background .3s ease, color .3s ease; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+        .nav-toggle { display:flex; flex-direction:column; gap:5px; padding:8px 4px; background:none; border:none; cursor:pointer; }
+        @media (min-width:768px) { .nav-toggle { display:none !important; } }
+        .nav-toggle span { display:block; width:20px; height:2px; background:var(--muted); transition:transform .3s, opacity .3s; }
+        .nav-toggle.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+        .nav-toggle.open span:nth-child(2) { opacity:0; }
+        .nav-toggle.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+        #mobileMenu { z-index:40; }
+        #mobileMenu a { display:flex; align-items:center; justify-content:space-between; padding:14px 0; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid rgba(255,255,255,.06); transition:color .3s; text-decoration:none; }
+        #mobileMenu a.acc { color:var(--acc); }
+        .toolbar { max-width:1400px; margin:0 auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 24px 24px; }
+        .toolbar-label { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--ash); letter-spacing:.15em; margin-right:6px; }
+        .toolbar-link { font-size:11.5px; color:var(--muted); text-decoration:none; border:1px solid var(--line); padding:4px 10px; transition:all .25s; }
+        .toolbar-link:hover { border-color:var(--acc); color:var(--acc); }
+        .nav-desktop { display:none; }
+        @media (min-width:768px) { .nav-desktop { display:flex !important; } }
+        .stat { font-family:'Space Grotesk',monospace; font-size:11px; color:var(--muted); }
+        .stat b { color:var(--fg); font-weight:500; }
+        .enemy-card { border:1px solid var(--line); background:var(--graphite); padding:10px; cursor:pointer; transition:border-color .2s, background .2s; display:flex; flex-direction:column; gap:6px; }
+        .enemy-card:hover, .enemy-card.active { border-color:var(--acc); background:var(--acc-dim); }
+    </style>
+    <script>
+        (function () { try { if (localStorage.getItem('dgweb_theme') === 'light') document.documentElement.classList.add('light'); } catch (e) {} })();
+    </script>
+</head>
+<body>
+    <nav class="fixed top-0 left-0 right-0 z-50" style="background:var(--bg);opacity:.96;border-bottom:1px solid var(--line);backdrop-filter:blur(8px)">
+        <div style="max-width:1400px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between">
+            <a href="index.html" style="display:flex;align-items:center;gap:12px;color:var(--fg);text-decoration:none">
+                <span class="display" style="font-size:15px">LOWCOST</span>
+                <span style="width:1px;height:16px;background:var(--line)"></span>
+                <span style="font-size:13px;letter-spacing:.04em">低配挂机研讨会</span>
+            </a>
+            <button id="navToggle" class="nav-toggle" aria-label="菜单" aria-expanded="false"><span></span><span></span><span></span></button>
+            <div class="nav-desktop" style="align-items:center;gap:26px">
+                <a href="search.html" style="font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">搜索 SEARCH</a>
+                <a href="ranking.html" style="font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">核心使用率 RANK</a>
+                <a href="aliases.html" style="font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">别名 ALIASES</a>
+                <a href="map-sim.html" style="font-size:12px;color:var(--acc);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">3D 地图模拟 MAP</a>
+                <a href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:8px 16px;letter-spacing:.08em">BILI 哔哩</a>
+            </div>
+        </div>
+        <div id="mobileMenu" style="display:none;padding:8px 24px 12px;border-top:1px solid var(--line);background:var(--bg)">
+            <a href="search.html">搜索 SEARCH</a>
+            <a href="ranking.html">核心使用率 RANK</a>
+            <a href="aliases.html">别名 ALIASES</a>
+            <a href="map-sim.html" class="acc">3D 地图模拟 MAP</a>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener">BILI 哔哩</a>
+        </div>
+    </nav>
+
+    <main style="padding-top:64px">
+        <section style="border-bottom:1px solid var(--line)">
+            <div style="max-width:1400px;margin:0 auto;padding:24px 24px 16px">
+                <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.2em;margin-bottom:14px">ENEMY HANDBOOK / 敌人图鉴</div>
+                <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between">
+                    <h1 class="display" style="font-size:clamp(24px,4vw,40px);letter-spacing:0">敌人详情</h1>
+                    <a href="map-sim.html" class="btn">← 返回地图模拟</a>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap">
+                    <input id="searchInput" class="input" placeholder="输入敌人 ID 或名称搜索，如 agporc / 戴面具 / 源石虫" style="max-width:440px" />
+                    <span class="chip" id="dataStatus">INDEX --</span>
+                </div>
+            </div>
+        </section>
+
+        <section style="max-width:1400px;margin:0 auto;padding:20px 24px 40px">
+            <div style="display:grid;grid-template-columns:1fr;gap:22px">
+                <div id="enemyList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:420px;overflow:auto"></div>
+                <div id="detail" class="card" style="padding:22px">
+                    <div id="detailBody">加载中…</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer style="border-top:1px solid var(--line);padding:48px 0 0">
+        <div class="toolbar">
+            <span class="toolbar-label">社区常用工具</span>
+            <a href="https://prts.wiki/w/%E5%85%AC%E6%8B%9B%E8%AE%A1%E7%AE%97" target="_blank" rel="noopener" class="toolbar-link">公招计算</a>
+            <a href="https://prts.wiki/" target="_blank" rel="noopener" class="toolbar-link">PRTS WIKI</a>
+            <a href="https://penguin-stats.io/" target="_blank" rel="noopener" class="toolbar-link">企鹅物流</a>
+            <a href="https://ark.yituliu.cn/" target="_blank" rel="noopener" class="toolbar-link">一图流</a>
+            <a href="https://tomimi.dev/zh" target="_blank" rel="noopener" class="toolbar-link">特米米</a>
+        </div>
+        <div style="max-width:1400px;margin:0 auto;padding:18px 24px 40px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--muted);letter-spacing:.08em">低配挂机研讨会 · DGWEB</span>
+            <span class="mono" style="font-size:10px;color:var(--muted);letter-spacing:.12em">DATA: ARKNIGHTSGAMEDATA / THREE.JS</span>
+        </div>
+    </footer>
+
+    <button id="themeToggle" aria-label="切换到白昼" aria-pressed="false" title="白昼模式"></button>
+
+    <script src="data/enemy_index.js"></script>
+    <script src="data/enemy_detail.js"></script>
+    <script>
+        const state = { enemies: window.ENEMY_INDEX || [], detail: window.ENEMY_DETAIL || {} };
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fmt = n => {
+            if (n == null) return '--';
+            if (Array.isArray(n)) return n.join('/') || '--';
+            if (typeof n === 'object') return JSON.stringify(n);
+            if (typeof n === 'string') return n;
+            return Number.isInteger(n) ? n : parseFloat(n.toFixed(1));
+        };
+
+        function iconUrl(id) {
+            return 'https://cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/enemy/' + id + '.png';
+        }
+        window.__enemyIconFallback = function (img) {
+            const next = img.src.replace('cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/', 'raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/');
+            if (next !== img.src) { img.onerror = null; img.src = next; }
+        };
+
+        function renderList(filter) {
+            const box = $('enemyList');
+            box.innerHTML = '';
+            const q = (filter || '').trim().toLowerCase();
+            const list = state.enemies.filter(e => {
+                if (!q) return true;
+                const lv0 = e.levels && e.levels[0];
+                return e.id.toLowerCase().includes(q) || (lv0 && lv0.name && lv0.name.toLowerCase().includes(q));
+            }).slice(0, 300);
+            if (!list.length) { box.innerHTML = '<p style="color:var(--muted);font-size:13px">未找到敌人</p>'; return; }
+            list.forEach(e => {
+                const lv0 = e.levels && e.levels[0] || {};
+                const el = document.createElement('div');
+                el.className = 'enemy-card';
+                el.innerHTML = '<img src="' + iconUrl(e.id) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this);this.onerror=null" style="width:44px;height:44px;object-fit:contain;background:var(--fog);border:1px solid var(--line);align-self:center" /><b style="font-size:12px">' + esc(lv0.name || e.id) + '</b><span class="mono" style="font-size:9px;color:var(--ash);word-break:break-all">' + esc(e.id) + '</span>';
+                el.onclick = () => { history.replaceState(null, '', '?id=' + encodeURIComponent(e.id)); renderDetail(e.id); };
+                box.appendChild(el);
+            });
+        }
+
+        function statCell(k, v) {
+            return '<div style="display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:8px 2px"><span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.12em">' + k + '</span><b style="font-size:13px">' + esc(fmt(v)) + '</b></div>';
+        }
+
+        function motionName(m) { return m === 'FLY' ? '飞行' : (m === 'WALK' ? '地面' : (m || '--')); }
+        function applyWayName(a) { return a === 'MELEE' ? '近战' : a === 'RANGED' ? '远程' : (a || '--'); }
+        function bbVal(b) { return b.valueStr != null ? b.valueStr : b.value; }
+        const PARAM_LABELS = {
+            interval: '间隔', atk_scale: '攻击力倍率', anim_duration: '动画时长', scale: '倍率', value: '数值',
+            count: '数量', num: '数量', duration: '持续', radius: '半径', range: '范围', sp: 'SP消耗',
+            atk: '攻击', def: '防御', hp: '生命', move_speed: '移速', speed: '速度', weight: '重量',
+            cooldown: '冷却', angle: '角度', distance: '距离', max: '上限', min: '下限', delay: '延迟',
+            prob: '概率', chance: '概率', times: '次数', target: '目标数', height: '高度', width: '宽度'
+        };
+        function paramLabel(key) {
+            const k = String(key);
+            const last = k.includes('.') ? k.slice(k.lastIndexOf('.') + 1) : k;
+            return PARAM_LABELS[last] || k;
+        }
+        function formatParam(key, v) {
+            if (v == null) return '--';
+            const k = String(key);
+            const last = k.includes('.') ? k.slice(k.lastIndexOf('.') + 1) : k;
+            if (/(scale|ratio|rate)$/.test(last)) return Math.round(v * 100) + '%';
+            if (/(interval|duration|cooldown|delay|anim_duration)/.test(last)) return v + 's';
+            return fmt(v);
+        }
+        function kvTable(list, emptyText) {
+            if (!list || !list.length) return '<p style="color:var(--muted);font-size:12px">' + esc(emptyText || '无') + '</p>';
+            return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 16px">' + list.map(b =>
+                '<div style="display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:5px 2px"><span style="font-size:11px;color:var(--muted)" title="' + esc(b.key) + '">' + esc(paramLabel(b.key)) + '</span><b style="font-size:12px">' + esc(formatParam(b.key, bbVal(b))) + '</b></div>'
+            ).join('') + '</div>';
+        }
+        function renderTalents(list, meaning) {
+            if (!list || !list.length) return '<p style="color:var(--muted);font-size:12px">无天赋</p>';
+            const groups = {};
+            list.forEach(b => {
+                const k = String(b.key);
+                const i = k.indexOf('.');
+                const g = i > 0 ? k.slice(0, i) : '天赋';
+                (groups[g] = groups[g] || []).push(b);
+            });
+            return Object.keys(groups).map(g =>
+                '<div class="card" style="padding:12px;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="chip" style="color:var(--acc)">' + esc(g) + '</span><span style="font-size:11px;color:var(--muted)">天赋参数（PRTS 可读描述）</span></div>' +
+                (meaning ? '<p style="margin-top:8px;font-size:12px;color:var(--fg);line-height:1.75">能力/描述：' + esc(meaning) + '</p>' : '') +
+                '<div style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 16px">' +
+                groups[g].map(b =>
+                    '<div style="display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:5px 2px"><span style="font-size:11px;color:var(--muted)" title="' + esc(b.key) + '">' + esc(paramLabel(b.key)) + '</span><b style="font-size:12px">' + esc(formatParam(b.key, bbVal(b))) + '</b></div>'
+                ).join('') + '</div></div>'
+            ).join('');
+        }
+
+        function renderDetail(id) {
+            const e = state.enemies.find(x => x.id === id);
+            const body = $('detailBody');
+            if (!e) { body.innerHTML = '<p style="color:var(--muted)">未找到敌人：' + esc(id) + '</p>'; return; }
+            const d = state.detail[id] || {};
+            const desc = d.desc || '';
+            const prtsDesc = d.prts_desc || '';
+            const prtsTalents = d.prts_talents || '';
+            let html = '<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">';
+            html += '<img src="' + iconUrl(id) + '" alt="" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this);this.onerror=null" style="width:96px;height:96px;object-fit:contain;background:var(--fog);border:1px solid var(--line);flex:none" />';
+            html += '<div style="flex:1;min-width:240px">';
+            html += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2 style="font-size:22px">' + esc((e.levels[0] || {}).name || id) + '</h2><span class="chip">' + esc(id) + '</span>';
+            if (d.levelType) html += '<span class="chip" style="color:var(--acc)">' + esc(d.levelType) + '</span>';
+            html += '</div>';
+            if ((d.ability || []).length) html += '<div style="margin-top:12px"><span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.18em;margin-right:8px">能力 ABILITY</span>' + d.ability.map(a => '<span class="chip" style="margin:0 6px 6px 0;color:var(--fg)">' + esc(a) + '</span>').join('') + '</div>';
+            if (prtsDesc || desc) {
+                html += '<div style="margin-top:10px"><span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.18em;margin-right:8px">描述 DESCRIPTION</span>';
+                html += '<p style="margin-top:6px;font-size:13px;color:var(--fg);line-height:1.9;max-width:760px">' + esc(prtsDesc || desc) + '</p>';
+                if (prtsDesc && desc && prtsDesc !== desc) html += '<p style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.8;max-width:760px">官方原始描述：' + esc(desc) + '</p>';
+                html += '</div>';
+            }
+            html += '</div></div>';
+
+            const lv0 = (e.levels && e.levels[0]) || {};
+            const immune = [];
+            if (lv0.stunImmune) immune.push('晕眩');
+            if (lv0.silenceImmune) immune.push('沉默');
+            if (lv0.sleepImmune) immune.push('沉睡');
+            if (lv0.frozenImmune) immune.push('冻结');
+            if (lv0.levitateImmune) immune.push('浮空');
+            if (lv0.palsyImmune) immune.push('麻痹');
+            if (lv0.fearedImmune) immune.push('恐惧');
+            const basics = [
+                ['移动', motionName(d.motion)], ['攻击方式', applyWayName(d.applyWay)], ['攻击范围', fmt(d.rangeRadius)],
+                ['目标值', fmt(d.lifePointReduce)], ['不计入总数', d.notCountInTotal ? '是' : '否'],
+                ['伤害类型', fmt(d.damageType)], ['标签', fmt(d.enemyTags)],
+                ['元素抗性', lv0.epResistance != null ? lv0.epResistance + '%' : '--'],
+                ['损伤抵抗', lv0.epDamageResistance != null ? lv0.epDamageResistance + '%' : '--'],
+                ['异常免疫', immune.length ? immune.join('·') : '无']
+            ];
+            html += '<div style="margin-top:22px"><div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.18em;margin-bottom:10px">基本信息 / BASIC</div><div class="card" style="padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 18px">' + basics.map(([k, v]) => statCell(k, v)).join('') + '</div></div>';
+
+            html += '<div style="margin-top:22px"><div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.18em;margin-bottom:10px">技能 / SKILLS · ' + (d.skills || []).length + '</div>';
+            if (!(d.skills || []).length) {
+                html += '<p style="color:var(--muted);font-size:12px">无技能</p>';
+            } else {
+                (d.skills || []).forEach((sk, si) => {
+                    html += '<div class="card" style="padding:14px;margin-bottom:10px">';
+                    html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:14px">技能 ' + (si + 1) + '</b><span class="chip">' + esc(sk.prefabKey) + '</span>';
+                    html += '<span class="stat">优先级 <b>' + esc(fmt(sk.priority)) + '</b></span><span class="stat">初始冷却 <b>' + esc(fmt(sk.initCooldown)) + '</b></span><span class="stat">冷却 <b>' + esc(fmt(sk.cooldown)) + '</b></span><span class="stat">SP 消耗 <b>' + esc(fmt(sk.spCost)) + '</b></span></div>';
+                    html += kvTable(sk.blackboard, '无参数');
+                    html += '</div>';
+                });
+            }
+            html += '</div>';
+
+            html += '<div style="margin-top:22px"><div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.18em;margin-bottom:10px">天赋参数 / TALENT PARAMS · ' + (d.talents || []).length + '</div>';
+            html += renderTalents(d.talents, prtsTalents || prtsDesc || desc || (d.ability || []).join('；'));
+            html += '</div>';
+
+            html += '<div style="margin-top:22px"><div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.18em;margin-bottom:12px">属性 / STATS · ' + e.levels.length + ' 个等级</div>';
+            (e.levels || []).forEach((lv, i) => {
+                html += '<div class="card" style="padding:14px;margin-top:10px">';
+                html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span class="chip" style="color:var(--acc)">LV ' + (lv.level ?? i) + '</span><b style="font-size:14px">' + esc(lv.name || '') + '</b></div>';
+                html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px 18px">';
+                html += statCell('HP', lv.maxHp) + statCell('ATK', lv.atk) + statCell('DEF', lv.def) + statCell('RES', lv.magicResistance);
+                html += statCell('SPD', lv.moveSpeed) + statCell('ATK SPD', lv.attackSpeed) + statCell('攻击间隔', lv.baseAttackTime) + statCell('重量', lv.weight);
+                html += '</div></div>';
+            });
+            html += '</div>';
+            body.innerHTML = html;
+        }
+
+        $('searchInput').addEventListener('input', e => renderList(e.target.value));
+        $('navToggle').addEventListener('click', function () {
+            const m = $('mobileMenu');
+            const open = m.style.display !== 'block';
+            m.style.display = open ? 'block' : 'none';
+            this.classList.toggle('open', open);
+            this.setAttribute('aria-expanded', open);
+        });
+        $('themeToggle').addEventListener('click', () => {
+            const light = document.documentElement.classList.toggle('light');
+            try { localStorage.setItem('dgweb_theme', light ? 'light' : 'dark'); } catch (e) {}
+        });
+        $('dataStatus').textContent = 'INDEX ' + state.enemies.length;
+        renderList('');
+        const q = new URLSearchParams(location.search).get('id') || '';
+        if (q) renderDetail(q);
+        else if (state.enemies.length) renderDetail(state.enemies[0].id);
+    </script>
+</body>
+</html>

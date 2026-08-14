@@ -1,0 +1,2766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>低配挂机研讨会 — 3D 关卡地图模拟</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; --paper:#fff; --charcoal:#333; --smoke:#555; --graphite:#1a1a1a; --fog:#0a0a0a; --ash:#888; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
+        *::-webkit-scrollbar { width:4px; }
+        *::-webkit-scrollbar-track { background:#000; }
+        *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
+        body { background:var(--bg); color:var(--fg); font-family:'Noto Sans SC',sans-serif; overflow-x:hidden; }
+        body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
+        ::selection { background:#fff; color:#000; }
+        .display { font-family:'Space Grotesk','Noto Sans SC',sans-serif; font-weight:700; letter-spacing:0; line-height:.95; }
+        .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:.05em; }
+        .card { border:1px solid var(--line); background:var(--graphite); }
+        .chip { border:1px solid var(--line); padding:3px 9px; font-size:10px; color:var(--muted); font-family:'Space Grotesk',monospace; letter-spacing:.08em; }
+        .btn { border:1px solid var(--line); background:transparent; color:var(--fg); padding:8px 14px; font-family:'Noto Sans SC',sans-serif; font-size:12px; cursor:pointer; transition:all .25s; }
+        .btn:hover { border-color:var(--acc); color:var(--acc); }
+        .input { background:var(--fog); border:1px solid var(--line); color:var(--fg); padding:11px 14px; font-size:14px; outline:none; width:100%; transition:border-color .25s; }
+        .input:focus { border-color:var(--acc); }
+        .tab-btn { border:1px solid var(--line); background:transparent; color:var(--muted); padding:9px 16px; font-size:11px; cursor:pointer; letter-spacing:.08em; }
+        .tab-btn.active { color:var(--fg); border-color:var(--paper); background:var(--charcoal); }
+        .enemy-row { border-bottom:1px solid var(--line); padding:13px 0; display:flex; gap:12px; align-items:flex-start; }
+        .enemy-row:last-child { border-bottom:none; }
+        .stat { font-family:'Space Grotesk',monospace; font-size:11px; color:var(--muted); }
+        .stat b { color:var(--fg); font-weight:500; }
+        #mapWrap { position:relative; height:clamp(300px, calc(100vh - 475px), 720px); border:1px solid var(--line); background:var(--fog); overflow:hidden; }
+        .wait-cd { position:absolute; transform:translate(-50%,-100%); font-family:'Space Grotesk',monospace; font-size:12px; color:#ffd76a; background:rgba(10,13,18,.82); border:1px solid rgba(255,215,106,.45); padding:1px 7px; border-radius:6px; white-space:nowrap; pointer-events:none; line-height:1.4; }
+        .wait-cd.wait-cd-min { font-size:10px; color:#9fe8c8; border-color:rgba(159,232,200,.4); }
+        #mapCanvas { display:block; width:100%; height:100%; }
+        #mapOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:.5; pointer-events:none; z-index:1; }
+        #mapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.15em; color:var(--muted); z-index:2; }
+        #hint3d { position:absolute; left:12px; bottom:10px; z-index:2; pointer-events:none; font-size:10px; letter-spacing:.12em; color:var(--muted); font-family:'Space Grotesk',monospace; }
+        html.light { --bg:#f4f4f2; --fg:#141414; --muted:#787878; --line:#e2e2df; --paper:#141414; --charcoal:#c6c6c3; --smoke:#6a6a68; --graphite:#ececea; --fog:#efefed; --ash:#8a8a88; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        html.light body::before { filter:invert(1); opacity:.5; }
+        html.light *::-webkit-scrollbar-track { background:#ececea; }
+        html.light *::-webkit-scrollbar-thumb { background:#c4c4c1; }
+        html.light #mapWrap { background:#ececea; }
+        .theme-overlay { position:fixed; border-radius:50%; transform:scale(0); pointer-events:none; z-index:9999; }
+        .theme-overlay.run { animation:themeWipe .55s cubic-bezier(.4,0,.2,1) forwards; }
+        @keyframes themeWipe { to { transform:scale(1); } }
+        #themeToggle { position:fixed; right:20px; bottom:96px; width:44px; height:44px; z-index:60; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--line); background:var(--fg); color:var(--bg); cursor:pointer; transition:transform .3s ease, background .3s ease, color .3s ease; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+        #themeToggle:hover { transform:rotate(180deg) scale(1.06); }
+        .nav-toggle { display:flex; flex-direction:column; gap:5px; padding:8px 4px; background:none; border:none; cursor:pointer; }
+        @media (min-width:768px) { .nav-toggle { display:none !important; } }
+        .nav-toggle span { display:block; width:20px; height:2px; background:var(--muted); transition:transform .3s, opacity .3s; }
+        .nav-toggle:hover span { background:var(--paper); }
+        .nav-toggle.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+        .nav-toggle.open span:nth-child(2) { opacity:0; }
+        .nav-toggle.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+        #mobileMenu { z-index:40; }
+        #mobileMenu a { display:flex; align-items:center; justify-content:space-between; padding:14px 0; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid rgba(255,255,255,.06); transition:color .3s; }
+        #mobileMenu a:hover, #mobileMenu a:active { color:var(--paper); }
+        #mobileMenu a.acc { color:var(--acc); }
+        .toolbar { max-width:1400px; margin:0 auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 24px 24px; }
+        .toolbar-label { font-family:'Space Grotesk',monospace; font-size:10px; color:var(--ash); letter-spacing:.15em; margin-right:6px; }
+        .toolbar-link { font-size:11.5px; color:var(--muted); text-decoration:none; border:1px solid var(--line); padding:4px 10px; transition:all .25s; }
+        .toolbar-link:hover { border-color:var(--acc); color:var(--acc); }
+        .nav-desktop { display:none; }
+        @media (min-width:768px) { .nav-desktop { display:flex !important; } }
+        @media (max-width:768px) { #themeToggle { right:14px; bottom:80px; width:40px; height:40px; } }
+    </style>
+    <script>
+        (function () {
+            try { if (localStorage.getItem('dgweb_theme') === 'light') document.documentElement.classList.add('light'); } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <nav class="fixed top-0 left-0 right-0 z-50" style="background:var(--bg);opacity:.96;border-bottom:1px solid var(--line);backdrop-filter:blur(8px)">
+        <div style="max-width:1400px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between">
+            <a href="index.html" style="display:flex;align-items:center;gap:12px;color:var(--fg);text-decoration:none">
+                <span class="display" style="font-size:15px">LOWCOST</span>
+                <span style="width:1px;height:16px;background:var(--line)"></span>
+                <span style="font-size:13px;letter-spacing:.04em">低配挂机研讨会</span>
+            </a>
+            <button id="navToggle" class="nav-toggle" aria-label="菜单" aria-expanded="false"><span></span><span></span><span></span></button>
+            <div class="nav-desktop" style="align-items:center;gap:26px">
+                <a href="search.html" style="font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">搜索 SEARCH</a>
+                <a href="ranking.html" style="font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">核心使用率 RANK</a>
+                <a href="aliases.html" style="font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">别名 ALIASES</a>
+                <a href="map-sim.html" style="font-size:12px;color:var(--acc);text-decoration:none;letter-spacing:.1em;text-transform:uppercase">3D 地图模拟 MAP</a>
+                <a href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:8px 16px;letter-spacing:.08em">BILI 哔哩</a>
+            </div>
+        </div>
+        <div id="mobileMenu" style="display:none;padding:8px 24px 12px;border-top:1px solid var(--line);background:var(--bg)">
+            <a href="search.html">搜索 SEARCH</a>
+            <a href="ranking.html">核心使用率 RANK</a>
+            <a href="aliases.html">别名 ALIASES</a>
+            <a href="map-sim.html" class="acc">3D 地图模拟 MAP</a>
+            <a href="https://space.bilibili.com/3546373951588920" target="_blank" rel="noopener">BILI 哔哩</a>
+        </div>
+    </nav>
+
+    <main style="padding-top:64px">
+        <section style="border-bottom:1px solid var(--line)">
+            <div style="max-width:1400px;margin:0 auto;padding:24px 24px 16px">
+                <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.2em;margin-bottom:14px">3D STAGE MAP SIMULATOR / 3D 关卡地图模拟</div>
+                <h1 class="display" style="font-size:clamp(24px,4vw,40px);letter-spacing:0;max-width:760px">3D 地形、路线与波次</h1>
+                <div style="display:flex;gap:10px;margin-top:30px;flex-wrap:wrap">
+                    <input id="stageInput" class="input" list="stageList" placeholder="输入关卡代号，如 UR-1 / 1-7 / H10-4" style="max-width:420px" />
+                    <datalist id="stageList"></datalist>
+                    <button id="loadBtn" class="btn">载入关卡</button>
+                    <span class="chip" id="dataStatus">INDEX --</span>
+                </div>
+                <div id="zonePicker" class="card" style="margin-top:18px;padding:18px">
+                    <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.2em;margin-bottom:14px">关卡选择 / STAGE SELECT</div>
+                    <div id="modeTabs" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+                    <div id="zonePickRow" style="display:flex;gap:10px;margin-top:14px;align-items:center">
+                        <span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em">活动</span>
+                        <select id="zoneSelect" class="input" style="flex:1;max-width:420px"></select>
+                    </div>
+                    <div id="stageListBox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px;max-height:260px;overflow:auto"></div>
+                </div>
+            </div>
+        </section>
+
+        <section style="max-width:1400px;margin:0 auto;padding:20px 24px 40px">
+            <div id="summary" style="display:none;margin-bottom:20px"></div>
+            <div style="display:grid;grid-template-columns:1fr;gap:22px">
+                <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <span class="chip" id="stageCode">--</span>
+                            <span class="chip" id="stageName">--</span>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <button id="pauseBtn" class="btn">暂停</button>
+                            <button id="playBtn" class="btn">重播</button>
+                            <button id="resetBtn" class="btn">重置</button>
+                            <select id="speedSel" class="btn" style="padding:6px 10px">
+                                <option value="1">1x</option>
+                                <option value="2">2x</option>
+                                <option value="4">4x</option>
+                            </select>
+                            <button id="mapPreviewBtn" class="btn">官方地图</button>
+                            <button id="mapOverlayBtn" class="btn">叠图</button>
+                            <button id="deployBtn" class="btn" title="高亮可部署地块">部署格</button>
+                            <button id="waitCdBtn" class="btn" title="显示/隐藏敌人罚站倒计时">罚站倒计时</button>
+                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+                                透明度
+                                <input type="range" id="overlayOpacity" min="5" max="100" step="1" value="35" style="width:90px;accent-color:var(--acc)" />
+                            </label>
+                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+                                缩放
+                                <input type="range" id="overlayScale" min="50" max="200" step="1" value="100" style="width:90px;accent-color:var(--acc)" />
+                            </label>
+                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+                                X
+                                <input type="range" id="overlayOffsetX" min="-100" max="100" step="1" value="0" style="width:90px;accent-color:var(--acc)" />
+                            </label>
+                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+                                Y
+                                <input type="range" id="overlayOffsetY" min="-100" max="100" step="1" value="0" style="width:90px;accent-color:var(--acc)" />
+                            </label>
+                            <span class="chip" id="simTime">00:00</span>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin:12px 0">
+                        <span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em">关卡进度</span>
+                        <input type="range" id="timeSlider" min="0" max="100" step="0.1" value="0" style="flex:1;accent-color:var(--acc)" />
+                        <span class="chip" id="progressPct">0%</span>
+                        <span class="chip" id="killCount">击杀 0/0</span>
+                    </div>
+                    <div id="mapWrap">
+                        <canvas id="mapCanvas"></canvas>
+                        <img id="mapOverlay" alt="" style="display:none" />
+                        <div id="mapLoading">LOADING LEVEL DATA</div>
+                        <div id="hint3d">SCROLL / PINCH ZOOM</div>
+                        <div id="waitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5"></div>
+                    </div>
+                    <div id="enemyDetail" style="display:none;position:fixed;z-index:90;width:320px;max-height:76vh;overflow:auto;background:rgba(15,19,25,.97);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(5px)">
+                        <div style="display:flex;gap:12px;align-items:flex-start">
+                            <img id="edIcon" alt="" style="width:56px;height:56px;object-fit:contain;background:var(--fog);border:1px solid var(--line);border-radius:8px;flex:none" referrerpolicy="no-referrer" />
+                            <div style="flex:1;min-width:0">
+                                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                    <b id="edName" style="font-size:14px"></b>
+                                    <span class="chip" id="edMotion" style="font-size:10px"></span>
+                                </div>
+                                <div class="mono" id="edId" style="font-size:10px;color:var(--ash);margin-top:4px;word-break:break-all"></div>
+                            </div>
+                            <button id="edClose" class="btn" style="padding:3px 9px;font-size:12px;flex:none" title="关闭">×</button>
+                        </div>
+                        <div id="edMeta" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+                        <div id="edAbility" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;max-height:96px;overflow:auto"></div>
+                        <div id="edDesc" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.75;max-height:110px;overflow:auto;border-left:2px solid var(--line);padding-left:10px"></div>
+                        <div id="edStats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px"></div>
+                        <div id="edExtra" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
+                    </div>
+                    <div id="legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px"></div>
+                </div>
+                <div class="card">
+                    <div style="display:flex;gap:0;border-bottom:1px solid var(--line)">
+                        <button class="tab-btn active" data-tab="enemies">敌人</button>
+                        <button class="tab-btn" data-tab="waves">波次</button>
+                        <button class="tab-btn" data-tab="routes">路线</button>
+                    </div>
+                    <div id="tabEnemies" class="tab-panel" style="padding:18px;min-height:420px;max-height:720px;overflow:auto"></div>
+                    <div id="tabWaves" class="tab-panel" style="display:none;padding:18px;min-height:420px;max-height:720px;overflow:auto"></div>
+                    <div id="tabRoutes" class="tab-panel" style="display:none;padding:18px;min-height:420px;max-height:720px;overflow:auto"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer style="border-top:1px solid var(--line);padding:48px 0 0">
+        <div class="toolbar">
+            <span class="toolbar-label">社区常用工具</span>
+            <a href="https://prts.wiki/w/%E5%85%AC%E6%8B%9B%E8%AE%A1%E7%AE%97" target="_blank" rel="noopener" class="toolbar-link">公招计算</a>
+            <a href="https://prts.wiki/" target="_blank" rel="noopener" class="toolbar-link">PRTS WIKI</a>
+            <a href="https://penguin-stats.io/" target="_blank" rel="noopener" class="toolbar-link">企鹅物流</a>
+            <a href="https://ark.yituliu.cn/" target="_blank" rel="noopener" class="toolbar-link">一图流</a>
+            <a href="https://tomimi.dev/zh" target="_blank" rel="noopener" class="toolbar-link">特米米</a>
+        </div>
+        <div style="max-width:1400px;margin:0 auto;padding:18px 24px 40px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--muted);letter-spacing:.08em">低配挂机研讨会 · DGWEB</span>
+            <span class="mono" style="font-size:10px;color:var(--muted);letter-spacing:.12em">DATA: ARKNIGHTSGAMEDATA / THREE.JS</span>
+        </div>
+    </footer>
+
+    <div id="mapPreview" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.9);align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:14px">
+        <button id="mapPreviewClose" class="btn" style="align-self:flex-end">关闭</button>
+        <img id="mapPreviewImg" alt="官方地图预览" style="max-width:92vw;max-height:80vh;border:1px solid var(--line);background:var(--fog)" />
+        <span class="mono" style="font-size:10px;color:var(--muted);letter-spacing:.12em" id="mapPreviewMeta"></span>
+    </div>
+
+    <button id="themeToggle" aria-label="切换到白昼" aria-pressed="false" title="白昼模式"></button>
+
+    <script src="data/stage_index.js?v=20260813c"></script>
+    <script src="data/enemy_index.js?v=20260813c"></script>
+    <script src="data/enemy_detail.js?v=20260813c"></script>
+    <script src="data/camera_index.js?v=20260813c"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="js/spine-core-3.8.js"></script>
+    <script src="js/spine-webgl-3.8.js"></script>
+
+    <script>
+        const INDEX_URLS = [
+            'data/stage_index.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/stage_index.json',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/stage_index.json'
+        ];
+        const ZONE_URLS = [
+            'data/zone_index.json?v=20260813b',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/zone_index.json?v=20260813b',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/zone_index.json?v=20260813b'
+        ];
+        const ENEMY_URLS = [
+            'data/enemy_index.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/enemy_index.json',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/enemy_index.json'
+        ];
+        const GAMEDATA_BASE = 'https://cdn.jsdelivr.net/gh/Kengxxiao/ArknightsGameData@master/';
+        const RAW_BASE = 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/master/';
+
+        const TILE_COLORS = {
+            tile_empty: 0x141414, tile_forbidden: 0x080808, tile_wall: 0x4b4b4b, tile_road: 0x333333,
+            tile_floor: 0x202020, tile_start: 0xe03253, tile_end: 0x359dde, tile_green: 0x3d8a4f,
+            tile_hole: 0x14171a, tile_deepwater: 0x16455f, tile_deepsea: 0x104b66, tile_quicksand: 0x6b5627,
+            tile_balloon: 0x7a4b37, tile_fence: 0x4a4a4a, tile_passable_wall: 0x666666, tile_grass: 0x304f33,
+            tile_telin: 0x3d5b7a, tile_telout: 0x84506c, tile_volcano: 0x793126, tile_healing: 0x3d6b61,
+            tile_grvtybtn_up: 0x6f6330, tile_grvtybtn_down: 0x45556a, tile_toxic: 0x45632b, tile_sleep_road: 0x3a4060,
+            tile_sleep_wall: 0x4b4b4b, tile_banned: 0x1d1d1d, tile_banned2: 0x1d1d1d
+        };
+        const TILE_TEXTURES = {
+            tile_banned: 'tile_banned', tile_banned2: 'tile_banned2', tile_bigforce: 'tile_bigforce',
+            tile_bigforce2: 'tile_bigforce2', tile_bnspck_road: 'tile_bnspck_road', tile_corrosion: 'tile_corrosion',
+            tile_defup: 'tile_defup', tile_floor: 'tile_floor', tile_flystart: 'tile_flystart',
+            tile_gazebo: 'tile_gazebo', tile_grass: 'tile_grass', tile_grvtybtn_down: 'tile_grvtybtn_down',
+            tile_grvtybtn_up: 'tile_grvtybtn_up', tile_healing: 'tile_healing', tile_infection: 'tile_infection',
+            tile_ristar_road: 'tile_ristar_road', tile_ristar_road_forbidden: 'tile_ristar_road_forbidden',
+            tile_sleep_wall: 'tile_sleep_wall', tile_sleep_road: 'tile_sleep_wall', tile_smog: 'tile_smog', tile_stairs: 'tile_stairs',
+            tile_stairs_2: 'tile_stairs_2', tile_telin: 'tile_telin', tile_telout: 'tile_telout',
+            tile_volcano: 'tile_volcano'
+        };
+        const ROUTE_COLORS = [0xe08f00, 0x35a6e0, 0x53c36b, 0xe0567a, 0xb07de0, 0xe0c23a, 0x4bc3b3, 0xe0782f];
+        // 参考站 MAP_ROTATION=0.5，但模拟器相机俯仰约 -57.5°（更陡），需反向倾斜 -0.5：
+        // 平面面向相机、模型从屏幕竖直向后仰 28.65°，底部锚定格子中心，与影子对齐
+        const ENEMY_MODEL_TILT = -0.5;
+        const HL_URLS = [
+            'data/highland_colors.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/highland_colors.json',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/highland_colors.json'
+        ];
+        const SPINE_BASE = location.protocol === 'https:' ? '/spine/' : 'http://152.136.189.98:3000/';
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false };
+
+        const $ = id => document.getElementById(id);
+        const fmt = n => String(Math.floor(n)).padStart(2, '0');
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        }
+
+        function hashColor(s) {
+            let h = 0;
+            for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+            return ROUTE_COLORS[h % ROUTE_COLORS.length];
+        }
+
+        function pos(p) {
+            if (!p) return { row: 0, col: 0 };
+            if (typeof p === 'string') {
+                const m = p.match(/row=(\d+); col=(\d+)/) || p.match(/"row":\s*(\d+).*?"col":\s*(\d+)/);
+                if (m) return { row: +m[1], col: +m[2] };
+                try { const o = JSON.parse(p); return { row: o.row || 0, col: o.col || 0 }; } catch (e) { return { row: 0, col: 0 }; }
+            }
+            return { row: p.row || 0, col: p.col || 0 };
+        }
+
+        function enemyInfo(id) {
+            const e = state.enemyIndex[id];
+            if (!e || !e.levels || !e.levels.length) return { name: id, stats: {} };
+            return { name: e.levels[0].name || id, stats: e.levels[0] };
+        }
+
+        function getCameraData(stage) {
+            const levelId = (stage.levelId || '').toLowerCase();
+            return (state.cameraIndex || []).find(c => c.levelId.toLowerCase() === levelId) || null;
+        }
+
+        function mapImageName(stage) {
+            const levelId = stage.levelId || '';
+            const seg = levelId.split('/').pop() || '';
+            return (seg.replace(/^level_/, '') || stage.id) + '.png';
+        }
+
+        function mapImageUrls(stage) {
+            const name = mapImageName(stage);
+            return [
+                'https://cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/map/' + name,
+                'https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/map/' + name,
+                'https://raw.githubusercontent.com/fexli/ArknightsResource/main/mapreview/' + name
+            ];
+        }
+
+        function enemyIconUrl(id) {
+            return 'https://cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/enemy/' + id + '.png';
+        }
+
+        window.__enemyIconFallback = function (img) {
+            const next = img.src.replace('cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/', 'raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/');
+            if (next && next !== img.src) { img.onerror = null; img.src = next; }
+        };
+
+        function normalizeEnemyKey(id) {
+            return String(id).replace('enemy_', '').replace(/^(8\d{3}_[a-zA-Z]*)_\d$/, '$1');
+        }
+
+        function spineAssetPath(key, file) {
+            return SPINE_BASE.indexOf('/') === 0 ? key + '/' + file : 'spine/' + key + '/' + file;
+        }
+
+        function pickEnemyAnimation(skeletonData) {
+            const names = (skeletonData.animations || []).map(a => a.name);
+            // 参考站（lutonada）同款：跑步优先，先精确后包含
+            for (const want of ['Run_Loop', 'Move_Loop', 'Run', 'Move']) {
+                if (names.includes(want)) return want;
+                const hit = names.find(n => n.includes(want));
+                if (hit) return hit;
+            }
+            return names.find(n => /idle/i.test(n)) || names[0] || 'Default';
+        }
+
+        function pickTrapAnimation(skeletonData) {
+            // 参考站（lutonada）同款：道具优先 Idle / Sleep / Default
+            const names = (skeletonData.animations || []).map(a => a.name);
+            for (const want of ['Idle', 'Sleep', 'Default']) {
+                if (names.includes(want)) return want;
+                const hit = names.find(n => n.includes(want));
+                if (hit) return hit;
+            }
+            return names[0] || 'Default';
+        }
+
+        function getSharedSpineRenderer() {
+            if (state.spineShared && state.spineShared.renderer) return state.spineShared;
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const context = new spine.webgl.ManagedWebGLRenderingContext(canvas, {
+                alpha: true,
+                premultipliedAlpha: false,
+                preserveDrawingBuffer: true
+            });
+            const renderer = new spine.webgl.SceneRenderer(canvas, context, false);
+            state.spineShared = { canvas, context, renderer };
+            return state.spineShared;
+        }
+
+        async function prepareEnemySpines() {
+            if (typeof spine === 'undefined' || !state.enemies.length) return;
+            const ids = Array.from(new Set(state.enemies.map(e => e.id)));
+            const keys = ids.map(normalizeEnemyKey);
+            try {
+                const resp = await fetch(SPINE_BASE + 'assets/getMeshsKey', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keys })
+                });
+                const payload = await resp.json();
+                const data = (payload && payload.data) || payload || {};
+                const spineMap = data.spine || {};
+                if (!Object.keys(spineMap).length) return;
+                const byId = {};
+                await Promise.all(ids.map(async id => {
+                    const key = normalizeEnemyKey(id);
+                    const entry = spineMap[key];
+                    if (!entry) return;
+                    try {
+                        const shared = getSharedSpineRenderer();
+                        const output = document.createElement('canvas');
+                        output.width = 128;
+                        output.height = 128;
+                        const outCtx = output.getContext('2d');
+                        const manager = new spine.webgl.AssetManager(shared.context, SPINE_BASE);
+                        const atlasPath = spineAssetPath(key, entry.atlas);
+                        const skelPath = spineAssetPath(key, entry.skel);
+                        await Promise.all([
+                            new Promise((res, rej) => manager.loadTextureAtlas(atlasPath, () => res(), (_, m) => rej(m))),
+                            new Promise((res, rej) => manager.loadBinary(skelPath, () => res(), (_, m) => rej(m)))
+                        ]);
+                        const atlas = manager.get(atlasPath);
+                        const binary = manager.get(skelPath);
+                        const loader = new spine.AtlasAttachmentLoader(atlas);
+                        const reader = new spine.SkeletonBinary(loader);
+                        reader.scale = 0.019;
+                        const skeletonData = reader.readSkeletonData(binary);
+                        const skeleton = new spine.Skeleton(skeletonData);
+                        const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                        animationState.setAnimation(0, pickEnemyAnimation(skeletonData), true);
+                        skeleton.x = 0;
+                        skeleton.y = 0;
+                        skeleton.scaleX = 1;
+                        skeleton.scaleY = 1;
+                        animationState.update(0);
+                        animationState.apply(skeleton);
+                        skeleton.updateWorldTransform();
+                        const probeOffset = new spine.Vector2();
+                        const probeSize = new spine.Vector2();
+                        skeleton.getBounds(probeOffset, probeSize);
+                        const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
+                        const scaleK = Math.max(0.15, 108 / probeSpan);
+                        const centerX = 64 - (probeOffset.x + probeSize.x / 2) * scaleK;
+                        const centerY = 64 - (probeOffset.y + probeSize.y / 2) * scaleK;
+                        const texture = new THREE.CanvasTexture(output);
+                        texture.encoding = THREE.sRGBEncoding;
+                        texture.flipY = true;
+                        texture.premultiplyAlpha = false;
+                        texture.minFilter = THREE.LinearFilter;
+                        texture.magFilter = THREE.LinearFilter;
+                        byId[id] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY };
+                    } catch (e) {
+                        console.warn('Spine setup failed', id, e);
+                    }
+                }));
+                state.spineData = byId;
+                applySpineMeshes();
+            } catch (e) {
+                console.warn('Spine load failed', e);
+            }
+        }
+
+        function applySpineMeshes() {
+            if (!state.scene || !state.enemies.length) return;
+            state.enemies.forEach(en => {
+                if (en.spineApplied || !state.spineData[en.id]) return;
+                try {
+                    const anim = state.spineData[en.id];
+                    const tex = anim.texture.clone();
+                    tex.needsUpdate = true;
+                    (anim.textures = anim.textures || []).push(tex);
+                    const sprite = makeFlatModel(tex, en.mesh ? (en.mesh.scale.x || 1) : 1, true);
+                    if (en.mesh) {
+                        sprite.visible = en.mesh.visible;
+                        sprite.scale.copy(en.mesh.scale);
+                        sprite.position.copy(en.mesh.position);
+                        // Spine 加载完成立即按脚底贴地修正高度，避免替换瞬间跳变
+                        if (state.level) {
+                            const surfY = tileSurfaceY(state.level, Math.round(sprite.position.z - 0.5), Math.round(sprite.position.x - 0.5));
+                            const scl = sprite.scale.x || 1;
+                            sprite.position.y = modelBottomY(surfY, scl, anim.bodyBottom);
+                        }
+                        state.scene.remove(en.mesh);
+                    } else {
+                        sprite.position.set(0, 0.5, 0);
+                        sprite.visible = false;
+                    }
+                    state.scene.add(sprite);
+                    en.mesh = sprite;
+                    en.spineSprite = sprite;
+                    en.spineApplied = true;
+                } catch (e) {
+                    console.warn('Spine sprite failed', en.id, e);
+                }
+            });
+        }
+
+        function makeTrapMarker(key) {
+            // 道具加载前的占位标记：半透明虚线圆环 + 短 ID
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 64, 64);
+            ctx.strokeStyle = 'rgba(255,214,106,.9)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.arc(32, 32, 25, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255,214,106,.85)';
+            ctx.font = 'bold 15px Space Grotesk, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(key).replace('trap_', '').slice(0, 3), 32, 32);
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.55 });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(0.62, 0.62, 1);
+            sprite.renderOrder = 4;
+            return sprite;
+        }
+
+        function buildTrapMeshes(level) {
+            // 场地预置道具/部署物（如「直到大地变成一颗酸橙」的信箱 trap_334_agmbox）
+            state.traps = [];
+            const toks = (level.predefines && level.predefines.tokenInsts) || [];
+            const rows = level.mapData.map.length;
+            toks.forEach(tok => {
+                if (tok.hidden) return;
+                const inst = tok.inst || {};
+                const key = inst.characterKey || '';
+                if (!key) return;
+                const p = pos(tok.position);
+                // tokenInsts 坐标与路线同为自底向上（row 0=地图底部），需与地图坐标翻转对齐
+                const r = rows - 1 - Math.round(p.row), c = Math.round(p.col);
+                const surfY = tileSurfaceY(level, r, c);
+                const sprite = makeTrapMarker(key);
+                sprite.position.set(c + 0.5, surfY + 0.28, r + 0.5);
+                state.scene.add(sprite);
+                state.traps.push({ key, alias: tok.alias || '', row: r, col: c, mesh: sprite, applied: false });
+            });
+        }
+
+        async function prepareTrapSpines() {
+            if (typeof spine === 'undefined' || !state.traps.length) return;
+            const keys = Array.from(new Set(state.traps.map(t => t.key)));
+            try {
+                const resp = await fetch(SPINE_BASE + 'assets/getTrapsKey', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keys })
+                });
+                const payload = await resp.json();
+                const data = (payload && payload.data) || {};
+                const spineMap = {};
+                (data.spine || []).forEach(e => { spineMap[e.name] = e; });
+                const imageMap = {};
+                (data.image || []).forEach(e => { imageMap[e.name] = e; });
+                const byKey = {};
+                await Promise.all(keys.map(async key => {
+                    const entry = spineMap[key];
+                    if (entry) {
+                        try {
+                            const shared = getSharedSpineRenderer();
+                            const output = document.createElement('canvas');
+                            output.width = 128;
+                            output.height = 128;
+                            const outCtx = output.getContext('2d');
+                            const manager = new spine.webgl.AssetManager(shared.context, SPINE_BASE);
+                            // AssetManager 会自行拼接 baseUrl（SPINE_BASE），只能传相对路径，避免 URL 重复
+                            const atlasPath = 'trap/spine/' + entry.atlas + '/' + entry.atlas + '.atlas';
+                            const skelPath = 'trap/spine/' + entry.skel + '/' + entry.skel + '.skel';
+                            await Promise.all([
+                                new Promise((res, rej) => manager.loadTextureAtlas(atlasPath, () => res(), (_, m) => rej(m))),
+                                new Promise((res, rej) => manager.loadBinary(skelPath, () => res(), (_, m) => rej(m)))
+                            ]);
+                            const atlas = manager.get(atlasPath);
+                            const binary = manager.get(skelPath);
+                            const loader = new spine.AtlasAttachmentLoader(atlas);
+                            const reader = new spine.SkeletonBinary(loader);
+                            reader.scale = 0.019;
+                            const skeletonData = reader.readSkeletonData(binary);
+                            const skeleton = new spine.Skeleton(skeletonData);
+                            const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                            animationState.setAnimation(0, pickTrapAnimation(skeletonData), true);
+                            skeleton.x = 0;
+                            skeleton.y = 0;
+                            skeleton.scaleX = 1;
+                            skeleton.scaleY = 1;
+                            animationState.update(0);
+                            animationState.apply(skeleton);
+                            skeleton.updateWorldTransform();
+                            const probeOffset = new spine.Vector2();
+                            const probeSize = new spine.Vector2();
+                            skeleton.getBounds(probeOffset, probeSize);
+                            const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
+                            const scaleK = Math.max(0.15, 108 / probeSpan);
+                            const centerX = 64 - (probeOffset.x + probeSize.x / 2) * scaleK;
+                            const centerY = 64 - (probeOffset.y + probeSize.y / 2) * scaleK;
+                            const texture = new THREE.CanvasTexture(output);
+                            texture.encoding = THREE.sRGBEncoding;
+                            texture.flipY = true;
+                            texture.premultiplyAlpha = false;
+                            texture.minFilter = THREE.LinearFilter;
+                            texture.magFilter = THREE.LinearFilter;
+                            byKey[key] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY };
+                        } catch (e) {
+                            console.warn('Trap spine setup failed', key, e);
+                        }
+                    } else if (imageMap[key]) {
+                        byKey[key] = { imageUrl: SPINE_BASE + 'trap/image/' + imageMap[key].image + '.png' };
+                    }
+                }));
+                state.trapSpines = byKey;
+                applyTrapMeshes();
+            } catch (e) {
+                console.warn('Trap load failed', e);
+            }
+        }
+
+        function applyTrapMeshes() {
+            if (!state.scene || !state.traps.length) return;
+            state.traps.forEach(tr => {
+                if (tr.applied || !state.trapSpines[tr.key]) return;
+                const anim = state.trapSpines[tr.key];
+                const surfY = tileSurfaceY(state.level, tr.row, tr.col);
+                try {
+                    let sprite = null;
+                    if (anim.skeleton) {
+                        const tex = anim.texture.clone();
+                        tex.needsUpdate = true;
+                        (anim.textures = anim.textures || []).push(tex);
+                        // 按参考站：敌人网格乘 z1（默认 0.9），道具不乘缩放（1.0）
+                        // 道具正确尺寸 = 敌人公式 ÷ 0.9（= ×1.111），即 19.2/anim.scale/0.9
+                        const scl = 19.2 / anim.scale / 0.9;
+                        sprite = makeFlatModel(tex, scl, true);
+                        sprite.position.set(tr.col + 0.5, modelBottomY(surfY, scl, anim.bodyBottom), tr.row + 0.5);
+                    } else if (anim.imageUrl) {
+                        const loader = new THREE.TextureLoader();
+                        loader.setCrossOrigin('anonymous');
+                        sprite = makeFlatModel(new THREE.Texture(), 0.9, true);
+                        sprite.position.set(tr.col + 0.5, modelBottomY(surfY, 0.9, 0.92), tr.row + 0.5);
+                        loader.load(anim.imageUrl, t => {
+                            t.encoding = THREE.sRGBEncoding;
+                            sprite.material.map = t;
+                            sprite.material.needsUpdate = true;
+                            measureTrapImage(anim, sprite, surfY);
+                        }, undefined, () => {});
+                    }
+                    if (sprite) {
+                        sprite.renderOrder = 4;
+                        state.scene.remove(tr.mesh);
+                        state.scene.add(sprite);
+                        tr.mesh = sprite;
+                        tr.applied = true;
+                    }
+                } catch (e) {
+                    console.warn('Trap sprite failed', tr.key, e);
+                }
+            });
+        }
+
+        function measureTrapImage(anim, sprite, surfY) {
+            if (!anim._imgCanvas) {
+                anim._imgCanvas = document.createElement('canvas');
+                anim._imgCanvas.width = 128;
+                anim._imgCanvas.height = 128;
+            }
+            const cv = anim._imgCanvas;
+            const ctx = cv.getContext('2d');
+            const img = sprite.material.map && sprite.material.map.image;
+            if (!img) return;
+            const s = Math.min(128 / img.width, 128 / img.height);
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.drawImage(img, (128 - img.width * s) / 2, (128 - img.height * s) / 2, img.width * s, img.height * s);
+            const d = ctx.getImageData(0, 0, 128, 128).data;
+            let y1 = -1;
+            for (let y = 0; y < 128; y++) {
+                for (let x = 0; x < 128; x++) {
+                    if (d[(y * 128 + x) * 4 + 3] > 8) { y1 = y; }
+                }
+            }
+            if (y1 >= 0) {
+                const foot = (y1 + 1) / 128;
+                sprite.position.y = modelBottomY(surfY, sprite.scale.x || 0.9, foot);
+            }
+        }
+
+        function updateTrapFoot(anim) {
+            if (!anim.bodyH || !state.traps) return;
+            state.traps.forEach(tr => {
+                if (!state.trapSpines[tr.key] || state.trapSpines[tr.key] !== anim) return;
+                if (tr.mesh && !tr.mesh.userData.footed) {
+                    const scl = tr.mesh.scale.x || 1;
+                    const surfY = tileSurfaceY(state.level, tr.row, tr.col);
+                    tr.mesh.position.y = modelBottomY(surfY, scl, anim.bodyBottom);
+                    tr.mesh.userData.footed = true;
+                }
+            });
+        }
+
+        function renderSpineAnimations(delta) {
+            [state.spineData, state.trapSpines].forEach(map => {
+                if (!map) return;
+                Object.keys(map).forEach(id => {
+                    const anim = map[id];
+                    if (!anim || !anim.skeleton) return;
+                anim.animationState.update(delta);
+                anim.animationState.apply(anim.skeleton);
+                anim.skeleton.scaleX = anim.scale;
+                anim.skeleton.scaleY = anim.scale;
+                anim.skeleton.x = anim.centerX;
+                anim.skeleton.y = anim.centerY;
+                anim.skeleton.updateWorldTransform();
+                const shared = state.spineShared;
+                if (!shared) return;
+                const gl = shared.context.gl;
+                gl.viewport(0, 0, 128, 128);
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                shared.renderer.camera.position.set(64, 64, 0);
+                shared.renderer.camera.update();
+                shared.renderer.begin();
+                shared.renderer.drawSkeleton(anim.skeleton, false);
+                shared.renderer.end();
+                if (!anim.pixels) anim.pixels = new Uint8Array(128 * 128 * 4);
+                gl.readPixels(0, 0, 128, 128, gl.RGBA, gl.UNSIGNED_BYTE, anim.pixels);
+                const imageData = anim.outCtx.createImageData(128, 128);
+                for (let y = 0; y < 128; y++) {
+                    const src = (127 - y) * 512;
+                    const dst = y * 512;
+                    imageData.data.set(anim.pixels.subarray(src, src + 512), dst);
+                }
+                anim.outCtx.putImageData(imageData, 0, 0);
+                if (!anim.measured) {
+                    const d = imageData.data;
+                    let x0 = 128, y0 = 128, x1 = -1, y1 = -1;
+                    for (let i = 0; i < d.length; i += 4) {
+                        if (d[i + 3] > 8) {
+                            const pi = i / 4;
+                            const cx = pi % 128, cy = Math.floor(pi / 128);
+                            if (cx < x0) x0 = cx;
+                            if (cx > x1) x1 = cx;
+                            if (cy < y0) y0 = cy;
+                            if (cy > y1) y1 = cy;
+                        }
+                    }
+                    anim.bodyW = x1 >= x0 ? (x1 - x0 + 1) : 64;
+                    anim.bodyH = y1 >= y0 ? (y1 - y0 + 1) : 64;
+                    // 脚底在贴图中的精确位置（canvas Y 向下，y1 为身体最低点）
+                    anim.bodyBottom = y1 >= y0 ? (y1 + 1) / 128 : 0.5;
+                    anim.measured = true;
+                    if (map === state.spineData) updateEnemyShadowSizes(anim);
+                    else updateTrapFoot(anim);
+                }
+                anim.texture.needsUpdate = true;
+                (anim.textures || []).forEach(t => { t.needsUpdate = true; });
+                });
+            });
+        }
+
+        function showMapPreview(stage) {
+            const urls = mapImageUrls(stage);
+            const img = $('mapPreviewImg');
+            const meta = $('mapPreviewMeta');
+            let i = 0;
+            function tryNext() {
+                if (i >= urls.length) {
+                    meta.textContent = '官方地图资源不可用';
+                    return;
+                }
+                const url = urls[i++];
+                meta.textContent = url;
+                img.onload = () => { $('mapPreview').style.display = 'flex'; };
+                img.onerror = tryNext;
+                img.src = url;
+            }
+            tryNext();
+        }
+
+        function loadMapOverlay(stage) {
+            const urls = mapImageUrls(stage);
+            const img = $('mapOverlay');
+            let i = 0;
+            function tryNext() {
+                if (i >= urls.length) { hideMapOverlay(); return; }
+                const url = urls[i++];
+                img.onload = () => {
+                    img.style.display = 'block';
+                    state.mapOverlayVisible = true;
+                    $('mapOverlayBtn').classList.add('active');
+                };
+                img.onerror = tryNext;
+                img.src = url;
+            }
+            tryNext();
+        }
+
+        function showMapOverlay() {
+            state.mapOverlayVisible = true;
+            if (state.underlayMesh) state.underlayMesh.visible = true;
+            $('mapOverlayBtn').classList.add('active');
+            document.querySelectorAll('.overlay-ctl').forEach(el => el.style.display = 'flex');
+        }
+
+        function hideMapOverlay() {
+            state.mapOverlayVisible = false;
+            if (state.underlayMesh) state.underlayMesh.visible = false;
+            $('mapOverlay').style.display = 'none';
+            $('mapOverlayBtn').classList.remove('active');
+            document.querySelectorAll('.overlay-ctl').forEach(el => el.style.display = 'none');
+        }
+
+        function applyOverlayOpacity(v) {
+            state.overlayOpacity = +v;
+            if (state.underlayMesh) {
+                state.underlayMesh.material.opacity = +v / 100;
+                state.underlayMesh.material.needsUpdate = true;
+            }
+        }
+
+        function applyOverlayScale(v) {
+            state.overlayScale = +v;
+            if (state.underlayMesh) {
+                const s = +v / 100;
+                state.underlayMesh.scale.set(s, 1, s);
+            }
+        }
+
+        function applyOverlayOffsetX(v) {
+            state.overlayOffsetX = +v;
+            if (state.underlayMesh && state.level) {
+                const cols = state.level.mapData.map[0] ? state.level.mapData.map[0].length : 0;
+                state.underlayMesh.position.x = cols / 2 + (+v / 100) * cols * 0.5 * (state.overlayScale / 100);
+            }
+        }
+
+        function applyOverlayOffsetY(v) {
+            state.overlayOffsetY = +v;
+            if (state.underlayMesh && state.level) {
+                const rows = state.level.mapData.map.length;
+                state.underlayMesh.position.z = rows / 2 + (+v / 100) * rows * 0.5 * (state.overlayScale / 100);
+            }
+        }
+
+        async function fetchJSON(urls) {
+            for (const url of urls) {
+                try {
+                    const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return await resp.json();
+                } catch (e) { console.warn('数据源失败 ' + url, e); }
+            }
+            return null;
+        }
+
+        const MODE_NAMES = { main: '主线', activity: '活动', branchline: '支线', annihilation: '剿灭', roguelike: '集成战略', climbtower: '攀塔·试炼' };
+        let currentMode = 'main', currentZone = null;
+        async function loadZoneIndex() {
+            const idx = window.ZONE_INDEX || await fetchJSON(ZONE_URLS);
+            if (!idx || !idx.modes) return;
+            state.zoneIndex = idx;
+            renderModeTabs();
+        }
+        function renderModeTabs() {
+            const box = $('modeTabs');
+            box.innerHTML = '';
+            state.zoneIndex.modes.forEach(m => {
+                const b = document.createElement('button');
+                b.className = 'chip';
+                b.style.padding = '7px 14px';
+                b.style.cursor = 'pointer';
+                b.textContent = MODE_NAMES[m.key] || m.key;
+                if (m.key === currentMode) {
+                    b.style.background = 'var(--acc)';
+                    b.style.borderColor = 'var(--acc)';
+                    b.style.color = '#000';
+                    b.style.fontWeight = '700';
+                    b.style.outline = '2px solid rgba(255,255,255,.35)';
+                    b.style.outlineOffset = '1px';
+                } else {
+                    b.style.background = 'transparent';
+                    b.style.color = 'var(--muted)';
+                }
+                b.onclick = () => { currentMode = m.key; currentZone = null; renderModeTabs(); renderZones(); };
+                box.appendChild(b);
+            });
+            renderZones();
+        }
+        function renderZones() {
+            const sel = $('zoneSelect');
+            sel.innerHTML = '';
+            const mode = state.zoneIndex.modes.find(m => m.key === currentMode);
+            if (!mode) return;
+            const zones = mode.zones.filter(z => (z.stages || []).length > 0);
+            const pickRow = $('zonePickRow');
+            if (currentMode === 'annihilation') {
+                // 剿灭直接全列，不做活动/分区选择
+                if (pickRow) pickRow.style.display = 'none';
+                const seen = new Set();
+                const all = [];
+                zones.forEach(z => (z.stages || []).forEach(s => {
+                    const k = s.id || s.code;
+                    if (!seen.has(k)) { seen.add(k); all.push(Object.assign({}, s, { zoneName: z.name })); }
+                }));
+                // 剿灭按官方关卡 id 开放顺序倒序（camp_r_33 最新在前）
+                all.sort((a, b) => String(b.id || '').localeCompare(String(a.id || ''), 'en', { numeric: true }));
+                renderStages({ stages: all });
+                return;
+            }
+            if (pickRow) pickRow.style.display = 'flex';
+            zones.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z.id;
+                opt.textContent = z.name + (z.sub && z.sub !== z.name ? ' ' + z.sub : '') + ' (' + z.stages.length + ')';
+                sel.appendChild(opt);
+            });
+            if (zones.length) {
+                currentZone = zones[0].id;
+                sel.value = currentZone;
+                renderStages(zones[0]);
+            } else {
+                currentZone = null;
+                $('stageListBox').innerHTML = '';
+            }
+        }
+        function renderStages(zone) {
+            const box = $('stageListBox');
+            box.innerHTML = '';
+            (zone.stages || []).forEach(s => {
+                const b = document.createElement('button');
+                b.className = 'chip';
+                b.style.padding = '10px 12px';
+                b.style.display = 'flex';
+                b.style.flexDirection = 'column';
+                b.style.alignItems = 'flex-start';
+                b.style.gap = '3px';
+                b.style.textAlign = 'left';
+                b.style.cursor = 'pointer';
+                b.style.minWidth = '130px';
+                if (currentMode === 'annihilation') {
+                    b.innerHTML = '<b style="font-size:13px">' + esc(s.name || s.code) + '</b><span style="font-size:11px;color:var(--ash)">' + esc(s.code) + '</span>';
+                } else {
+                    b.innerHTML = '<b style="font-size:13px">' + esc(s.code) + '</b><span style="font-size:11px;color:var(--ash)">' + esc(s.name) + '</span>';
+                }
+                b.onclick = () => loadStage(s.id || s.code);
+                box.appendChild(b);
+            });
+            if (!(zone.stages || []).length) box.innerHTML = '<span class="mono" style="color:var(--ash);font-size:11px">该活动暂无可用关卡数据</span>';
+        }
+
+        function setupDatalist() {
+            const dl = $('stageList');
+            dl.innerHTML = '';
+            state.stageIndex.slice(0, 2500).forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.code;
+                opt.label = s.code + ' ' + s.name;
+                dl.appendChild(opt);
+            });
+        }
+
+        async function init() {
+            state.stageIndex = window.STAGE_INDEX || await fetchJSON(INDEX_URLS) || [];
+            const enemyArr = window.ENEMY_INDEX || await fetchJSON(ENEMY_URLS) || [];
+            (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
+            state.cameraIndex = window.CAMERA_INDEX || [];
+            state.highlandColors = await fetchJSON(HL_URLS) || {};
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length;
+            setupDatalist();
+            loadZoneIndex();
+            const params = new URLSearchParams(location.search);
+            const q = params.get('id') || params.get('code') || '';
+            if (q) { await loadStage(q); }
+            bindUI();
+        }
+
+        function bindUI() {
+            const load = () => loadStage($('stageInput').value.trim());
+            $('loadBtn').addEventListener('click', load);
+            $('stageInput').addEventListener('keydown', e => { if (e.key === 'Enter') load(); });
+            $('edClose').addEventListener('click', () => { closeEnemyDetail(); hideAllRoutes(); });
+        function syncPlayBtns() {
+            $('pauseBtn').textContent = state.playing ? '暂停' : '继续';
+        }
+        function resetSim(autoPlay) {
+            state.time = 0; state.last = 0; state.scrubbing = false;
+            state.playing = !!autoPlay;
+            $('timeSlider').value = 0;
+            $('progressPct').textContent = '0%';
+            state.kills = 0;
+            $('killCount').textContent = '击杀 0/' + state.totalEnemies;
+            state.enemies.forEach(en => {
+                en.progress = 0; en.done = false;
+                if (en.mesh) en.mesh.visible = false;
+                if (en.shadow) en.shadow.visible = false;
+            });
+            $('playBtn').textContent = '重播';
+            syncPlayBtns();
+        }
+        $('playBtn').addEventListener('click', () => { resetSim(true); });
+        $('pauseBtn').addEventListener('click', () => {
+            state.playing = !state.playing;
+            state.last = 0;
+            syncPlayBtns();
+        });
+        $('resetBtn').addEventListener('click', () => { resetSim(false); });
+        $('zoneSelect').addEventListener('change', () => {
+            currentZone = $('zoneSelect').value;
+            const mode = state.zoneIndex.modes.find(m => m.key === currentMode);
+            const z = mode && mode.zones.find(z => z.id === currentZone);
+            if (z) renderStages(z);
+        });
+        $('timeSlider').addEventListener('input', e => {
+            state.scrubbing = true;
+            // 拖拽不暂停动画：设置时间后从该点继续播放
+            state.time = state.maxTime ? (+e.target.value / 100) * state.maxTime : 0;
+            state.last = 0;
+        });
+        $('timeSlider').addEventListener('change', () => { state.scrubbing = false; });
+            $('speedSel').addEventListener('change', e => { state.speed = +e.target.value; });
+            $('mapPreviewBtn').addEventListener('click', () => { if (state.currentStage) showMapPreview(state.currentStage); });
+            $('mapPreviewClose').addEventListener('click', () => { $('mapPreview').style.display = 'none'; });
+            $('mapPreview').addEventListener('click', e => { if (e.target === $('mapPreview')) $('mapPreview').style.display = 'none'; });
+            $('mapOverlayBtn').addEventListener('click', () => {
+                if (!state.currentStage) return;
+                if (state.mapOverlayVisible) { hideMapOverlay(); return; }
+                showMapOverlay();
+            });
+            $('overlayOpacity').addEventListener('input', e => applyOverlayOpacity(e.target.value));
+            $('overlayScale').addEventListener('input', e => applyOverlayScale(e.target.value));
+            $('overlayOffsetX').addEventListener('input', e => applyOverlayOffsetX(e.target.value));
+            $('overlayOffsetY').addEventListener('input', e => applyOverlayOffsetY(e.target.value));
+            $('deployBtn').addEventListener('click', toggleDeployOverlay);
+            $('waitCdBtn').addEventListener('click', toggleWaitCountdown);
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+                    btn.classList.add('active');
+                    const key = btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
+                    $('tab' + key).style.display = 'block';
+                });
+            });
+        }
+
+        function findStage(q) {
+            const key = q.trim().toUpperCase();
+            return state.stageIndex.find(s => (s.id || '').toUpperCase() === key)
+                || state.stageIndex.find(s => s.code.toUpperCase() === key)
+                || state.stageIndex.find(s => s.code.toUpperCase().includes(key));
+        }
+
+        async function loadStage(q) {
+            const stage = findStage(q);
+            if (!stage) { renderError('未找到关卡：' + q); return; }
+            $('stageCode').textContent = stage.code;
+            $('stageName').textContent = stage.name || '';
+            $('mapLoading').style.display = 'flex';
+            if (!stage.file) { renderError('该关卡没有地图数据（可能为剧情关）'); return; }
+            // 本地关卡数据优先（data/levels/），失败再走 CDN，避免 CDN 不可达导致白屏
+            const localPath = 'data/levels/' + stage.file.split('/').pop();
+            const level = await fetchJSON([localPath, GAMEDATA_BASE + stage.file, RAW_BASE + stage.file]);
+            $('mapLoading').style.display = 'none';
+            if (!level) { renderError('关卡数据加载失败：' + stage.code); return; }
+            state.level = level;
+            state.currentStage = stage;
+            hideMapOverlay();
+            state.spineData = {};
+            build3D(level);
+            prepareEnemySpines();
+            prepareTrapSpines();
+            renderSummary(stage, level);
+            renderTabs(stage, level);
+            // 选择关卡后自动播放
+            state.playing = true;
+            state.last = 0;
+            $('playBtn').textContent = '重播';
+            $('pauseBtn').textContent = '暂停';
+            history.replaceState(null, '', '?id=' + encodeURIComponent(stage.id || stage.code));
+        }
+
+        function renderError(msg) {
+            $('mapLoading').style.display = 'none';
+            $('stageCode').textContent = 'ERROR';
+            $('stageName').textContent = msg;
+            $('tabEnemies').innerHTML = '<p style="color:var(--muted);font-size:13px">' + esc(msg) + '</p>';
+            $('tabWaves').innerHTML = ''; $('tabRoutes').innerHTML = '';
+        }
+
+        function renderSummary(stage, level) {
+            const opt = level.options || {};
+            $('summary').style.display = 'block';
+            $('summary').innerHTML = `
+                <div class="card" style="padding:20px">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px">
+                        ${statCell('CODE', stage.code)}${statCell('NAME', stage.name || '--')}
+                        ${statCell('MAP', (level.mapData.map.length || 0) + ' x ' + (level.mapData.map[0] ? level.mapData.map[0].length : 0))}
+                        ${statCell('ROUTES', (level.routes || []).length)}${statCell('WAVES', (level.waves || []).length)}
+                        ${statCell('COST', (opt.initialCost || 0) + ' / ' + (opt.maxCost || 0))}
+                        ${statCell('LIFE', opt.maxLifePoint || 0)}${statCell('DEPLOY', opt.characterLimit || 0)}
+                    </div>
+                </div>`;
+        }
+
+        function statCell(k, v) {
+            return `<div><div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.16em;margin-bottom:6px">${esc(k)}</div><div style="font-size:14px;font-weight:500">${esc(v)}</div></div>`;
+        }
+
+        function parseRoutePoints(route) {
+            const pts = [pos(route.startPosition)];
+            (route.checkpoints || []).forEach(cp => {
+                if (cp.type !== 'MOVE') return;
+                const p = pos(cp.position);
+                if (!(p.row === 0 && p.col === 0)) pts.push(p);
+            });
+            pts.push(pos(route.endPosition));
+            return pts;
+        }
+
+        function tileAccess(level, r, c) {
+            const map = level && level.mapData && level.mapData.map;
+            if (!map || r < 0 || c < 0 || r >= map.length || c >= map[0].length) return 9;
+            const t = level.mapData.tiles[map[r][c]] || {};
+            const key = t.tileKey || '';
+            // 地穴（tile_hole）官方数据可能为可通行地面（passableMask=ALL，如「直到大地变成一颗酸橙」），按掩码判定
+            if (key === 'tile_hole' && (t.passableMask || '') !== 'ALL') return 9;
+            if (t.heightType === 'HIGHLAND' || ['tile_fence', 'tile_fence_bound', 'tile_forbidden'].includes(key)) return 9;
+            if (key === 'tile_stairs') return 1;
+            if (key === 'tile_passable_wall' || key === 'tile_passable_wall_forbidden') return 2;
+            return 0;
+        }
+
+        function canAccessTiles(level, a, b) {
+            return Math.abs(tileAccess(level, a.row, a.col) - tileAccess(level, b.row, b.col)) <= 1;
+        }
+
+        function lineIntersection(level, from, to, primary) {
+            const result = [];
+            let x0 = from.row;
+            let y0 = from.col;
+            const x1 = to.row;
+            const y1 = to.col;
+            const dx = Math.abs(x1 - x0);
+            const dy = Math.abs(y1 - y0);
+            const sx = x0 < x1 ? 1 : -1;
+            const sy = y0 < y1 ? 1 : -1;
+            let err = dx - dy;
+            while (true) {
+                result.push({ row: x0, col: y0 });
+                if (x0 === x1 && y0 === y1) break;
+                const e2 = 2 * err;
+                if (primary) {
+                    if (e2 > -dy) { err -= dy; x0 += sx; }
+                    else if (e2 < dx) { err += dx; y0 += sy; }
+                } else {
+                    if (e2 < dx) { err += dx; y0 += sy; }
+                    else if (e2 > -dy) { err -= dy; x0 += sx; }
+                }
+            }
+            return result;
+        }
+
+        function canMoveDirectTo(level, from, to) {
+            if (from.row === to.row && from.col === to.col) return true;
+            const a = lineIntersection(level, from, to, true);
+            const b = lineIntersection(level, from, to, false);
+            const line = Array.from(new Map(a.concat(b).map(p => [p.row + ',' + p.col, p])).values());
+            for (let i = 0; i < line.length; i++) {
+                const point = line[i];
+                if (!canAccessTiles(level, from, point)) return false;
+                for (let j = i; j >= 0; j--) {
+                    if (!canAccessTiles(level, line[j], line[i])) return false;
+                }
+            }
+            return true;
+        }
+
+        function findGridPath(level, from, to) {
+            const map = level.mapData.map;
+            const rows = map.length;
+            const cols = map[0].length;
+            const sr = Math.round(from.row);
+            const sc = Math.round(from.col);
+            const tr = Math.round(to.row);
+            const tc = Math.round(to.col);
+            if (sr === tr && sc === tc) return [{ row: sr, col: sc }];
+            const grid = [];
+            for (let i = 0; i < rows; i++) {
+                const row = [];
+                for (let j = 0; j < cols; j++) {
+                    row.push({ row: i, col: j, cost: 0, heuristic: 0, total: 0, parent: null, diagCost: 1, open: false, closed: false });
+                }
+                grid.push(row);
+            }
+            const start = grid[sr][sc];
+            const dest = grid[tr][tc];
+            const openList = [start];
+            start.open = true;
+            while (openList.length) {
+                openList.sort((a, b) => a.total - b.total);
+                const curr = openList.shift();
+                curr.open = false;
+                if (curr.row === tr && curr.col === tc) {
+                    const raw = [];
+                    let node = curr;
+                    const seen = new Set();
+                    while (node) {
+                        const kk = node.row + ',' + node.col;
+                        if (seen.has(kk)) break; // 父链成环兜底，避免无限循环
+                        seen.add(kk);
+                        raw.push({ row: node.row, col: node.col });
+                        node = node.parent;
+                    }
+                    raw.reverse();
+                    const optimized = [raw[0]];
+                    let farthest = raw[0];
+                    for (let i = 1; i < raw.length; i++) {
+                        const target = raw[i];
+                        if (!canMoveDirectTo(level, farthest, target)) {
+                            // 不可直达时保留上一个路径点，并保证循环前进（防止相邻格访问差>1 时死循环）
+                            optimized.push(raw[i - 1]);
+                            farthest = raw[i - 1];
+                        }
+                    }
+                    if (optimized[optimized.length - 1] !== raw[raw.length - 1]) {
+                        optimized.push(raw[raw.length - 1]);
+                    }
+                    return optimized;
+                }
+                curr.closed = true;
+                const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                for (const [dr, dc] of dirs) {
+                    const nr = curr.row + dr;
+                    const nc = curr.col + dc;
+                    if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue;
+                    const neighbour = grid[nr][nc];
+                    if (neighbour.closed) continue;
+                    if (!(nr === tr && nc === tc) && !canAccessTiles(level, curr, neighbour)) continue;
+                    let bestCost = false;
+                    const nCost = curr.cost + neighbour.diagCost;
+                    if (!neighbour.open) {
+                        bestCost = true;
+                        neighbour.heuristic = Math.abs(nr - tr) + Math.abs(nc - tc);
+                        neighbour.open = true;
+                        openList.push(neighbour);
+                    } else if (nCost < neighbour.cost) {
+                        // 重设父节点前检查是否会成环（curr 已在 neighbour 祖先链上则跳过）
+                        let anc = neighbour.parent;
+                        let cyclic = false;
+                        while (anc) {
+                            if (anc === curr) { cyclic = true; break; }
+                            anc = anc.parent;
+                        }
+                        if (!cyclic) bestCost = true;
+                    }
+                    if (bestCost) {
+                        neighbour.parent = curr;
+                        neighbour.cost = nCost;
+                        neighbour.total = nCost + neighbour.heuristic;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function nearestGate(gates, p) {
+            let best = null;
+            let bestD = Infinity;
+            gates.forEach(g => {
+                const d = Math.abs(g.row - p.row) + Math.abs(g.col - p.col);
+                if (d < bestD) { bestD = d; best = g; }
+            });
+            return best;
+        }
+
+        function buildRoutePaths(level, rawRoutes, opts) {
+            const map = level.mapData.map;
+            const rows = map.length;
+            const redGates = [];
+            const blueGates = [];
+            map.forEach((row, r) => row.forEach((idx, c) => {
+                const key = level.mapData.tiles[idx].tileKey || '';
+                if (key === 'tile_start') redGates.push({ row: r, col: c });
+                else if (key === 'tile_end') blueGates.push({ row: r, col: c });
+            }));
+            // route 坐标的 row 自底向上（0=地图底部），地图坐标自顶向下，需翻转
+            const toMap = p => ({ row: rows - 1 - p.row, col: p.col });
+            return (rawRoutes || []).map(rt => {
+                const startPos = toMap(pos(rt.startPosition));
+                const endPos = toMap(pos(rt.endPosition));
+                // 按官方/参考站：敌人从路线起点出生（地穴洞口、传送门出口、地图中段等），不吸附红门
+                const startGate = { row: startPos.row, col: startPos.col };
+                const endGate = nearestGate(blueGates, endPos) || { row: endPos.row, col: endPos.col };
+                // WAIT_FOR_SECONDS 的 position 是 (0,0) 占位 =「在当前位置罚站 time 秒」，
+                // 只记录罚站发生时的坐标（waitCursor），不新增移动点，避免路线乱跳
+                const waits = [];
+                const allCps = [];
+                let telePair = null;
+                let telePending = null;
+                let waitCursor = startPos;
+                (rt.checkpoints || []).forEach(cp => {
+                    if (cp.type === 'MOVE') {
+                        const p = toMap(pos(cp.position));
+                        if (!(p.row === 0 && p.col === 0)) {
+                            waitCursor = p;
+                            allCps.push(p);
+                            if (telePair) telePair.rest.push({ row: p.row, col: p.col });
+                        }
+                    } else if (cp.type === 'WAIT_FOR_SECONDS' && cp.time > 0) {
+                        waits.push({ at: { row: waitCursor.row, col: waitCursor.col }, time: cp.time });
+                        if (telePair) telePair.restWaits.push({ at: { row: waitCursor.row, col: waitCursor.col }, time: cp.time });
+                    } else if (cp.type === 'DISAPPEAR') {
+                        // 官方传送门编码：敌人消失（teleport away）
+                        telePending = { row: waitCursor.row, col: waitCursor.col };
+                    } else if (cp.type === 'APPEAR_AT_POS') {
+                        // 官方传送门编码：在指定位置重新出现（teleport to）
+                        const ap = toMap(pos(cp.position));
+                        // 兔洞（tile_rabbithole_*）也是 DISAPPEAR/APPEAR_AT_POS 编码，但走独立随机出口逻辑，不纳入经典传送门
+                        const inPos = telePending || waitCursor;
+                        if (!telePair
+                            && !isRabbitHoleIn(level, Math.round(inPos.row), Math.round(inPos.col))
+                            && !isRabbitHoleOut(level, Math.round(ap.row), Math.round(ap.col))) {
+                            telePair = {
+                                in: { row: inPos.row, col: inPos.col },
+                                out: { row: ap.row, col: ap.col },
+                                rest: [],
+                                restWaits: []
+                            };
+                        }
+                        telePending = null;
+                    }
+                });
+                const via = allCps.filter(p => tileAccess(level, Math.round(p.row), Math.round(p.col)) !== 9);
+                // 飞行单位无视高台/墙/禁行：按检查点直飞（折线），不做 A* 绕行
+                // 传送门出口路线（extraRoutes）同样按官方检查点折线走：出2 出口会沿洞区走进地穴（地面怪被击杀）
+                if ((rt.motionMode || '').toUpperCase() === 'FLY' || (opts && opts.rawStart)) {
+                    const raw = [];
+                    for (const pt of [startPos, ...allCps, endPos]) {
+                        const last = raw[raw.length - 1];
+                        if (!last || last.row !== pt.row || last.col !== pt.col) raw.push(pt);
+                    }
+                    const path = raw.length > 1 ? raw : [startPos, endPos];
+                    attachRouteWaits(path, waits);
+                    applyRouteTeleport(path, telePair);
+                    return path;
+                }
+                const raw = [startPos, ...via, endPos];
+                const path = [startGate];
+                let cursor = startGate;
+                for (const v of via) {
+                    const seg = findGridPath(level, cursor, v);
+                    if (seg && seg.length > 1) {
+                        path.push(...seg.slice(1));
+                        cursor = v;
+                    }
+                }
+                const last = findGridPath(level, cursor, endGate);
+                if (last && last.length > 1) path.push(...last.slice(1));
+                else path.push(endGate);
+                const out = path.length > 1 ? path : raw;
+                attachRouteWaits(out, waits);
+                applyRouteTeleport(out, telePair);
+                return out;
+            });
+        }
+
+        function tileKeyAt(level, r, c) {
+            const map = level && level.mapData && level.mapData.map;
+            if (!map || r < 0 || c < 0 || r >= map.length || c >= map[0].length) return '';
+            return (level.mapData.tiles[map[r][c]] || {}).tileKey || '';
+        }
+
+        function isRabbitHoleIn(level, r, c) {
+            return tileKeyAt(level, r, c).indexOf('tile_rabbithole_in_') === 0;
+        }
+
+        function isRabbitHoleOut(level, r, c) {
+            return tileKeyAt(level, r, c).indexOf('tile_rabbithole_out_') === 0;
+        }
+
+        function buildRabbitHoles(level) {
+            // 兔洞（传送门）：tile_rabbithole_in_<n> 入口、tile_rabbithole_out_<n> 出口
+            const map = level.mapData.map;
+            const ins = [];
+            const outs = [];
+            map.forEach((row, r) => row.forEach((idx, c) => {
+                const t = level.mapData.tiles[idx] || {};
+                const key = t.tileKey || '';
+                const mm = key.match(/^tile_rabbithole_(in|out)_(\d+)$/);
+                if (!mm) return;
+                const bb = t.blackboard || [];
+                const bbVal = k => {
+                    const e = bb.find(x => x.key === k);
+                    return e ? e.value : null;
+                };
+                if (mm[1] === 'in') {
+                    ins.push({ row: r, col: c, num: +mm[2] });
+                } else {
+                    outs.push({ row: r, col: c, num: +mm[2], actionIndex: bbVal('action_index'), prob: bbVal('prob') });
+                }
+            }));
+            // 出口概率（参考站同款：按 prob 权重比例显示百分比）
+            const total = outs.reduce((s, o) => s + (o.prob || 0), 0);
+            const probByPos = {};
+            outs.forEach(o => {
+                const p = total > 0 ? o.prob / total * 100 : 0;
+                o.probStr = p ? (Number.isInteger(p) ? p : p.toFixed(1)) + '%' : '';
+                probByPos[o.row + ',' + o.col] = o.probStr;
+            });
+            state.rabbitHoles = { ins, outs, probByPos };
+        }
+
+        function pickRabbitHoleExit(enIndex, outs) {
+            // 按出口 prob 权重做确定性随机（由敌人序号决定，拖拽回看不跳变）
+            if (!outs.length) return null;
+            const total = outs.reduce((s, o) => s + (o.prob || 0), 0);
+            if (total <= 0) return outs[0];
+            let u = (enIndex + 1) * 0.6180339887498949;
+            u = u - Math.floor(u);
+            u = (u * 7919) - Math.floor(u * 7919);
+            let acc = 0;
+            for (const o of outs) {
+                acc += o.prob || 0;
+                if (u * total <= acc) return o;
+            }
+            return outs[outs.length - 1];
+        }
+
+        const rabbitLabelCache = {};
+        const holePitCache = {};
+        function holePitTexture() {
+            // 地穴（tile_hole）洞口：黑色圆坑，参考站同款纯黑圆 + 柔和边缘
+            if (holePitCache.tex) return holePitCache.tex;
+            const cv = document.createElement('canvas');
+            cv.width = 128;
+            cv.height = 128;
+            const ctx = cv.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+            const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 62);
+            g.addColorStop(0, 'rgba(0,0,0,1)');
+            g.addColorStop(0.62, 'rgba(0,0,0,.96)');
+            g.addColorStop(0.86, 'rgba(18,22,26,.82)');
+            g.addColorStop(0.97, 'rgba(42,48,54,.35)');
+            g.addColorStop(1, 'rgba(42,48,54,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(64, 64, 62, 0, Math.PI * 2);
+            ctx.fill();
+            const tex = new THREE.CanvasTexture(cv);
+            tex.encoding = THREE.sRGBEncoding;
+            holePitCache.tex = tex;
+            return tex;
+        }
+        function rabbitHoleLabel(key, r, c) {
+            // 传送门地面标记：入口 入<n>、出口 出<n> + 概率
+            const isOut = key.indexOf('tile_rabbithole_out_') === 0;
+            const num = (key.match(/_(\d+)$/) || [])[1] || '';
+            const prob = (state.rabbitHoles.probByPos || {})[r + ',' + c] || '';
+            const cacheKey = key + '@' + r + ',' + c + '|' + prob;
+            if (rabbitLabelCache[cacheKey]) return rabbitLabelCache[cacheKey];
+            const cv = document.createElement('canvas');
+            cv.width = 256;
+            cv.height = 256;
+            const ctx = cv.getContext('2d');
+            ctx.clearRect(0, 0, 256, 256);
+            const cx = 128, cy = 128, rad = 95;
+            const grad = ctx.createRadialGradient(cx, cy, 14, cx, cy, rad);
+            if (isOut) {
+                grad.addColorStop(0, '#a9e0ad');
+                grad.addColorStop(0.58, '#3f9c4f');
+                grad.addColorStop(1, 'rgba(25,70,32,.65)');
+            } else {
+                grad.addColorStop(0, '#ecd3ae');
+                grad.addColorStop(0.58, '#8a5a34');
+                grad.addColorStop(1, 'rgba(70,40,20,.65)');
+            }
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = isOut ? '#d6f2d6' : '#f4dcb8';
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const main = (isOut ? '出' : '入') + num;
+            ctx.font = 'bold 82px Space Grotesk, "Microsoft YaHei", sans-serif';
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = 'rgba(0,0,0,.75)';
+            ctx.strokeText(main, cx, cy - 30);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(main, cx, cy - 30);
+            if (isOut && prob) {
+                ctx.font = 'bold 46px Space Grotesk, "Microsoft YaHei", sans-serif';
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = 'rgba(0,0,0,.8)';
+                ctx.strokeText(prob, cx, cy + 62);
+                ctx.fillStyle = '#ffd76a';
+                ctx.fillText(prob, cx, cy + 62);
+            }
+            const tex = new THREE.CanvasTexture(cv);
+            tex.encoding = THREE.sRGBEncoding;
+            rabbitLabelCache[cacheKey] = tex;
+            return tex;
+        }
+
+        function clearScene() {
+            if (!state.scene) return;
+            if (state.spineShared && state.spineShared.renderer && state.spineShared.renderer.dispose) {
+                state.spineShared.renderer.dispose();
+            }
+            state.spineShared = null;
+            state.spineData = {};
+            state.trapSpines = {};
+            while (state.scene.children.length) state.scene.remove(state.scene.children[0]);
+            state.enemyMeshes = [];
+            state.enemies = [];
+            state.traps = [];
+            state.routes = [];
+            state.rabbitHoles = { ins: [], outs: [] };
+            state.extraRouteBase = 0;
+            state.routeVisuals = {};
+            state.deployMeshes = [];
+        }
+
+        function deployTileTexture() {
+            const cv = document.createElement('canvas');
+            cv.width = 128;
+            cv.height = 128;
+            const ctx = cv.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+            // 绿色底（技能范围预览风格）
+            ctx.fillStyle = 'rgba(74, 214, 110, 0.40)';
+            ctx.fillRect(0, 0, 128, 128);
+            // 斜线排线（45°）
+            ctx.strokeStyle = 'rgba(220, 255, 225, 0.85)';
+            ctx.lineWidth = 3;
+            for (let i = -128; i < 256; i += 18) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 128, 128);
+                ctx.stroke();
+            }
+            const tex = new THREE.CanvasTexture(cv);
+            tex.encoding = THREE.sRGBEncoding;
+            tex.anisotropy = 4;
+            return tex;
+        }
+
+        function toggleDeployOverlay() {
+            state.deployVisible = !state.deployVisible;
+            $('deployBtn').classList.toggle('active', state.deployVisible);
+            state.deployMeshes.forEach(m => { m.visible = state.deployVisible; });
+        }
+
+        function build3D(level) {
+            if (typeof THREE === 'undefined') { renderError('3D 引擎加载失败，请检查网络'); return; }
+            clearScene();
+            const wrap = $('mapWrap');
+            const canvas = $('mapCanvas');
+            let renderer = state.renderer;
+            if (!renderer) {
+                renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+                state.renderer = renderer;
+            }
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 0.92;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+
+            const scene = new THREE.Scene();
+            state.scene = scene;
+            scene.background = new THREE.Color(0x090b0e);
+            scene.fog = new THREE.Fog(0x090b0e, 16, 44);
+
+            const camera = new THREE.PerspectiveCamera(46, wrap.clientWidth / Math.max(1, wrap.clientHeight), 0.1, 120);
+            state.camera = camera;
+
+            const rows = level.mapData.map.length;
+            const cols = level.mapData.map[0] ? level.mapData.map[0].length : 0;
+            const midR = rows / 2, midC = cols / 2;
+            // 先解析兔洞（传送门）数据，供格子标签与敌人传送使用
+            buildRabbitHoles(level);
+
+            const hemi = new THREE.HemisphereLight(0xd9e6ff, 0x0b0b0b, 0.45);
+            scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xfff0dc, 0.85);
+            dir.position.set(7, 15, 5);
+            dir.castShadow = true;
+            dir.shadow.mapSize.set(2048, 2048);
+            dir.shadow.camera.near = 1;
+            dir.shadow.camera.far = 40;
+            dir.shadow.camera.left = -14;
+            dir.shadow.camera.right = 14;
+            dir.shadow.camera.top = 14;
+            dir.shadow.camera.bottom = -14;
+            scene.add(dir);
+            const rim = new THREE.PointLight(0xe08f00, 0.5, 20);
+            rim.position.set(midC - 3, 5, midR + 3);
+            scene.add(rim);
+
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(cols + 4, rows + 4),
+                new THREE.MeshStandardMaterial({ color: 0x0d0f12, roughness: 0.92, metalness: 0.04 })
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.set(midC, -0.02, midR);
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            state.underlayMesh = addMapUnderlay(scene, level, rows, cols, midR, midC);
+
+            level.mapData.map.forEach((row, r) => row.forEach((tileIdx, c) => {
+                const t = level.mapData.tiles[tileIdx] || {};
+                const key = t.tileKey || 'tile_floor';
+                const color = TILE_COLORS[key] || (t.heightType === 'HIGHLAND' ? 0x3a3a3a : 0x1d1d1d);
+                const holeColor = key.indexOf('tile_rabbithole_in_') === 0 ? 0x2f1d12
+                    : key.indexOf('tile_rabbithole_out_') === 0 ? 0x173a20 : 0;
+                const gateColor = key === 'tile_start' ? 0xe03253 : key === 'tile_end' ? 0x359dde : key === 'tile_green' ? 0x32d74b : 0;
+                let h = 0.12;
+                if (t.heightType === 'HIGHLAND') h = 0.42;
+                if (key === 'tile_wall' || key === 'tile_passable_wall' || key === 'tile_sleep_wall') h = 0.62;
+                const baseColor = holeColor || color;
+                if (gateColor) {
+                    h = 1;
+                    const ground = new THREE.Mesh(
+                        new THREE.PlaneGeometry(0.96, 0.96),
+                        new THREE.MeshStandardMaterial({ color: 0x747474, roughness: 0.82, metalness: 0.04 })
+                    );
+                    ground.rotation.x = -Math.PI / 2;
+                    ground.position.set(c + 0.5, 0.02, r + 0.5);
+                    ground.receiveShadow = true;
+                    scene.add(ground);
+                    const gateCube = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.985, h, 0.985),
+                        new THREE.MeshBasicMaterial({ color: gateColor, transparent: true, opacity: 0.03, depthWrite: false })
+                    );
+                    gateCube.position.set(c + 0.5, h / 2, r + 0.5);
+                    scene.add(gateCube);
+                    const gateEdge = new THREE.LineSegments(
+                        new THREE.EdgesGeometry(gateCube.geometry),
+                        new THREE.LineBasicMaterial({ color: gateColor, transparent: true, opacity: 0.95 })
+                    );
+                    gateEdge.position.copy(gateCube.position);
+                    scene.add(gateEdge);
+                    if (key === 'tile_start' || key === 'tile_end') {
+                        const sprite = new THREE.Mesh(
+                            new THREE.PlaneGeometry(0.86, 0.86),
+                            new THREE.MeshBasicMaterial({
+                                map: loadTileTexture(key),
+                                transparent: true,
+                                depthWrite: false,
+                                side: THREE.DoubleSide
+                            })
+                        );
+                        sprite.rotation.x = -Math.PI / 2;
+                        sprite.position.set(c + 0.5, h + 0.03, r + 0.5);
+                        sprite.renderOrder = 1;
+                        scene.add(sprite);
+                    }
+                    return;
+                }
+                const geo = new THREE.BoxGeometry(0.985, h, 0.985);
+                let mat;
+                const hlColor = state.highlandColors[(state.currentStage && state.currentStage.code) || level.code];
+                const isHighland = t.heightType === 'HIGHLAND' && key !== 'tile_wall' && key !== 'tile_passable_wall' && key !== 'tile_sleep_wall';
+                if (isHighland && hlColor) {
+                    mat = [
+                        new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.68, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.68, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: hlColor, roughness: 0.78, metalness: 0.05 }),
+                        new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.68, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.68, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.68, metalness: 0.1 })
+                    ];
+                } else {
+                    mat = new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.68, metalness: 0.1 });
+                }
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                mesh.position.set(c + 0.5, h / 2, r + 0.5);
+                scene.add(mesh);
+                // 顶面细分割线（只画四条顶边，替代整块立方体 12 条边的粗线/缝隙感）
+                const edgeGeo = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(-0.48, 0, -0.48),
+                    new THREE.Vector3(0.48, 0, -0.48),
+                    new THREE.Vector3(0.48, 0, 0.48),
+                    new THREE.Vector3(-0.48, 0, 0.48),
+                    new THREE.Vector3(-0.48, 0, -0.48)
+                ]);
+                const edge = new THREE.Line(edgeGeo, new THREE.LineBasicMaterial({ color: 0x171a1f, transparent: true, opacity: 0.22 }));
+                edge.position.set(c + 0.5, h + 0.006, r + 0.5);
+                scene.add(edge);
+                // 可部署地块高亮（绿色斜线排线，缓慢闪烁，仿干员技能范围预览）
+                if (t.buildableType && t.buildableType !== 'NONE') {
+                    const dm = new THREE.Mesh(
+                        new THREE.PlaneGeometry(0.96, 0.96),
+                        new THREE.MeshBasicMaterial({
+                            map: deployTileTexture(),
+                            transparent: true,
+                            opacity: 0.9,
+                            depthWrite: false,
+                            side: THREE.DoubleSide
+                        })
+                    );
+                    dm.rotation.x = -Math.PI / 2;
+                    dm.position.set(c + 0.5, h + 0.055, r + 0.5);
+                    dm.renderOrder = 2;
+                    dm.visible = state.deployVisible;
+                    scene.add(dm);
+                    state.deployMeshes.push(dm);
+                }
+                const textureKey = TILE_TEXTURES[key];
+                if (textureKey) {
+                    const sprite = new THREE.Mesh(
+                        new THREE.PlaneGeometry(0.955, 0.955),
+                        new THREE.MeshBasicMaterial({
+                            map: loadTileTexture(textureKey),
+                            transparent: true,
+                            depthWrite: false,
+                            side: THREE.DoubleSide
+                        })
+                    );
+                    sprite.rotation.x = -Math.PI / 2;
+                    sprite.position.set(c + 0.5, h + 0.05, r + 0.5);
+                    sprite.renderOrder = 1;
+                    scene.add(sprite);
+                }
+                if (key.indexOf('tile_rabbithole') === 0) {
+                    // 传送门地面标记（入口/出口 + 编号 + 出口概率）
+                    const label = new THREE.Mesh(
+                        new THREE.PlaneGeometry(0.82, 0.82),
+                        new THREE.MeshBasicMaterial({ map: rabbitHoleLabel(key, r, c), transparent: true, depthWrite: false, side: THREE.DoubleSide })
+                    );
+                    label.rotation.x = -Math.PI / 2;
+                    label.position.set(c + 0.5, h + 0.07, r + 0.5);
+                    label.renderOrder = 2;
+                    scene.add(label);
+                }
+                if (key === 'tile_hole') {
+                    // 地穴洞口（黑色圆坑）
+                    const pit = new THREE.Mesh(
+                        new THREE.PlaneGeometry(0.72, 0.72),
+                        new THREE.MeshBasicMaterial({ map: holePitTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide })
+                    );
+                    pit.rotation.x = -Math.PI / 2;
+                    pit.position.set(c + 0.5, h + 0.07, r + 0.5);
+                    pit.renderOrder = 2;
+                    scene.add(pit);
+                }
+            }));
+
+            const grid = new THREE.GridHelper(Math.max(rows, cols, 2), Math.max(rows, cols, 2), 0x2a2a2a, 0x181818);
+            grid.position.set(midC, 0.01, midR);
+            scene.add(grid);
+
+            state.routes = buildRoutePaths(level, level.routes || []);
+            // 传送门出口路线（extraRoutes）追加在主线路线之后，routeIndex = extraRouteBase + action_index
+            state.extraRouteBase = state.routes.length;
+            state.routes = state.routes.concat(buildRoutePaths(level, level.extraRoutes || [], { rawStart: true }));
+            state.routes.forEach((pts, ri) => {
+                if (pts.length < 2) return;
+                const vectors = pts.map(p => new THREE.Vector3(p.col + 0.5, 0.55, p.row + 0.5));
+                const color = ROUTE_COLORS[ri % ROUTE_COLORS.length];
+                const line = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(vectors),
+                    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95 })
+                );
+                scene.add(line);
+                const points = new THREE.Points(
+                    new THREE.BufferGeometry().setFromPoints(vectors),
+                    new THREE.PointsMaterial({ color, size: 0.22, transparent: true, opacity: 0.6, sizeAttenuation: true })
+                );
+                scene.add(points);
+                const end = vectors[vectors.length - 1];
+                const glow = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.24, 20, 16),
+                    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.42 })
+                );
+                glow.position.copy(end);
+                scene.add(glow);
+                const core = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.1, 16, 12),
+                    new THREE.MeshBasicMaterial({ color })
+                );
+                core.position.copy(end);
+                scene.add(core);
+                // 路线默认隐藏（参考站同款）：点敌人时显示对应路线
+                const visuals = { line, points, glow, core };
+                // 路线显示在官方地图叠层之上，避免被参考底图遮挡
+                line.renderOrder = 3;
+                points.renderOrder = 3;
+                glow.renderOrder = 3;
+                core.renderOrder = 3;
+                line.visible = false;
+                points.visible = false;
+                glow.visible = false;
+                core.visible = false;
+                state.routeVisuals[ri] = visuals;
+            });
+
+            buildEnemyMeshes(level, midR, midC);
+            buildTrapMeshes(level);
+            const fallbackSize = Math.max(rows, cols, 2);
+            camera.position.set(midC, fallbackSize * 1.35 + 2, midR + fallbackSize * 0.82);
+            camera.lookAt(midC, 0.2, midR);
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target.set(midC, 0.2, midR);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.enableRotate = false;
+            controls.enablePan = false;
+            controls.enableZoom = true;
+            controls.mouseButtons.LEFT = null;
+            controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+            controls.mouseButtons.RIGHT = null;
+            controls.touches.ONE = null;
+            controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+            controls.minDistance = 2;
+            controls.maxDistance = 30;
+            controls.maxPolarAngle = Math.PI * 0.48;
+            controls.zoomSpeed = 0.9;
+            const camData = getCameraData(state.currentStage);
+            if (camData) {
+                const view = camData.view_default || [0, -5.6, -8.9];
+                camera.up.set(0, 1, 0);
+                camera.position.set(midC + (view[0] || 0), -(view[2] || 0), midR - (view[1] || 0));
+                camera.lookAt(midC, 0.2, midR);
+            }
+            const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
+            camera.projectionMatrix.multiply(mirror);
+            state.controls = controls;
+            if (!state._clickBound) {
+                renderer.domElement.addEventListener('click', onMapClick);
+                state._clickBound = true;
+            }
+            buildLegend(level);
+            if (!state.raf) animate();
+        }
+
+        // 敌人罚站倒计时（参考站「显示等待时间」同款）
+        function toggleWaitCountdown() {
+            state.showWaitCountdown = !state.showWaitCountdown;
+            $('waitCdBtn').classList.toggle('active', state.showWaitCountdown);
+            if (!state.showWaitCountdown) {
+                const box = $('waitLabels');
+                while (box.firstChild) box.removeChild(box.firstChild);
+            }
+        }
+
+        // 当前时刻敌人剩余罚站秒数（-1 = 未在罚站）
+        function enemyWaitRemaining(pts, dur, t) {
+            const waits = (pts && pts.waits) || [];
+            if (!waits.length) return -1;
+            let acc = 0, prev = 0;
+            for (const w of waits) {
+                const f = Math.min(1, Math.max(0, w.frac));
+                if (f > prev) {
+                    const seg = (f - prev) * dur;
+                    if (t < acc + seg) return -1;
+                    acc += seg;
+                }
+                if (t < acc + w.time) return acc + w.time - t;
+                acc += w.time;
+                prev = Math.max(prev, f);
+            }
+            return -1;
+        }
+
+        // 每帧更新罚站倒计时标签（仅显示可见且正在罚站的敌人）
+        function updateWaitCountdowns() {
+            if (!state.showWaitCountdown || !state.level || !state.camera) return;
+            const box = $('waitLabels');
+            const wrap = $('mapWrap');
+            const W = wrap.clientWidth, H = wrap.clientHeight;
+            const cam = state.camera;
+            const used = new Set();
+            state.enemies.forEach(en => {
+                if (en.done || !en.mesh || !en.mesh.visible || state.time < en.spawnAt) return;
+                const pts = state.routes[en.route];
+                if (!pts) return;
+                const remain = enemyWaitRemaining(pts, en.dur, state.time - en.spawnAt);
+                if (remain <= 0) return;
+                used.add(en.index);
+                let el = box.querySelector('[data-idx="' + en.index + '"]');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.className = 'wait-cd';
+                    el.setAttribute('data-idx', en.index);
+                    box.appendChild(el);
+                }
+                el.classList.toggle('wait-cd-min', remain < 5);
+                el.textContent = remain >= 10 ? Math.ceil(remain) + 's' : remain.toFixed(1) + 's';
+                const headY = en.mesh.position.y + ((en.mesh.scale && en.mesh.scale.y) || 1) * 0.9;
+                const v = new THREE.Vector3(en.mesh.position.x, headY, en.mesh.position.z).project(cam);
+                const sx = (v.x + 1) / 2 * W;
+                const sy = (1 - v.y) / 2 * H;
+                const off = v.z > 1 || v.z < -1 || sx < -80 || sy < -80 || sx > W + 80 || sy > H + 80;
+                el.style.display = off ? 'none' : 'block';
+                el.style.left = sx + 'px';
+                el.style.top = sy + 'px';
+            });
+            Array.from(box.children).forEach(el => {
+                if (!used.has(+el.getAttribute('data-idx'))) el.remove();
+            });
+        }
+
+        function loadTileTexture(key) {
+            const cacheKey = 'official_' + key;
+            if (state.textureCache[cacheKey]) return state.textureCache[cacheKey];
+            const name = (key === 'tile_start' ? 'gate_red' : key === 'tile_end' ? 'gate_blue' : key) + '.png';
+            const loader = new THREE.TextureLoader();
+            const tex = loader.load('images/map/' + name, t => {
+                t.encoding = THREE.sRGBEncoding;
+                t.anisotropy = 4;
+            });
+            state.textureCache[cacheKey] = tex;
+            return tex;
+        }
+
+        function addMapUnderlay(scene, level, rows, cols, midR, midC) {
+            const stage = state.currentStage;
+            const cell = Math.max(2, Math.min(24, Math.floor(512 / Math.max(rows, cols, 1))));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, cols * cell);
+            canvas.height = Math.max(1, rows * cell);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const tiles = (level.mapData && level.mapData.tiles) || [];
+            level.mapData.map.forEach((row, r) => row.forEach((tileIdx, c) => {
+                const t = tiles[tileIdx] || {};
+                const key = t.tileKey || 'tile_floor';
+                const color = TILE_COLORS[key] || (t.heightType === 'HIGHLAND' ? 0x3a3a3a : 0x1d1d1d);
+                ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+                ctx.fillRect(c * cell, r * cell, cell, cell);
+                ctx.strokeStyle = 'rgba(255,255,255,.14)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(c * cell + 0.5, r * cell + 0.5, cell - 1, cell - 1);
+            }));
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.encoding = THREE.sRGBEncoding;
+            tex.anisotropy = 4;
+            const mat = new THREE.MeshBasicMaterial({
+                map: tex,
+                transparent: true,
+                opacity: 0.82,
+                depthWrite: false,
+                depthTest: false,
+                side: THREE.DoubleSide
+            });
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(cols, rows), mat);
+            plane.rotation.x = -Math.PI / 2;
+            plane.position.set(midC, 0.8, midR);
+            plane.renderOrder = 0.5;
+            plane.visible = false;
+            scene.add(plane);
+            // 优先用官方地图图片做低透明底图（对齐格子区域），加载失败时保留上方示意图
+            if (stage) {
+                const urls = mapImageUrls(stage);
+                let i = 0;
+                const tryLoad = () => {
+                    if (i >= urls.length) return;
+                    const url = urls[i++];
+                    new THREE.TextureLoader().load(url, tex => {
+                        tex.encoding = THREE.sRGBEncoding;
+                        tex.anisotropy = 4;
+                        Object.assign(mat, { map: tex, transparent: true, opacity: state.overlayOpacity / 100, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
+                        mat.needsUpdate = true;
+                        const s = state.overlayScale / 100;
+                        plane.scale.set(s, 1, s);
+                        plane.position.x = midC + (state.overlayOffsetX / 100) * cols * 0.5 * s;
+                        plane.position.z = midR + (state.overlayOffsetY / 100) * rows * 0.5 * s;
+                        if (state.mapOverlayVisible) plane.visible = true;
+                    }, undefined, tryLoad);
+                };
+                tryLoad();
+            }
+            return plane;
+        }
+
+        // 参考站同款「纸片贴地图」模型：平面网格 + 底部枢轴 + 后仰倾斜（MAP_ROTATION=0.5），脚底锚定格子中心与影子对齐
+        function makeFlatModel(tex, scl, flip) {
+            const geo = new THREE.PlaneGeometry(1, 1);
+            geo.translate(0, 0.5, 0); // 枢轴移到底边：旋转后脚底仍保持在格心
+            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.scale.set(scl, scl, 1);
+            mesh.rotation.x = ENEMY_MODEL_TILT;
+            mesh.userData.flip = !!flip;
+            mesh.renderOrder = 5;
+            return mesh;
+        }
+
+        // 脚底贴地时的模型 Y：底边 = surfY - (1-bodyBottom)*scl*cos(tilt)，模型脚（贴图底部附近）正好落在格面
+        function modelBottomY(surfY, scl, bodyBottom) {
+            const bb = bodyBottom || 0.5;
+            return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT);
+        }
+
+        function makeEnemySprite(id, color, scale) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.fillStyle = 'rgba(0,0,0,.42)';
+            ctx.beginPath();
+            ctx.arc(64, 64, 54, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#' + color.toString(16).padStart(6, '0');
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(64, 64, 54, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 28px Space Grotesk, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(id.replace('enemy_', '').slice(0, 2).toUpperCase(), 64, 64);
+            const fallback = new THREE.CanvasTexture(canvas);
+            const model = makeFlatModel(fallback, scale, false);
+            let tex = state.textureCache[id];
+            if (!tex) {
+                const loader = new THREE.TextureLoader();
+                loader.setCrossOrigin('anonymous');
+                tex = loader.load(enemyIconUrl(id), t => {
+                    model.material.map = t;
+                    model.material.needsUpdate = true;
+                }, undefined, () => {});
+                state.textureCache[id] = tex;
+            }
+            model.material.map = tex;
+            model.material.needsUpdate = true;
+            return model;
+        }
+
+        const shadowTexCache = {};
+        function makeEnemyShadow(scale) {
+            let tex = shadowTexCache.grad;
+            if (!tex) {
+                const cv = document.createElement('canvas');
+                cv.width = 128;
+                cv.height = 128;
+                const ctx = cv.getContext('2d');
+                const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 62);
+                g.addColorStop(0, 'rgba(0,0,0,0.88)');
+                g.addColorStop(0.7, 'rgba(0,0,0,0.55)');
+                g.addColorStop(0.9, 'rgba(20,28,38,0.32)');
+                g.addColorStop(0.97, 'rgba(120,140,160,0.3)');
+                g.addColorStop(1, 'rgba(120,140,160,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(64, 64, 62, 0, Math.PI * 2);
+                ctx.fill();
+                tex = new THREE.CanvasTexture(cv);
+                shadowTexCache.grad = tex;
+            }
+            const shadow = new THREE.Mesh(
+                new THREE.PlaneGeometry(1, 1),
+                new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })
+            );
+            shadow.rotation.x = -Math.PI / 2;
+            shadow.renderOrder = 2;
+            // 参考站 GROUND_ENEMY_YOFFSET 是模型贴地偏移（模型与阴影共用），阴影相对模型居中绑定
+            shadow.userData.off = { x: 0.12, z: 0.24 };
+            // 完全复刻官方/参考站：阴影固定椭圆 0.56 × 0.12 格
+            shadow.scale.set(0.56, 0.12, 1);
+            shadow.visible = false;
+            return shadow;
+        }
+
+        function updateEnemyShadowSizes(anim) {
+            if (!anim.bodyW || !state.enemies) return;
+            state.enemies.forEach(en => {
+                if (!state.spineData[en.id] || state.spineData[en.id] !== anim) return;
+                // 模型对齐官方/参考站：身体宽 = 骨骼原始宽 × z1(默认0.9) ÷ 6（参考站格子 6 单位）
+                // 骨骼原始宽 = bodyW / canvasScale → 贴图缩放 = 0.9*128/(6*canvasScale) = 19.2/canvasScale
+                if (en.mesh && !en.mesh.userData.sized) {
+                    const z1 = ENEMY_SCALE_OVERRIDES[normalizeEnemyKey(en.id)] || 0.9;
+                    const scl = 19.2 / anim.scale * (z1 / 0.9);
+                    en.mesh.scale.set(scl, scl, 1);
+                    en.mesh.userData.sized = true;
+                }
+                // 完全复刻官方/参考站：阴影固定椭圆 0.56 × 0.12 格（不按身体）
+                if (en.shadow) {
+                    en.shadow.scale.set(0.56, 0.12, 1);
+                    // 偏移按身体高度比例缩放，避免小体型敌人阴影相对悬浮
+                    const k = (anim.bodyH || 64) / 128;
+                    en.shadow.userData.off = { x: 0.12 * k, z: 0.24 * k };
+                }
+            });
+        }
+
+        function tileSurfaceY(level, r, c) {
+            const map = level && level.mapData && level.mapData.map;
+            if (!map || r < 0 || c < 0 || r >= map.length || c >= map[0].length) return 0.18;
+            const t = level.mapData.tiles[map[r][c]] || {};
+            const key = t.tileKey || '';
+            let h = 0.12;
+            if (t.heightType === 'HIGHLAND') h = 0.42;
+            if (['tile_wall', 'tile_passable_wall', 'tile_sleep_wall'].includes(key)) h = 0.62;
+            // 门（红/蓝门）是地面标记：敌人贴自身地形高度行走，不上门柱
+            // 视觉地面 = 格子顶 + 贴图纹理层（build3D 中 texture sprite 在 h+0.05）
+            return h + 0.05;
+        }
+
+        // 官方/参考站（lutonada）模型缩放特例表 z1/O5e（负值仅镜像，此处只取正缩放）
+        const ENEMY_SCALE_OVERRIDES = {
+            '1005_yokai': 0.8, '1005_yokai_3': 0.65,
+            '1112_emppnt': 0.8, '1112_emppnt_2': 0.8,
+            '1321_wdarft': 1.1, '1321_wdarft_2': 1.1,
+            '10145_xdrock': 0.9, '10145_xdrock_2': 0.9
+        };
+        function buildEnemyMeshes(level, midR, midC) {
+            let actionIndex = 0;
+            const rows = level.mapData.map.length;
+            const cols = level.mapData.map[0] ? level.mapData.map[0].length : 0;
+            let waveT = 0;
+            (level.waves || []).forEach((wave, wi) => {
+                waveT += wave.preDelay || 0;
+                (wave.fragments || []).forEach((frag, fi) => {
+                    waveT += frag.preDelay || 0;
+                    let fragEnd = waveT;
+                    (frag.actions || []).forEach(a => {
+                        if (a.actionType !== 'SPAWN') return;
+                        // 完全复刻官方/参考站：模型缩放默认 0.9，个别敌人走特例表
+                        const scale = ENEMY_SCALE_OVERRIDES[normalizeEnemyKey(a.key)] || 0.9;
+                        const routeIdx = a.routeIndex != null ? a.routeIndex : 0;
+                        const motion = (level.routes[routeIdx] && (level.routes[routeIdx].motionMode || '').toUpperCase() === 'FLY') ? 'FLY' : 'WALK';
+                        const count = Math.max(1, a.count || 1);
+                        const pre = a.preDelay || 0;
+                        const interval = a.interval || 2;
+                        for (let i = 0; i < count; i++) {
+                            const spawnAt = waveT + pre + i * interval;
+                            if (spawnAt > fragEnd) fragEnd = spawnAt;
+                            const pts = state.routes[routeIdx] || [];
+                            const color = hashColor(a.key);
+                            const sprite = makeEnemySprite(a.key, color, scale);
+                            sprite.visible = false;
+                            const shadow = makeEnemyShadow(scale);
+                            if (pts.length) {
+                                const p0 = pts[0];
+                                const surfY = tileSurfaceY(level, Math.round(p0.row), Math.round(p0.col));
+                                sprite.position.set(p0.col + 0.5, modelBottomY(surfY, scale, 0.92), p0.row + 0.5);
+                                shadow.position.set(p0.col + 0.5 + (shadow.userData.off ? shadow.userData.off.x : 0), surfY - 0.03, p0.row + 0.5 + (shadow.userData.off ? shadow.userData.off.z : 0));
+                            }
+                            state.scene.add(sprite);
+                            state.scene.add(shadow);
+                            state.enemyMeshes.push(sprite);
+                            // 按官方移速计算移动耗时（秒/格）；移速 0 的敌人（圣徒祈祷像等）原地罚站不移动
+                            const spdRaw = (enemyInfo(a.key).stats || {}).moveSpeed;
+                            const immobile = spdRaw === 0;
+                            const spd = spdRaw > 0 ? spdRaw : 1;
+                            const dur = immobile ? 1 : Math.max(2, pathLen(pts) / spd);
+                            // 经典传送门（tile_telin→tile_telout）：到达入口后瞬间跳到出口继续
+                            const tele = (pts && pts.tele) ? { fromFrac: pts.tele.fromFrac, toPath: pts.tele.toPath } : null;
+                            // 预计算兔洞（传送门）触发点：路线首次踩到 tile_rabbithole_in_* 的位置
+                            let hole = null;
+                            if (pts.length > 1) {
+                                const totalD = pathLen(pts);
+                                let cum = 0;
+                                for (let pi = 1; pi < pts.length; pi++) {
+                                    cum += Math.abs(pts[pi].row - pts[pi - 1].row) + Math.abs(pts[pi].col - pts[pi - 1].col);
+                                    const hr = Math.round(pts[pi].row), hc = Math.round(pts[pi].col);
+                                    if (isRabbitHoleIn(level, hr, hc)) {
+                                        const exit = pickRabbitHoleExit(actionIndex, state.rabbitHoles.outs);
+                                        if (exit) {
+                                            hole = {
+                                                frac: totalD > 0 ? cum / totalD : 1,
+                                                routeIndex: state.extraRouteBase + (exit.actionIndex != null ? exit.actionIndex : 0),
+                                                row: exit.row,
+                                                col: exit.col
+                                            };
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            state.enemies.push({
+                                id: a.key, index: actionIndex++, wave: wi + 1, route: routeIdx,
+                                spawnAt: spawnAt,
+                                progress: 0, done: false, counted: false, dur: dur, mesh: sprite, shadow: shadow, hole: hole, motion: motion,
+                                immobile: immobile, speed: spd, tele: tele
+                            });
+                        }
+                    });
+                    // 参考站（lutonada.online）时序：fragment 结束点 = 本 fragment 最后一个怪实际出怪时刻
+                    waveT = fragEnd;
+                });
+                waveT += wave.postDelay || 0;
+            });
+            state.totalEnemies = state.enemies.length;
+            state.kills = 0;
+            state.maxTime = state.enemies.reduce((m, e) => {
+                const pts = state.routes[e.route] || [];
+                if (e.immobile) return Math.max(m, e.spawnAt + 1);
+                if (e.tele) {
+                    // 经典传送门：到达入口（含入口罚站）+ 出口后检查点路线时长
+                    const t2 = e.tele.toPath || pts;
+                    const d2 = Math.max(2, pathLen(t2) / Math.max(0.05, e.speed || 1));
+                    return Math.max(m, e.spawnAt + teleEnterTime(pts, e.dur, e.tele) + routeProgressToTime(t2, d2, 1));
+                }
+                if (e.hole) {
+                    // 传送怪：到达入口（含途中罚站）+ 消失 3 秒 + 出口路线时长
+                    const extra = state.routes[e.hole.routeIndex] || [];
+                    const extraDur = Math.max(2, pathLen(extra) / Math.max(0.05, e.speed || 1));
+                    return Math.max(m, e.spawnAt + routeProgressToTime(pts, e.dur, e.hole.frac) + 3 + routeProgressToTime(extra, extraDur, 1));
+                }
+                return Math.max(m, e.spawnAt + routeProgressToTime(pts, e.dur, 1));
+            }, 0) + 2;
+            $('timeSlider').value = 0;
+            $('progressPct').textContent = '0%';
+            $('killCount').textContent = '击杀 0/' + state.totalEnemies;
+        }
+
+        function hideAllRoutes() {
+            Object.keys(state.routeVisuals || {}).forEach(ri => {
+                const v = state.routeVisuals[ri];
+                if (!v) return;
+                v.line.visible = false;
+                v.points.visible = false;
+                v.glow.visible = false;
+                v.core.visible = false;
+            });
+        }
+
+        function showEnemyRoute(en) {
+            hideAllRoutes();
+            const v = state.routeVisuals[en.route];
+            if (!v) return;
+            v.line.visible = true;
+            v.points.visible = true;
+            v.glow.visible = true;
+            v.core.visible = true;
+        }
+
+        function openEnemyDetail(en, clientX, clientY) {
+            const info = enemyInfo(en.id);
+            const st = info.stats || {};
+            const dd = (window.ENEMY_DETAIL || {})[en.id] || {};
+            $('edIcon').src = enemyIconUrl(en.id);
+            $('edIcon').onerror = function () {
+                const next = this.src.replace('cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/', 'raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/');
+                if (next !== this.src) { this.onerror = null; this.src = next; }
+            };
+            $('edName').textContent = info.name || en.id;
+            $('edId').textContent = en.id;
+            $('edMotion').textContent = en.motion === 'FLY' ? '飞行' : '地面';
+            $('edMotion').style.borderColor = en.motion === 'FLY' ? 'var(--acc)' : 'var(--line)';
+            $('edMeta').innerHTML = '';
+            [['波次', 'W' + en.wave], ['路线', 'R' + en.route], ['进度', Math.round((en.progress || 0) * 100) + '%']].forEach(pair => {
+                const chip = document.createElement('span');
+                chip.className = 'chip';
+                chip.style.fontSize = '10px';
+                chip.textContent = pair[0] + ' ' + pair[1];
+                $('edMeta').appendChild(chip);
+            });
+            const ability = dd.ability || [];
+            $('edAbility').innerHTML = ability.length ? ability.map(a => '<span class="chip" style="font-size:10px;color:var(--fg)">' + esc(a) + '</span>').join('') : '';
+            const descText = dd.prts_desc || dd.desc || '';
+            const talentText = dd.prts_talents || '';
+            $('edDesc').innerHTML = [descText, talentText ? '天赋/能力：' + talentText : ''].filter(Boolean).map(t => '<div>' + esc(t) + '</div>').join('');
+            const immune = [];
+            if (st.stunImmune) immune.push('晕眩');
+            if (st.silenceImmune) immune.push('沉默');
+            if (st.sleepImmune) immune.push('沉睡');
+            if (st.frozenImmune) immune.push('冻结');
+            if (st.levitateImmune) immune.push('浮空');
+            if (st.palsyImmune) immune.push('麻痹');
+            if (st.fearedImmune) immune.push('恐惧');
+            const rows = [
+                ['生命', st.maxHp], ['攻击', st.atk], ['防御', st.def],
+                ['法抗', st.magicResistance != null ? st.magicResistance + '%' : null],
+                ['移速', st.moveSpeed != null ? Number(st.moveSpeed).toFixed(1) : null],
+                ['重量', st.weight], ['元素抗性', st.epResistance != null ? st.epResistance + '%' : null],
+                ['损伤抵抗', st.epDamageResistance != null ? st.epDamageResistance + '%' : null],
+                ['异常免疫', immune.length ? immune.join('·') : '无'], ['攻击间隔', st.baseAttackTime != null ? st.baseAttackTime + 's' : null]
+            ];
+            $('edStats').innerHTML = rows.map(([k, v]) =>
+                `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span class="mono" style="color:var(--ash);font-size:10px">${k}</span><b>${v ?? '--'}</b></div>`
+            ).join('');
+            $('edExtra').innerHTML = '<a class="btn" href="enemy.html?id=' + encodeURIComponent(en.id) + '" target="_blank" rel="noopener" style="padding:6px 12px;font-size:12px;margin-right:10px">查看详情</a><span style="color:var(--muted);font-size:11px">已暂停 · 路线已高亮 · 点击空白处关闭</span>';
+            const box = $('enemyDetail');
+            const W = 320, H = 560;
+            box.style.left = Math.max(8, Math.min(clientX + 14, window.innerWidth - W - 8)) + 'px';
+            box.style.top = Math.max(8, Math.min(clientY + 14, window.innerHeight - H - 8)) + 'px';
+            box.style.display = 'block';
+        }
+
+        function closeEnemyDetail() {
+            const box = $('enemyDetail');
+            if (box) box.style.display = 'none';
+        }
+
+        function onMapClick(e) {
+            if (!state.scene || !state.camera || !state.renderer) return;
+            if (!state.raycaster) state.raycaster = new THREE.Raycaster();
+            const rect = state.renderer.domElement.getBoundingClientRect();
+            const ndc = new THREE.Vector2(
+                ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                -((e.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            state.raycaster.setFromCamera(ndc, state.camera);
+            const meshes = state.enemies.filter(en => en.mesh && en.mesh.visible).map(en => en.mesh);
+            const hits = state.raycaster.intersectObjects(meshes, false);
+            hideAllRoutes();
+            closeEnemyDetail();
+            if (hits.length) {
+                const hit = state.enemies.find(en => en.mesh === hits[0].object);
+                if (hit) {
+                    // 点敌人：暂停播放并显示其路线
+                    state.playing = false;
+                    state.last = 0;
+                    if (typeof syncPlayBtns === 'function') syncPlayBtns();
+                    showEnemyRoute(hit);
+                    openEnemyDetail(hit, e.clientX, e.clientY);
+                }
+            }
+        }
+
+        function buildLegend(level) {
+            const map = new Map();
+            (level.mapData.map || []).flat().forEach(idx => {
+                const t = level.mapData.tiles[idx];
+                if (t && t.tileKey) map.set(t.tileKey, '#' + (TILE_COLORS[t.tileKey] || 0x333333).toString(16).padStart(6, '0'));
+            });
+            $('legend').innerHTML = '';
+            map.forEach((color, key) => {
+                const el = document.createElement('span');
+                el.className = 'chip';
+                el.innerHTML = `<span style="display:inline-block;width:9px;height:9px;background:${color};border:1px solid var(--line);margin-right:6px;vertical-align:middle"></span>${esc(key.replace('tile_', ''))}`;
+                $('legend').appendChild(el);
+            });
+            // 传送门出口概率标注（参考站同款比例）
+            if ((state.rabbitHoles.outs || []).length) {
+                const sep = document.createElement('span');
+                sep.className = 'chip';
+                sep.style.cssText = 'background:transparent;color:var(--acc);font-weight:600';
+                sep.textContent = '传送门 · 出口概率';
+                $('legend').appendChild(sep);
+                state.rabbitHoles.outs.forEach(o => {
+                    const el = document.createElement('span');
+                    el.className = 'chip';
+                    el.innerHTML = `<span style="display:inline-block;width:10px;height:10px;background:#3f9c4f;border:1px solid #d6f2d6;border-radius:50%;margin-right:6px;vertical-align:middle"></span>出${o.num} (${o.row},${o.col}) <b style="color:#ffd76a">${esc(o.probStr || '--')}</b>`;
+                    $('legend').appendChild(el);
+                });
+            }
+            const hint = document.createElement('span');
+            hint.className = 'chip';
+            hint.style.cssText = 'background:transparent;color:var(--muted);font-size:11px';
+            hint.textContent = '点击敌人查看路线与详情（自动暂停）';
+            $('legend').appendChild(hint);
+        }
+
+        function animate() {
+            state.raf = requestAnimationFrame(animate);
+            const now = performance.now();
+            const delta = state.last ? (now - state.last) / 1000 * state.speed : 0;
+            if (state.playing) {
+                state.last = now;
+                state.time += delta;
+            } else {
+                state.last = 0;
+            }
+            // 暂停/拖拽时也更新敌人位置，支持进度条前进/倒退观察
+            updateEnemyPositions(delta);
+            $('simTime').textContent = fmtTime(state.time);
+            const pct = state.maxTime ? Math.min(100, state.time / state.maxTime * 100) : 0;
+            if (!state.scrubbing) $('timeSlider').value = pct;
+            $('progressPct').textContent = Math.round(pct) + '%';
+            renderSpineAnimations(state.playing ? delta : 0);
+            updateWaitCountdowns();
+            // 可部署地块高亮缓慢闪烁（绿色斜线排线）
+            if (state.deployVisible && state.deployMeshes.length) {
+                const pulse = 0.55 + 0.25 * Math.sin(now / 900);
+                state.deployMeshes.forEach(m => {
+                    m.material.opacity = pulse;
+                    m.material.needsUpdate = true;
+                });
+            }
+            if (state.controls) state.controls.update();
+            if (state.renderer && state.scene && state.camera) state.renderer.render(state.scene, state.camera);
+        }
+
+        function updateEnemyPositions(delta) {
+            if (!state.level) return;
+            let kills = 0;
+            state.enemies.forEach(en => {
+                if (state.time < en.spawnAt) {
+                    en.mesh.visible = false;
+                    if (en.shadow) en.shadow.visible = false;
+                    en.progress = 0;
+                    en.done = false;
+                    return;
+                }
+                let pts = state.routes[en.route];
+                let dur = en.dur || Math.max(2, pathLen(pts) * 0.9);
+                if (en.immobile) {
+                    // 移速为 0 的敌人（圣徒祈祷像等）：出生后原地罚站，不移动也不结算击杀；
+                    // 仍需逐帧做脚底贴地定位，避免精灵中心锚点导致半截入地
+                    en.progress = 0;
+                    en.done = false;
+                    en.mesh.visible = true;
+                    if (en.shadow) en.shadow.visible = true;
+                    if (pts && pts.length) {
+                        const p = samplePath(pts, 0);
+                        const surfY = tileSurfaceY(state.level, Math.round(p.row), Math.round(p.col));
+                        const scl = (en.mesh.scale && en.mesh.scale.x) || 1;
+                        const anim = state.spineData[en.id];
+                        const foot = anim && anim.bodyBottom ? anim.bodyBottom : 0.5;
+                        en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5);
+                        if (en.shadow) {
+                            en.shadow.position.set(
+                                p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0),
+                                surfY - 0.03,
+                                p.row + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.z : 0)
+                            );
+                        }
+                    }
+                    return;
+                }
+                let hidden = false;
+                let progress;
+                if (en.tele && !en.hole) {
+                    // 经典传送门（参考站/官方语义）：走到入口 → DISAPPEAR 隐藏（含入口罚站时间）→ APPEAR_AT_POS 在出口出现 → 走出口后检查点路线
+                    const arriveT = en.spawnAt + teleArriveTime(pts, en.dur, en.tele);
+                    const appearT = en.spawnAt + teleEnterTime(pts, en.dur, en.tele);
+                    if (state.time < arriveT) {
+                        progress = routeTimeToProgress(pts, en.dur, state.time - en.spawnAt);
+                    } else if (state.time < appearT) {
+                        // 入口处隐藏（DISAPPEAR 到 APPEAR_AT_POS 之间）
+                        progress = en.tele.fromFrac;
+                        hidden = true;
+                    } else {
+                        pts = en.tele.toPath || pts;
+                        dur = Math.max(2, pathLen(pts) / Math.max(0.05, en.speed || 1));
+                        progress = routeTimeToProgress(pts, dur, state.time - appearT);
+                    }
+                } else if (en.hole) {
+                    // 兔洞传送：到达入口（含途中罚站）→ 消失 3 秒 → 从加权随机出口出现并改走 extraRoutes
+                    const holeT = en.spawnAt + routeProgressToTime(pts, en.dur, en.hole.frac);
+                    if (state.time >= holeT + 3) {
+                        pts = state.routes[en.hole.routeIndex] || pts;
+                        dur = Math.max(2, pathLen(pts) / Math.max(0.05, en.speed || 1));
+                        en.route = en.hole.routeIndex;
+                        progress = routeTimeToProgress(pts, dur, state.time - holeT - 3);
+                    } else if (state.time >= holeT) {
+                        progress = en.hole.frac;
+                        hidden = true;
+                    } else {
+                        progress = routeTimeToProgress(pts, en.dur, state.time - en.spawnAt);
+                    }
+                } else {
+                    progress = routeTimeToProgress(pts, dur, state.time - en.spawnAt);
+                }
+                en.progress = Math.min(1, Math.max(0, progress));
+                if (hidden) {
+                    en.done = false;
+                    en.mesh.visible = false;
+                    if (en.shadow) en.shadow.visible = false;
+                    return;
+                }
+                if (en.progress >= 1) {
+                    en.done = true;
+                    kills++;
+                    en.mesh.visible = false;
+                    if (en.shadow) en.shadow.visible = false;
+                    return;
+                }
+                en.done = false;
+                en.mesh.visible = true;
+                if (en.shadow) en.shadow.visible = true;
+                if (!pts || pts.length < 2) return;
+                const p = samplePath(pts, en.progress);
+                // 地穴击杀：地面（WALK）敌人走进 tile_hole 直接掉坑死亡（参考站 hp=0）
+                if (en.motion !== 'FLY' && tileKeyAt(state.level, Math.round(p.row), Math.round(p.col)) === 'tile_hole') {
+                    en.done = true;
+                    kills++;
+                    en.mesh.visible = false;
+                    if (en.shadow) en.shadow.visible = false;
+                    return;
+                }
+                const surfY = tileSurfaceY(state.level, Math.round(p.row), Math.round(p.col));
+                const scl = (en.mesh.scale && en.mesh.scale.x) || 1;
+                // 准点绑定：身体脚底（Spine 帧实测）严格贴地
+                const anim = state.spineData[en.id];
+                const foot = anim && anim.bodyBottom ? anim.bodyBottom : 0.5;
+                en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5);
+                if (en.shadow) en.shadow.position.set(p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0), surfY - 0.03, p.row + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.z : 0));
+                // 面朝移动方向：Sprite 水平镜像（Spine 帧默认朝右，朝左时翻转贴图）
+                if (en.mesh.userData && en.mesh.userData.flip) {
+                    const ahead = samplePath(pts, Math.min(1, en.progress + 0.03));
+                    const dx = ahead.col - p.col;
+                    const flip = dx < -0.001;
+                    const map = en.mesh.material.map;
+                    if (map && (map.repeat.x < 0) !== flip) {
+                        map.repeat.x = flip ? -1 : 1;
+                        map.offset.x = flip ? 1 : 0;
+                        map.needsUpdate = true;
+                    }
+                }
+            });
+            // 击杀数按当前时间重算，拖拽前进/倒退实时同步
+            if (kills !== state.kills) {
+                state.kills = kills;
+                $('killCount').textContent = '击杀 ' + state.kills + '/' + state.totalEnemies;
+            }
+        }
+
+        function pathLen(pts) {
+            let sum = 0;
+            for (let i = 1; i < pts.length; i++) sum += Math.abs(pts[i].row - pts[i - 1].row) + Math.abs(pts[i].col - pts[i - 1].col);
+            return Math.max(1, sum);
+        }
+
+        // 把罚站检查点换算为路径进度比例（waits = [{at:{row,col}, time}]），挂在 path.waits 上
+        function attachRouteWaits(path, waits) {
+            if (!waits.length) { path.waits = []; return; }
+            const total = pathLen(path);
+            path.waits = waits.map(w => {
+                let best = 0, bestD = Infinity;
+                for (let i = 0; i < path.length; i++) {
+                    const d = Math.abs(path[i].row - w.at.row) + Math.abs(path[i].col - w.at.col);
+                    if (d < bestD) { bestD = d; best = i; }
+                }
+                let cum = 0;
+                for (let i = 1; i <= best; i++) cum += Math.abs(path[i].row - path[i - 1].row) + Math.abs(path[i].col - path[i - 1].col);
+                return { frac: total > 0 ? cum / total : 0, time: w.time };
+            }).sort((a, b) => a.frac - b.frac);
+        }
+
+        // 经典传送门 tile_telin → tile_telout（按原始检查点配对）：
+        // 敌人沿主路径走到入口进度后，瞬间跳到出口，再走「出口后的检查点折线」直至终点
+        function applyRouteTeleport(path, telePair) {
+            if (!telePair || !telePair.out) return;
+            const total = pathLen(path);
+            const fracAt = p => {
+                let best = 0, bestD = Infinity;
+                for (let i = 0; i < path.length; i++) {
+                    const d = Math.abs(path[i].row - p.row) + Math.abs(path[i].col - p.col);
+                    if (d < bestD) { bestD = d; best = i; }
+                }
+                let c = 0;
+                for (let i = 1; i <= best; i++) c += Math.abs(path[i].row - path[i - 1].row) + Math.abs(path[i].col - path[i - 1].col);
+                return total > 0 ? c / total : 0;
+            };
+            const toPath = [];
+            for (const pt of [telePair.out, ...telePair.rest]) {
+                const last = toPath[toPath.length - 1];
+                if (!last || last.row !== pt.row || last.col !== pt.col) toPath.push({ row: pt.row, col: pt.col });
+            }
+            // 出口路线终点 = 主路径终点（蓝门/路线终点）
+            const pathEnd = path[path.length - 1];
+            const lastPt = toPath[toPath.length - 1];
+            if (pathEnd && (!lastPt || lastPt.row !== pathEnd.row || lastPt.col !== pathEnd.col)) {
+                toPath.push({ row: pathEnd.row, col: pathEnd.col });
+            }
+            attachRouteWaits(toPath, telePair.restWaits || []);
+            path.tele = {
+                fromFrac: fracAt(telePair.in),
+                toPath: toPath.length > 1 ? toPath : [telePair.out, telePair.out]
+            };
+        }
+
+        // 把「移动+罚站」换算为路径进度：t 秒时敌人走到哪（罚站期间进度冻结）
+        function routeTimeToProgress(pts, dur, t) {
+            const waits = (pts && pts.waits) || [];
+            if (!waits.length) return dur > 0 ? Math.min(1, Math.max(0, t / dur)) : 1;
+            let acc = 0, prevFrac = 0;
+            for (const w of waits) {
+                const f = Math.min(1, Math.max(0, w.frac));
+                const wt = Math.max(0, w.time);
+                if (f > prevFrac) {
+                    const seg = (f - prevFrac) * dur;
+                    if (t < acc + seg) return prevFrac + (t - acc) / dur;
+                    acc += seg;
+                }
+                if (t < acc + wt) return f;
+                acc += wt;
+                if (f > prevFrac) prevFrac = f;
+            }
+            return Math.min(1, prevFrac + Math.max(0, t - acc) / dur);
+        }
+
+        // 到达路径进度 p 所需时间（含此前所有罚站）
+        function routeProgressToTime(pts, dur, p) {
+            const waits = (pts && pts.waits) || [];
+            let acc = Math.min(1, Math.max(0, p)) * dur;
+            for (const w of waits) {
+                if (w.frac < p) acc += Math.max(0, w.time);
+            }
+            return acc;
+        }
+
+        // 经典传送门（tile_telin→tile_telout）：到达入口的时间（不含入口处罚站）
+        function teleArriveTime(pts, dur, tele) {
+            const waits = (pts && pts.waits) || [];
+            let t = tele.fromFrac * dur;
+            for (const w of waits) if (w.frac < tele.fromFrac) t += w.time;
+            return t;
+        }
+
+        // 经典传送门（tile_telin→tile_telout）：到达入口（含入口处罚站，即 DISAPPEAR 隐藏后到 APPEAR_AT_POS 出现）的时间
+        function teleEnterTime(pts, dur, tele) {
+            const waits = (pts && pts.waits) || [];
+            let t = tele.fromFrac * dur;
+            for (const w of waits) if (w.frac <= tele.fromFrac) t += w.time;
+            return t;
+        }
+
+        function samplePath(pts, p) {
+            const total = pathLen(pts);
+            let target = total * p;
+            for (let i = 1; i < pts.length; i++) {
+                const seg = Math.abs(pts[i].row - pts[i - 1].row) + Math.abs(pts[i].col - pts[i - 1].col);
+                if (target <= seg) {
+                    const k = seg ? target / seg : 0;
+                    return { row: pts[i - 1].row + (pts[i].row - pts[i - 1].row) * k, col: pts[i - 1].col + (pts[i].col - pts[i - 1].col) * k };
+                }
+                target -= seg;
+            }
+            return pts[pts.length - 1];
+        }
+
+        function fmtTime(t) { t = Math.max(0, Math.floor(t)); return fmt(Math.floor(t / 60)) + ':' + fmt(t % 60); }
+
+        function renderTabs(stage, level) {
+            const enemyMap = new Map();
+            state.enemies.forEach(en => {
+                const item = enemyMap.get(en.id) || { id: en.id, count: 0, waves: new Set(), routes: new Set() };
+                item.count++; item.waves.add(en.wave); item.routes.add(en.route);
+                enemyMap.set(en.id, item);
+            });
+            let enemiesHtml = '<div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.15em;margin-bottom:12px">' + enemyMap.size + ' 种敌人</div>';
+            enemyMap.forEach(item => {
+                const info = enemyInfo(item.id);
+                const st = info.stats || {};
+                enemiesHtml += `<div class="enemy-row"><img src="${enemyIconUrl(item.id)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this); this.onerror=null" style="width:42px;height:42px;object-fit:contain;background:var(--fog);border:1px solid var(--line);flex:none" /><div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="width:10px;height:10px;background:${hashColor(item.id)}"></span><b style="font-size:14px">${esc(info.name)}</b><span class="chip">${esc(item.id)}</span></div><div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap"><span class="stat">生命 <b>${st.maxHp ?? '--'}</b></span><span class="stat">攻击 <b>${st.atk ?? '--'}</b></span><span class="stat">防御 <b>${st.def ?? '--'}</b></span><span class="stat">法抗 <b>${st.magicResistance ?? '--'}</b></span><span class="stat">移速 <b>${st.moveSpeed ?? '--'}</b></span><span class="stat">重量 <b>${st.weight ?? '--'}</b></span></div></div><div style="text-align:right"><div style="font-size:20px;font-weight:700">${item.count}</div><div class="mono" style="font-size:9px;color:var(--ash)">W ${[...item.waves].join(',')}</div></div></div>`;
+            });
+            $('tabEnemies').innerHTML = enemiesHtml;
+
+            let wavesHtml = '';
+            (level.waves || []).forEach((wave, wi) => {
+                wavesHtml += `<div class="mono" style="font-size:11px;color:var(--acc);margin:18px 0 8px">WAVE ${wi + 1}</div>`;
+                (wave.fragments || []).forEach((frag, fi) => {
+                    const spawns = (frag.actions || []).filter(a => a.actionType === 'SPAWN');
+                    if (!spawns.length) return;
+                    wavesHtml += `<div class="enemy-row"><div style="flex:1"><div class="mono" style="font-size:9px;color:var(--ash);margin-bottom:6px">FRAGMENT ${fi + 1} · PRE ${frag.preDelay || 0}s</div>`;
+                    spawns.forEach(a => {
+                        const info = enemyInfo(a.key);
+                        wavesHtml += `<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;align-items:center"><span style="display:flex;align-items:center;gap:8px;font-size:13px"><img src="${enemyIconUrl(a.key)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this); this.onerror=null" style="width:24px;height:24px;object-fit:contain;background:var(--fog);border:1px solid var(--line)" />${esc(info.name)}</span><span class="stat">x${a.count || 1} · R${a.routeIndex || 0}</span></div>`;
+                    });
+                    wavesHtml += '</div></div>';
+                });
+            });
+            $('tabWaves').innerHTML = wavesHtml || '<p style="color:var(--muted)">无波次数据</p>';
+
+            let routesHtml = '<div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.15em;margin-bottom:12px">' + state.routes.length + ' 条路线</div>';
+            state.routes.forEach((pts, ri) => {
+                const first = pos(state.level.routes[ri] ? state.level.routes[ri].startPosition : {});
+                const last = pts[pts.length - 1];
+                routesHtml += `<div class="enemy-row"><div style="width:12px;height:12px;background:${ROUTE_COLORS[ri % ROUTE_COLORS.length]};margin-top:3px"></div><div style="flex:1"><div style="font-size:14px;font-weight:500">ROUTE ${ri + 1}</div><div class="stat" style="margin-top:5px">${first.col},${first.row} → ${last.col},${last.row} · ${pts.length - 2} CHECKPOINTS</div></div></div>`;
+            });
+            $('tabRoutes').innerHTML = routesHtml;
+        }
+
+        window.addEventListener('resize', () => {
+            if (!state.renderer || !state.camera) return;
+            const wrap = $('mapWrap');
+            state.renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+            state.camera.aspect = wrap.clientWidth / Math.max(1, wrap.clientHeight);
+            state.camera.updateProjectionMatrix();
+            const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
+            state.camera.projectionMatrix.multiply(mirror);
+        });
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('navToggle');
+            var menu = document.getElementById('mobileMenu');
+            if (!btn || !menu) return;
+            btn.addEventListener('click', function () {
+                var open = menu.style.display === 'block';
+                menu.style.display = open ? 'none' : 'block';
+                btn.classList.toggle('open', !open);
+                btn.setAttribute('aria-expanded', String(!open));
+            });
+            menu.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', function () {
+                    menu.style.display = 'none';
+                    btn.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                });
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var KEY = 'dgweb_theme';
+            var SUN = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3L17 7M7 17l-1.7 1.7"/></svg>';
+            var MOON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a7 7 0 0 0 10.7 10.7z"/></svg>';
+            var root = document.documentElement;
+            var btn = document.getElementById('themeToggle');
+            function paint() {
+                var light = root.classList.contains('light');
+                btn.innerHTML = light ? MOON : SUN;
+                btn.setAttribute('aria-label', light ? '切换到暗夜' : '切换到白昼');
+                btn.setAttribute('aria-pressed', light ? 'true' : 'false');
+                btn.setAttribute('title', light ? '黑夜模式' : '白昼模式');
+            }
+            function setTheme(t) {
+                if (t === 'light') root.classList.add('light'); else root.classList.remove('light');
+                try { localStorage.setItem(KEY, t); } catch (e) {}
+                paint();
+            }
+            paint();
+            btn.addEventListener('click', function (e) {
+                var light = root.classList.contains('light');
+                var target = light ? 'dark' : 'light';
+                var switches = (window.__sw || (window.__sw = []));
+                var now = Date.now();
+                switches.push(now);
+                while (switches.length > 0 && now - switches[0] > 60000) switches.shift();
+                if (switches.length >= 4) { window.location.href = 'easter-egg.html'; return; }
+                var cx = e.clientX, cy = e.clientY;
+                var size = Math.max(window.innerWidth, window.innerHeight) * 2.4;
+                var overlay = document.createElement('div');
+                overlay.className = 'theme-overlay';
+                overlay.style.width = overlay.style.height = size + 'px';
+                overlay.style.left = (cx - size / 2) + 'px';
+                overlay.style.top = (cy - size / 2) + 'px';
+                overlay.style.background = (target === 'light') ? '#f4f4f2' : '#000000';
+                document.body.appendChild(overlay);
+                var done = false;
+                function finish() {
+                    if (done) return;
+                    done = true;
+                    setTheme(target);
+                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                }
+                overlay.addEventListener('animationend', finish, { once: true });
+                setTimeout(finish, 900);
+                requestAnimationFrame(function () { overlay.classList.add('run'); });
+            });
+        })();
+    </script>
+</body>
+</html>

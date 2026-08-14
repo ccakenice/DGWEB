@@ -1,20 +1,161 @@
 ﻿项目：DGWEB
-版本：V0.25
-日期：2026-08-08 01:20
-状态：正式（已定格）
+版本：V0.29
+日期：2026-08-11 11:21
+状态：草稿
+来源：V0.28（草稿）
 
 改动说明：
-- PV 下载期无灰层：blob 完成瞬间标记 stage 触发时机从「立即显示」改为 `<video>` `playing` 事件（画面渲染后才显示），并加 4s `pvStageTimer` 兜底（自动播放被拒时确保点亮）；iframe 兜底延迟 1200ms→5000ms
-- 进度条消失回归修复：用户交互（滚动/点击）触发 pvRender 时无条件重置 #pvProgress（loading 移除+宽度清零）；改为 blob 分段下载中（window.__pvBlobLoading）不重置，进度条全程保持 loading 至 100%
-- 白昼过度修复：白昼 .pv-stage::after 白色渐变遮罩（opacity:1）持续叠在画面上造成视频过曝；移除白昼白场覆写，恢复黑渐变遮罩 opacity .72，白场仅保留在 fade 过渡瞬间（露出 #f4f4f2 背景）
-- 线上验证：白昼 body active 时 afterBg 为黑渐变、画面中央像素 RGB(87,86,87) 无过曝；blob 100% 后 stage 点亮、视频播暂停为空、无 error
-- [attempt 1] HTTP 412 / [attempt 2] HTTP 412
-- 行，把项目文件夹命名V0.01，之后每次改动都复制一个副本命名都+0.01，同时每个版本都生成一个说明文件标注做了哪些改动
-- 每次修改项目先创建新版本直到我说没问题停止新版本定格，确认实现后下次增加功能或修改再复制一次项目修改
-- Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
-- 定格版本时根据opencode记录生成版本说明，同时把目前的交流记录整理一下写一份AI衔接进度文档，方便其他AI理解项目
+由 V0.28 复制创建的新版本
 
-文件清单（1507 个）：
+2026-08-14 部署上线：
+- V0.29 全量部署上线（单次提交推送 GitHub main，CF Pages 自动构建）：map-sim.html 3D 地图模拟 / enemy.html 敌人图鉴 / data 全部索引与 36 个剿灭关卡本地 JSON / functions/spine/[[path]].js 同源代理 / js/spine 3.8 库 / images/map 官方地图贴图 / data/highland_colors.json 高台配色
+- 补齐 camp_r_20（千嶂边城）、camp_r_23（燃烧街区）本地关卡 JSON（此前为 0 字节空文件，本地优先加载会失败，CDN 兜底）
+
+2026-08-13 敌人详情页：
+- 新增 enemy.html 敌人图鉴详情页（?id= 直达，支持 ID/名称搜索），展示头像/名称/ID/官方描述/能力列表/基本信息/技能（prefabKey + 冷却 + blackboard 参数）/天赋（talentBlackboard 参数）/各等级属性
+- 新增 data/enemy_detail.json/.js（官方 enemy_database + enemy_handbook_table，剥离富文本标签）；地图模拟敌人详情卡新增「查看详情」入口
+- 技能/天赋参数友好显示：天赋按前缀分组，参数中文标签+单位（间隔 1s / 攻击力倍率 100% / 动画时长 2s），原始 key 悬停可见
+- 天赋区块命名「天赋参数」，内部 ID（如 ThrowBomb）以 chip 呈现并注明官方数据无中文名
+- 顶部能力/描述加标签（能力 ABILITY / 描述 DESCRIPTION）；天赋参数卡内直接嵌入「能力/描述」文本
+
+2026-08-13 敌人详情页天赋/能力 PRTS 可读描述：
+- 按 PRTS 页面为 act53side（小刻的追番小屋）9 种敌人补全天赋可读中文描述（新增 prts_talents 字段），天赋卡内显示「能力/描述：每秒从自身模型向自身所在位置发射披萨弹道…」等，不再只有 ThrowBomb 等内部 ID
+- 修正官方描述中被裁剪的占位符（“大披风”夺取<浮空信件>、惊艳事热衷者投放<惊喜信件>等，新增 prts_desc 字段）；描述区优先展示 PRTS 可读文本
+- 已同步 data/enemy_detail.json/.js
+
+2026-08-13 敌人卡片抗性信息 + 属性中文化：
+- 地图模拟点击敌人的浮窗卡片直接展示能力 chips + PRTS 可读描述/天赋文本 + 抗性（元素抗性/损伤抵抗/异常免疫），无需跳转详情页；属性全部中文化（生命/攻击/防御/法抗/移速/重量/攻击间隔）
+- enemy_index.json/.js 重新生成，补充官方 attributes 的元素抗性（epResistance）、损伤抵抗（epDamageResistance）与异常免疫标记（晕眩/沉默/沉睡/冻结/浮空/麻痹/恐惧）
+- enemy.html 详情页基本信息区同步新增元素抗性/损伤抵抗/异常免疫；已同步 V0.29
+
+2026-08-13 叠图升级为官方地图低透明底图：
+- 地图模拟「叠图」按钮加载官方地图图片（ArknightsGameResource map/ 目录）作为低透明度（0.35）盖层，层级为 3D 地形 < 官方地图 < 场景贴图/敌人/道具（renderOrder=0.5，路线提升至 3），参考底图不遮挡场景贴图、敌人与道具；加载失败自动回退格子示意图
+
+2026-08-13 叠图透明度/缩放滑块：
+- 叠图开启时显示「透明度」「缩放」滑块（默认 35% / 100%），实时调整官方地图盖层透明度与平面缩放（以地图中心为基准），便于手动对齐参考图；关闭叠图自动隐藏，数值跨关卡保留
+
+2026-08-13 叠图 X/Y 偏移滑块：
+- 官方地图图片为 16:9 场景缩略图（非纯格子图），自动对齐不可靠；新增 X/Y 位置滑块（±100%，随缩放联动），配合缩放可手动把官方地图精确对齐到 3D 格子区域
+
+2026-08-13 格子边缘线改细：
+- 3D 格子边缘从整块立方体 12 条边粗线改为只画顶面 4 条细分割线（深色、opacity 0.45），保留清晰分割感、消除粗线与缝隙观感
+
+2026-08-13 高台缝隙消除：
+- 格子加宽至 1.0 完全贴合（消除高台间深色缝隙）、顶面贴图加大至 0.98 铺满、顶面分割线降淡至 opacity 0.22，仅保留极淡分割线
+
+2026-08-13 缝隙微调：
+- 完全无缝反而不好看，格子收窄至 0.985、顶面贴图 0.955，保留约 0.015 极细缝隙与贴图边缘，兼顾分割感与整洁
+
+2026-08-13 可部署地块高亮：
+- 工具栏新增「部署格」开关：按官方 buildableType 在可部署地块上叠加绿色斜线排线高亮（45° 斜线），并缓慢闪烁（仿干员技能范围预览），再次点击关闭
+
+2026-08-13 剿灭作战全量实装：
+- 修复 zone_index 按 code 去重导致的剿灭关卡丢失（剿灭 code 为地区名）；「剿灭」模式现含全部 36 个剿灭作战（15 个地区分区），含最新朱墙食府（r_32）、默祷圣祠（r_33）
+- 选关点击改用关卡唯一 id 加载，findStage 支持 id 精确匹配
+
+2026-08-13 剿灭模式全列：
+- 「剿灭」模式隐藏活动/分区下拉，直接平铺显示全部关卡（36 个剿灭作战 + 周常资源关），点击即加载
+
+2026-08-13 剿灭模式去除资源本/芯片本：
+- annihilation 仅保留 CAMPAIGN 类型；「剿灭」模式只显示 36 个真正的剿灭作战，PR/LS/AP/CA/SK/CE 资源本、芯片本不再混入
+
+2026-08-13 剿灭列表排序与标题：
+- 剿灭卡片改为关卡名大标题 + 地区小标题；按官方关卡 id 开放顺序倒序（最新默祷圣祠在前、最早切尔诺伯格在后）
+
+2026-08-13 剿灭 URL 用关卡 id：
+- 修复剿灭刷新白屏：URL 回写由地区名（code）改为关卡唯一 id（?id=camp_r_33），避免同地区多关 code 相同导致命中错误关卡
+
+2026-08-13 剿灭关卡本地数据 + 白屏修复：
+- 全部 36 个剿灭关卡 JSON 本地化（data/levels/），地图加载改为本地优先 + CDN 兜底，CDN 不可达不再白屏
+- stage_index/enemy_index/enemy_detail/camera_index 加版本号防浏览器缓存旧数据
+
+2026-08-13 敌人详情菜单：
+- 点击地图上的敌人弹出详情浮窗：头像/名称/ID/类型（地面·飞行）/波次·路线·进度/六维属性，自动暂停并高亮该敌人路线；点空白处或 × 关闭
+
+2026-08-13 敌人路线交互：
+- 敌人路线默认隐藏（参照参考站）；点击地图上的敌人自动暂停并显示其路线，点击空白处隐藏全部路线
+- 图例区增加「点击敌人查看其路线（自动暂停）」提示
+
+2026-08-13 地穴实装：
+- `tile_hole` 按官方 `passableMask` 判定通行（活动关卡为可通行洞穴），敌人按官方波次从地穴洞口出生并穿洞而行；洞口渲染黑色圆坑
+- 路线起点按官方 `startPosition` 出生（地穴/传送门出口/地图中段），不再吸附红门
+- 按 `motionMode` 区分敌人：地面敌人走进地穴掉坑死亡；飞行敌人直线飞行、无视高台/墙/禁行/地穴
+- 修复 A* 路径简化在相邻格访问差 >1 时的死循环隐患
+
+2026-08-13 活动传送门机制（兔洞）：
+- 解析 `tile_rabbithole_in_*` 入口 / `tile_rabbithole_out_*` 出口传送格：敌人踩到入口消失 3 秒，按出口 `prob` 权重随机从出口出现，改走 `extraRoutes[action_index]` 出口路线抵达蓝门
+- 出口路线追加进路线池并可拖拽回看；入口/出口地面标记「入/出 + 编号 + 出口概率%」（参考站同款样式），图例区附出口坐标与概率列表
+- 出口路线按官方检查点折线：左上「出2」出口的猪沿洞区走进地穴被击杀；其余出口沿道路直达蓝门
+
+2026-08-13 场地道具渲染：
+- 解析关卡 `predefines.tokenInsts` 预置部署物，将场地道具（如「直到大地变成一颗酸橙」的信箱）用官方 Spine 动画渲染到对应格位并脚底贴地
+- 数据与资源沿用参考站接口：`assets/getTrapsKey` 取道具数据，`trap/spine/...` 动画、`trap/image/...` 静态贴图；加载前显示占位标记
+- `functions/spine/[[path]].js` 同源代理扩展支持 `getTrapsKey` 与 `trap/` 路径（HTTPS 线上可用）
+
+2026-08-13 选关「活动」模式活动名修正：
+- 活动名改用官方 activity_table `basicInfo`（经 `zoneToActivity` 关联 zone→活动），替换原 zone 子区域名与英文 zoneId
+- 按活动开始时间倒序排列，最新活动（奇象巡展 2026-08-08）置顶；子区域名作为副标题显示
+- 隐藏带「不展示」标记的 RPG 关卡区；重新生成 data/zone_index.json/.js 并同步
+
+2026-08-13 剿灭关卡白屏根治：
+- 根因：Spine 敌人每类一个 WebGL 上下文（默祷圣祠 19 类敌人 + 主渲染器共 20 个），超过浏览器 16 个上限，最早创建的主渲染器上下文被浏览器回收 → 3D 区白屏
+- 修复：全部 Spine 敌人/道具改用一个共享 WebGL 上下文，逐骨架渲染 + readPixels 快照到各自 2D 画布；上下文数 20→2
+- 验证：默祷圣祠 19 种敌人正常渲染、主渲染器不丢失；TO-EX-2 / 0-1 无回归
+
+2026-08-13 敌人移速与罚站时间实装：
+- 根因：模拟器所有敌人统一按 0.9 秒/格移动，忽略官方 moveSpeed；路线 WAIT_FOR_SECONDS（5~120s 罚站）检查点也被整体忽略——圣徒祈祷像（移速 0.0）这类不动雕像被直接送走
+- 修复：按官方 moveSpeed 计算移动耗时（移速 0 = 原地罚站，不移动不结算击杀）；WAIT_FOR_SECONDS 的 (0,0) 占位按「当前位置罚站」解析并挂到路径进度（path.waits），新增 routeTimeToProgress / routeProgressToTime 换算，兔洞到达时间与出口路线同步计入罚站
+- 验证：默祷圣祠圣徒祈祷像原地不动、90/120s 罚站冻结进度、maxTime 1697s 计入；TO-EX-2 兔洞、0-1 无回归
+- 补丁：移速 0 敌人罚站分支补充逐帧脚底贴地定位，修复圣徒祈祷像「只剩半截」（精灵中心锚点停在地面高度、下半身入地），现全身完整站立
+
+2026-08-13 敌人罚站倒计时：
+- 工具栏新增「罚站倒计时」按钮（参考站「显示等待时间」同款）：开启后地图上实时显示正在罚站敌人的剩余秒数
+- 标签为 DOM 覆盖层：≥10s 显示整数、<10s 一位小数、<5s 变绿变小；位置随敌人屏幕投影每帧更新，播放/拖拽进度条均实时；关闭按钮清除全部标签
+- 仅显示可见敌人：传送门 DISAPPEAR 隐藏期、兔洞消失 3s 期不显示倒计时
+
+2026-08-13 模型渲染改参考站同款「纸片贴地图」：
+- 背景：用户指出「影子才是敌人本体，上边模型只是动画」——广告牌精灵被脚底抬升后，身体在 3/4 相机透视下与影子/格子中心错开
+- 修复：敌人/道具从 THREE.Sprite 广告牌改为平面网格（PlaneGeometry + 底部枢轴 translate(0,0.5,0) + rotation.x=ENEMY_MODEL_TILT），脚底锚定格子中心与影子对齐
+- 倾斜角：参考站 MAP_ROTATION=0.5，但模拟器相机俯仰约 -57.5°（更陡），0.5 会让平面几乎侧对相机只剩一条缝；改为 -0.5（平面面向相机、模型从屏幕竖直向后仰 28.65°）
+- 验证：readPixels 模型中心像素随显隐变化（240,116,23 ↔ 148,143,134）；0-1（11 敌）/默祷圣祠（401 敌+11 道具）/TO-EX-2（116 敌）全部正常渲染、无报错、无上下文丢失
+
+2026-08-13 场地机制核对与修复：
+- 中立单位位置：tokenInsts 坐标与路线同为自底向上，buildTrapMeshes 漏 y 翻转导致 11 个预置单位（圣堂奶/唤醒者/射手）垂直镜像错位；已按地图行数翻转（射手全部落高台、Milk 7 8 不再压 forbidden 格）
+- 经典传送门：tile_telin→tile_telout 此前仅渲染贴图无传送逻辑，敌人直接穿过；官方路线用 DISAPPEAR / APPEAR_AT_POS 检查点编码传送，已按参考站语义实现「走到入口 → DISAPPEAR 隐藏（含入口罚站时间）→ APPEAR_AT_POS 在出口出现 → 走出口后检查点折线至蓝门」；兔洞格（tile_rabbithole_*）排除，避免与随机出口逻辑双处理
+- 入梦砖：官方图集无独立 tile_sleep_road 贴图，按参考站 `tile_sleep_road = tile_sleep_wall` 复用入梦砖墙官方贴图；睡眠（沉睡）机制未模拟（模拟器无状态系统）
+- 中立单位视觉居中 + 尺寸：脚底抬升幅度降为 0.7 压低视觉中心（奶类视觉中心偏差约 17→13px、高台射手约 30→21~29px）；尺寸按参考站推导——参考站敌人网格乘 z1（默认 0.9）、道具不乘缩放（1.0），故道具 = 敌人公式 ÷ 0.9 = 19.2/anim.scale/0.9（精灵约 1.37~1.39 格、身体约 0.76 格）
+- 验证：默祷圣祠 11 单位位置正确且渲染正常（无上下文丢失/无报错）、route 28 敌人传送后 30s 采样在出口路线、TO-EX-2 兔洞 82 个不受影响、0-1 无回归
+
+2026-08-11 版本回退保障落地：
+- 已生成 manifest.json（文件 SHA256 + 数据时间戳），可用于版本完整性校验与回退
+- 新增版本清单 E:\WebProjects\versions\DGWEB\versions.json，作为版本状态单一事实源
+- 新增回退/校验工具 c_drive_mirror\tools\version-mgmt\（Test-DGWEBVersion / Invoke-DGWEBRollback）
+- 本版本代码与主目录一致；动态数据 latest.json（2026-08-11 00:22）、ark_pv.json（2026-08-11 00:35）早于主目录当前数据，回退时默认保留主目录最新数据
+
+2026-08-11 地图模拟页（map-sim.html）：
+- 新增单页 3D 关卡地图模拟：输入关卡代号按 ?id= 载入，Three.js 渲染 3D 地形、出生/终点路线、敌人波次推进与敌人属性
+- 数据源：ArknightsGameData（Kengxxiao）的 levels 关卡 JSON + enemy_database.json
+- 本地生成轻量索引 data/stage_index.json/.js（3511 关）与 data/enemy_index.json/.js（2130 敌人）；JS 版本支持 file:// 直接打开
+- 支持播放/暂停/重置/倍速、锁定相机旋转/平移、滚轮与双指缩放；file:// 与 HTTP、桌面与移动端已验证
+- 接入官方美术资源：关卡「官方地图」预览（yuanyan3060/ArknightsGameResource map + fexli mapreview 兜底）、敌人头像（jsDelivr 优先 + raw 兜底）
+- 视觉精致化：ACES 色调映射 + 软阴影 + 半球光/轮廓光、地面受影、路线点阵光带、敌人 Sprite 贴图（加载失败回退圆形标记）
+- 红蓝门方向明确：敌人从红门出生（`gate_red.png`）、进入蓝门消失（`gate_blue.png`）
+- 场景贴图优化：接入官方 `tiles1` 图集，地板/草地/楼梯/传送点/火山/治疗等格子使用官方顶部贴图
+- 路线数据修复：只使用 `MOVE` 检查点，忽略 `WAIT_FOR_SECONDS` 的 `(0,0)` 占位，避免路线乱跳
+- 路线寻路：使用明日方舟 Stage-Viewer 同款 A* + 视线优化，路线起点对齐红门、终点对齐蓝门，不再穿墙
+- 敌人动画：场景内敌人从静态头像改为官方 Spine 3.8 动画，WebGL 离屏渲染后贴入 3D 场景，加载失败自动回退头像
+- 修复动画透明/闪烁：WebGL 帧经 `readPixels` 快照到 2D 画布，并按加载时固定比例和中心渲染，避免动画过程中忽大忽小
+- 修复模型垂直翻转：动画贴图恢复默认 `flipY`，敌人头朝上显示
+- HTTPS 适配：新增 `functions/spine/[[path]].js` 同源代理，线上通过 `/spine/` 访问参考站动画资源，避免混合内容拦截
+- 官方地图预览保留在独立弹窗；「叠图」改为与地图格子严格对齐的示意底图，不再把透视截图的官方地图平铺到 3D 地面
+- 修复 3D 模型与底图错位：地形/路线/敌人坐标统一到地图坐标系，方块不再偏左上角
+- 锁定相机旋转与拖拽平移，仅保留滚轮/双指缩放
+- 使用官方相机数据（fexli map_camera_views/summary.json 生成 data/camera_index.js）设置官方视角并锁定
+- 修正官方视角轴换算：统一使用 `view_default`，Unity Y/Z 映射为 Three.js 深度/高度，避免 `view_by_side` 把部分关卡带成侧视歪斜，改为高视角 3/4 视图
+- 红蓝门左右方向校准：对照参考站确认 `0-1` 红门右、蓝门左，通过相机投影矩阵 X 镜像修正；缩放保留，旋转锁定不变
+- 首页导航增加「3D 地图模拟 MAP」入口
+
+文件清单（1548 个）：
 .github\workflows\daily.yml
 .gitignore
 _build_modes.py
@@ -24,6 +165,7 @@ _prev_frames.html
 AI_DOCS.md
 ai_handoff\AI_PROGRESS.md
 ai_handoff\版本变更历史.md
+ai_handoff\版本说明.txt
 ai_handoff\项目日志.md
 ai_handoff\最新版本说明.txt
 AI_PROGRESS.md
@@ -40,147 +182,147 @@ fetch_bili.py
 functions\pv.js
 gen_lowres.py
 gen_unified_manifest.py
-images\ext\avatars\a_02f4352666e9_%E5%A4%B4%E5%83%8F_%E5%A1%91%E5%BF%83.png
-images\ext\avatars\a_091c85ac68f5_%E5%A4%B4%E5%83%8F_%E4%BB%A4.png
-images\ext\avatars\a_0aa778d48eb3_%E5%A4%B4%E5%83%8F_%E5%82%80%E5%BD%B1.png
-images\ext\avatars\a_0b817166c6d6_%E5%A4%B4%E5%83%8F_%E7%90%B4%E6%9F%B3.png
-images\ext\avatars\a_0c602d025ed2_%E5%A4%B4%E5%83%8F_%E5%A6%AE%E8%8A%99.png
-images\ext\avatars\a_0caf14fdd91b_%E5%A4%B4%E5%83%8F_%E8%8D%92%E8%8A%9C%E6%8B%89%E6%99%AE%E5%85%B0%E5%BE%B7.png
-images\ext\avatars\a_0e3dae732af7_%E5%A4%B4%E5%83%8F_%E8%89%BE%E4%B8%BD%E5%A6%AE.png
-images\ext\avatars\a_0e53e494a526_%E5%A4%B4%E5%83%8F_%E6%B8%A9%E8%92%82.png
-images\ext\avatars\a_1324fe7893e3_%E5%A4%B4%E5%83%8F_%E6%AD%A2%E9%A2%82.png
-images\ext\avatars\a_16f33b600302_%E5%A4%B4%E5%83%8F_Mon3tr.png
-images\ext\avatars\a_1839638e19d9_%E5%A4%B4%E5%83%8F_%E9%93%B6%E7%81%B0.png
-images\ext\avatars\a_1868d351fd34_%E5%A4%B4%E5%83%8F_%E6%B6%A4%E7%81%AB%E6%9D%B0%E8%A5%BF%E5%8D%A1.png
-images\ext\avatars\a_188fe91373cc_%E5%A4%B4%E5%83%8F_%E7%81%B5%E7%9F%A5.png
-images\ext\avatars\a_1a4b592d15e7_%E5%A4%B4%E5%83%8F_%E7%84%B0%E5%BD%B1%E8%8B%87%E8%8D%89.png
-images\ext\avatars\a_1db9a8a8d233_%E5%A4%B4%E5%83%8F_%E7%BA%AF%E7%83%AC%E8%89%BE%E9%9B%85%E6%B3%95%E6%8B%89.png
-images\ext\avatars\a_1f37e3ec49ac_%E5%A4%B4%E5%83%8F_%E9%81%A5.png
-images\ext\avatars\a_22808296f480_%E5%A4%B4%E5%83%8F_%E5%9C%A3%E7%BA%A6%E9%80%81%E8%91%AC%E4%BA%BA.png
-images\ext\avatars\a_24943641374a_%E5%A4%B4%E5%83%8F_%E6%9D%B0%E8%A5%BF%E5%8D%A1.png
-images\ext\avatars\a_28f25af02c28_%E5%A4%B4%E5%83%8F_%E7%85%8C.png
-images\ext\avatars\a_29c05c5fe5f4_%E5%A4%B4%E5%83%8F_%E8%96%87%E8%96%87%E5%AE%89%E5%A8%9C.png
-images\ext\avatars\a_29da295cc92e_%E5%A4%B4%E5%83%8F_%E5%8F%AF%E9%9C%B2%E5%B8%8C%E5%B0%94.png
-images\ext\avatars\a_2b9c8d68edf6_%E5%A4%B4%E5%83%8F_W.png
-images\ext\avatars\a_2ba67662e5cd_%E5%A4%B4%E5%83%8F_%E9%BA%92%E9%BA%9FR%E5%A4%9C%E5%88%80.png
-images\ext\avatars\a_2e9013a28242_%E5%A4%B4%E5%83%8F_%E5%BC%82%E5%AE%A2.png
-images\ext\avatars\a_2fbed195c7dc_%E5%A4%B4%E5%83%8F_%E6%AD%BB%E8%8A%92.png
-images\ext\avatars\a_3053aeb774c8_%E5%A4%B4%E5%83%8F_%E6%8E%A8%E8%BF%9B%E4%B9%8B%E7%8E%8B.png
-images\ext\avatars\a_31e559877e86_%E5%A4%B4%E5%83%8F_%E7%BC%87%E7%BC%87.png
-images\ext\avatars\a_372218ba9545_%E5%A4%B4%E5%83%8F_%E7%81%B0%E7%83%AC.png
-images\ext\avatars\a_3803ad88c480_%E5%A4%B4%E5%83%8F_%E8%B5%AB%E5%BE%B7%E9%9B%B7.png
-images\ext\avatars\a_397f67edb028_%E5%A4%B4%E5%83%8F_%E5%B1%B1.png
-images\ext\avatars\a_39a4b0bafbce_%E5%A4%B4%E5%83%8F_%E7%8E%9B%E9%9C%B2%E8%A5%BF%E5%B0%94.png
-images\ext\avatars\a_39c1d6bacf7a_%E5%A4%B4%E5%83%8F_%E6%97%A9%E9%9C%B2.png
-images\ext\avatars\a_3acdc0a879e1_%E5%A4%B4%E5%83%8F_%E7%83%9B%E7%85%8C.png
-images\ext\avatars\a_3bc552cdae68_%E5%A4%B4%E5%83%8F_%E5%A8%9C%E4%BB%81%E5%9B%BE%E4%BA%9A.png
-images\ext\avatars\a_3d0942e7307a_%E5%A4%B4%E5%83%8F_%E9%BA%A6%E5%93%B2%E4%BC%A6.png
-images\ext\avatars\a_3d3ee707ee6b_%E5%A4%B4%E5%83%8F_%E6%96%AF%E5%8D%A1%E8%92%82.png
-images\ext\avatars\a_3e7d377de2d4_%E5%A4%B4%E5%83%8F_%E8%95%BE%E7%BC%AA%E5%AE%89.png
-images\ext\avatars\a_3edf50e9ddd9_%E5%A4%B4%E5%83%8F_%E5%AE%89%E6%B4%81%E8%8E%89%E5%A8%9C.png
-images\ext\avatars\a_428c59454efb_%E5%A4%B4%E5%83%8F_%E4%BD%A9%E4%BD%A9.png
-images\ext\avatars\a_47e4d6305017_%E5%A4%B4%E5%83%8F_%E7%94%B5%E5%BC%A7.png
-images\ext\avatars\a_482eb66424be_%E5%A4%B4%E5%83%8F_%E6%A3%AE%E8%9A%BA.png
-images\ext\avatars\a_48c71229b011_%E5%A4%B4%E5%83%8F_%E7%99%BD%E9%93%81.png
-images\ext\avatars\a_4f948704b16c_%E5%A4%B4%E5%83%8F_%E6%98%9F%E7%86%8A.png
-images\ext\avatars\a_50a8842098d7_%E5%A4%B4%E5%83%8F_%E5%A4%9C%E8%8E%BA.png
-images\ext\avatars\a_512c2762ad4a_%E5%A4%B4%E5%83%8F_%E5%8F%B8%E9%9C%86%E6%83%8A%E8%9B%B0.png
-images\ext\avatars\a_52e33f1ffd89_%E5%A4%B4%E5%83%8F_%E4%BF%A1%E4%BB%B0%E6%90%85%E6%8B%8C%E6%9C%BA.png
-images\ext\avatars\a_57e8a386b72f_%E5%A4%B4%E5%83%8F_%E7%BB%B4%E5%A8%9C%C2%B7%E7%BB%B4%E5%A4%9A%E5%88%A9%E4%BA%9A.png
-images\ext\avatars\a_58616d81bfad_%E5%A4%B4%E5%83%8F_%E5%9C%A3%E8%81%86%E5%88%9D%E9%9B%AA.png
-images\ext\avatars\a_5fac92fd29a6_%E5%A4%B4%E5%83%8F_%E9%94%8F.png
-images\ext\avatars\a_621fba1b35e8_%E5%A4%B4%E5%83%8F_%E5%BC%91%E5%90%9B%E8%80%85.png
-images\ext\avatars\a_635805121ba5_%E5%A4%B4%E5%83%8F_%E5%B7%A6%E4%B9%90.png
-images\ext\avatars\a_63ebce9a4b68_%E5%A4%B4%E5%83%8F_%E5%8F%B7%E8%A7%92.png
-images\ext\avatars\a_64ab11152a3b_%E5%A4%B4%E5%83%8F_%E5%88%9D%E9%9B%AA.png
-images\ext\avatars\a_65b46cae61fe_%E5%A4%B4%E5%83%8F_%E7%84%B0%E7%8B%90%E9%BE%99%E6%A2%93%E5%85%B0.png
-images\ext\avatars\a_65dcff018f88_%E5%A4%B4%E5%83%8F_%E9%98%BF%E6%96%AF%E5%8D%A1%E7%BA%B6.png
-images\ext\avatars\a_66e99f240152_%E5%A4%B4%E5%83%8F_%E7%BB%B4%E4%BC%8A.png
-images\ext\avatars\a_67794c9b8fb4_%E5%A4%B4%E5%83%8F_%E8%80%80%E9%AA%91%E5%A3%AB%E4%B8%B4%E5%85%89.png
-images\ext\avatars\a_67bc92784da7_%E5%A4%B4%E5%83%8F_%E8%89%BE%E6%8B%89.png
-images\ext\avatars\a_6820e0ed41b6_%E5%A4%B4%E5%83%8F_%E6%96%A5%E7%BD%AA.png
-images\ext\avatars\a_689558381bdf_%E5%A4%B4%E5%83%8F_%E9%87%8D%E5%B2%B3.png
-images\ext\avatars\a_6a3a74721228_%E5%A4%B4%E5%83%8F_%E9%BB%91%E9%94%AE.png
-images\ext\avatars\a_6e45ead18095_%E5%A4%B4%E5%83%8F_%E4%BC%8A%E8%8A%99%E5%88%A9%E7%89%B9.png
-images\ext\avatars\a_70350eaf7739_%E5%A4%B4%E5%83%8F_%E6%9C%BA%E6%A2%B0%E5%B8%88.png
-images\ext\avatars\a_72775ae9b1df_%E5%A4%B4%E5%83%8F_%E8%B0%AC%E5%9B%A0.png
-images\ext\avatars\a_72991b20e625_%E5%A4%B4%E5%83%8F_%E5%BD%92%E6%BA%9F%E5%B9%BD%E7%81%B5%E9%B2%A8.png
-images\ext\avatars\a_72d1d2f91c9e_%E5%A4%B4%E5%83%8F_%E7%A9%BA%E5%BC%A6.png
-images\ext\avatars\a_731ecefc7ba2_%E5%A4%B4%E5%83%8F_%E5%BF%8D%E5%86%AC.png
-images\ext\avatars\a_73269b2e424f_%E5%A4%B4%E5%83%8F_%E5%A1%9E%E9%9B%B7%E5%A8%85.png
-images\ext\avatars\a_7575eb4ec378_%E5%A4%B4%E5%83%8F_%E5%B5%AF%E5%B3%A8.png
-images\ext\avatars\a_767d7f5638ad_%E5%A4%B4%E5%83%8F_%E8%BF%B7%E8%BF%AD%E9%A6%99.png
-images\ext\avatars\a_77e3c34059f0_%E5%A4%B4%E5%83%8F_%E7%BC%84%E9%BB%98%E5%BE%B7%E5%85%8B%E8%90%A8%E6%96%AF.png
-images\ext\avatars\a_78115e0d59f3_%E5%A4%B4%E5%83%8F_%E5%B8%95%E6%8B%89%E6%96%AF.png
-images\ext\avatars\a_7df4debaeb38_%E5%A4%B4%E5%83%8F_%E4%BA%88%E6%84%BF%E5%AE%89%E6%B4%81%E8%8E%89%E5%A8%9C.png
-images\ext\avatars\a_7f686506941d_%E5%A4%B4%E5%83%8F_%E5%B9%BD%E7%81%B5%E9%B2%A8.png
-images\ext\avatars\a_7fd7aac63e5d_%E5%A4%B4%E5%83%8F_%E9%A3%8E%E7%AC%9B.png
-images\ext\avatars\a_8825ba0e84e6_%E5%A4%B4%E5%83%8F_%E9%98%BF.png
-images\ext\avatars\a_8ae0de1c2fc3_%E5%A4%B4%E5%83%8F_%E8%8E%AB%E6%96%AF%E6%8F%90%E9%A9%AC.png
-images\ext\avatars\a_8b72233e460f_%E5%A4%B4%E5%83%8F_%E8%B5%AB%E6%8B%89%E6%A0%BC.png
-images\ext\avatars\a_8ba72482bb5b_%E5%A4%B4%E5%83%8F_%E9%9C%8D%E5%B0%94%E6%B5%B7%E9%9B%85.png
-images\ext\avatars\a_8c410272eeab_%E5%A4%B4%E5%83%8F_%E4%BB%87%E7%99%BD.png
-images\ext\avatars\a_8dbfbb6c53f5_%E5%A4%B4%E5%83%8F_%E8%8E%B1%E4%BC%8A.png
-images\ext\avatars\a_8f61a2515844_%E5%A4%B4%E5%83%8F_%E4%B8%B0%E5%B7%9D%E7%A5%A5%E5%AD%90.png
-images\ext\avatars\a_900409dfb58a_%E5%A4%B4%E5%83%8F_%E5%87%AF%E5%B0%94%E5%B8%8C.png
-images\ext\avatars\a_902d6ce6cde9_%E5%A4%B4%E5%83%8F_%E9%85%92%E7%A5%9E.png
-images\ext\avatars\a_907a95d8add5_%E5%A4%B4%E5%83%8F_%E9%80%BB%E5%90%84%E6%96%AF.png
-images\ext\avatars\a_90ff30988c2a_%E5%A4%B4%E5%83%8F_%E5%81%87%E6%97%A5%E5%A8%81%E9%BE%99%E9%99%88.png
-images\ext\avatars\a_913a7c576a57_%E5%A4%B4%E5%83%8F_%E7%90%B3%E7%90%85%E8%AF%97%E6%80%80%E9%9B%85.png
-images\ext\avatars\a_91a161fb85a6_%E5%A4%B4%E5%83%8F_%E6%AD%8C%E8%95%BE%E8%92%82%E5%A8%85.png
-images\ext\avatars\a_92a2bd3e2df9_%E5%A4%B4%E5%83%8F_%E6%BE%84%E9%97%AA.png
-images\ext\avatars\a_9496ab24ab1a_%E5%A4%B4%E5%83%8F_%E5%8F%B2%E5%B0%94%E7%89%B9%E5%B0%94.png
-images\ext\avatars\a_9845537da897_%E5%A4%B4%E5%83%8F_%E7%99%BE%E7%82%BC%E5%98%89%E7%BB%B4%E5%B0%94.png
-images\ext\avatars\a_9c1fe644be90_%E5%A4%B4%E5%83%8F_%E7%84%B0%E5%B0%BE.png
-images\ext\avatars\a_9f9b5f06a1a8_%E5%A4%B4%E5%83%8F_%E7%9C%9F%E8%A8%80.png
-images\ext\avatars\a_a0f9ac044b98_%E5%A4%B4%E5%83%8F_%E6%A3%98%E5%88%BA.png
-images\ext\avatars\a_a1d2bb611720_%E5%A4%B4%E5%83%8F_%E8%B5%AB%E9%BB%98.png
-images\ext\avatars\a_a62e2e180d0a_%E5%A4%B4%E5%83%8F_%E7%BC%AA%E5%B0%94%E8%B5%9B%E6%80%9D.png
-images\ext\avatars\a_a65941739fe2_%E5%A4%B4%E5%83%8F_%E8%8F%B2%E4%BA%9A%E6%A2%85%E5%A1%94.png
-images\ext\avatars\a_aa036f1afa13_%E5%A4%B4%E5%83%8F_%E6%BA%AF%E5%85%89%E6%98%9F%E6%BA%90.png
-images\ext\avatars\a_abd6217c40b9_%E5%A4%B4%E5%83%8F_%E9%9A%90%E5%BE%B7%E6%9D%A5%E5%B8%8C.png
-images\ext\avatars\a_ac0c15b1d673_%E5%A4%B4%E5%83%8F_%E9%BB%8D.png
-images\ext\avatars\a_ac0fa0e7754d_%E5%A4%B4%E5%83%8F_%E5%A4%95.png
-images\ext\avatars\a_ad532ec8146c_%E5%A4%B4%E5%83%8F_%E6%9E%97.png
-images\ext\avatars\a_ae32cb529e6e_%E5%A4%B4%E5%83%8F_%E4%BC%BA%E5%A4%9C.png
-images\ext\avatars\a_ae66d95886ae_%E5%A4%B4%E5%83%8F_%E7%8F%8A%E6%AF%94.png
-images\ext\avatars\a_aebba01cc816_%E5%A4%B4%E5%83%8F_%E9%AD%94%E7%8E%8B.png
-images\ext\avatars\a_af949367cabc_%E5%A4%B4%E5%83%8F_%E6%80%92%E6%BD%AE%E5%87%9B%E5%86%AC.png
-images\ext\avatars\a_b5e4cb1d6d8e_%E5%A4%B4%E5%83%8F_%E6%B0%B4%E6%9C%88.png
-images\ext\avatars\a_b95336a82d7a_%E5%A4%B4%E5%83%8F_%E5%A4%9A%E8%90%9D%E8%A5%BF.png
-images\ext\avatars\a_bfca0a6a396d_%E5%A4%B4%E5%83%8F_%E6%B5%81%E6%98%8E.png
-images\ext\avatars\a_bff20305ba9b_%E5%A4%B4%E5%83%8F_%E5%B9%B4.png
-images\ext\avatars\a_c19fa8a49a77_%E5%A4%B4%E5%83%8F_%E7%8E%9B%E6%81%A9%E7%BA%B3.png
-images\ext\avatars\a_c28b65f74f58_%E5%A4%B4%E5%83%8F_%E6%96%A9%E4%B8%9A%E6%98%9F%E7%86%8A.png
-images\ext\avatars\a_cc2ff5a9a281_%E5%A4%B4%E5%83%8F_%E9%93%83%E5%85%B0.png
-images\ext\avatars\a_cfa92d6560ea_%E5%A4%B4%E5%83%8F_%E5%8D%A1%E6%B6%85%E5%88%A9%E5%AE%89.png
-images\ext\avatars\a_d1795985c7f3_%E5%A4%B4%E5%83%8F_%E8%B5%A4%E5%88%83%E6%98%8E%E9%9C%84%E9%99%88.png
-images\ext\avatars\a_d3e4f32bdfbe_%E5%A4%B4%E5%83%8F_%E4%BD%99.png
-images\ext\avatars\a_d6aef1e678ef_%E5%A4%B4%E5%83%8F_%E6%B7%AC%E7%BE%BD%E8%B5%AB%E9%BB%98.png
-images\ext\avatars\a_d76548b71319_%E5%A4%B4%E5%83%8F_%E4%BC%8A%E5%86%85%E4%B8%9D.png
-images\ext\avatars\a_d834dbe00252_%E5%A4%B4%E5%83%8F_%E8%89%BE%E9%9B%85%E6%B3%95%E6%8B%89.png
-images\ext\avatars\a_dba6bf8f991d_%E5%A4%B4%E5%83%8F_%E6%9C%9B.png
-images\ext\avatars\a_dbe5091aa833_%E5%A4%B4%E5%83%8F_%E9%97%AA%E7%81%B5.png
-images\ext\avatars\a_dc1e680c32cd_%E5%A4%B4%E5%83%8F_%E5%88%BB%E4%BF%84%E6%9F%8F.png
-images\ext\avatars\a_ddf826c76980_%E5%A4%B4%E5%83%8F_%E6%B3%A5%E5%B2%A9.png
-images\ext\avatars\a_de93011c1c08_%E5%A4%B4%E5%83%8F_%E9%99%88.png
-images\ext\avatars\a_e1e400076a41_%E5%A4%B4%E5%83%8F_%E8%B4%9D%E6%B4%9B%E5%86%85.png
-images\ext\avatars\a_e378a6c3121c_%E5%A4%B4%E5%83%8F_%E5%A8%9C%E6%96%AF%E6%8F%90.png
-images\ext\avatars\a_e39100245d5b_%E5%A4%B4%E5%83%8F_%E7%BB%B4%E4%BB%80%E6%88%B4%E5%B0%94.png
-images\ext\avatars\a_e3c45f92d5f7_%E5%A4%B4%E5%83%8F_%E8%80%81%E9%B2%A4.png
-images\ext\avatars\a_e3f92617e022_%E5%A4%B4%E5%83%8F_%E5%BC%95%E6%98%9F%E6%A3%98%E5%88%BA.png
-images\ext\avatars\a_e5455cd3d9b6_%E5%A4%B4%E5%83%8F_%E8%83%BD%E5%A4%A9%E4%BD%BF.png
-images\ext\avatars\a_e9b3dfe9cc26_%E5%A4%B4%E5%83%8F_%E6%96%B0%E7%BA%A6%E8%83%BD%E5%A4%A9%E4%BD%BF.png
-images\ext\avatars\a_ec9d024ceeb7_%E5%A4%B4%E5%83%8F_%E8%BF%9C%E7%89%99.png
-images\ext\avatars\a_ed545f955eb7_%E5%A4%B4%E5%83%8F_%E4%B9%8C%E5%B0%94%E6%AF%94%E5%AE%89.png
-images\ext\avatars\a_ef0a6e95d43a_%E5%A4%B4%E5%83%8F_%E8%8B%87%E8%8D%89.png
-images\ext\avatars\a_efae2b856f29_%E5%A4%B4%E5%83%8F_%E5%87%9B%E5%BE%A1%E9%93%B6%E7%81%B0.png
-images\ext\avatars\a_f0e6930365ff_%E5%A4%B4%E5%83%8F_%E7%91%95%E5%85%89.png
-images\ext\avatars\a_f20543c6185d_%E5%A4%B4%E5%83%8F_%E5%87%AF%E5%B0%94%E5%B8%8C%C2%B7%E6%80%9D%E8%A1%A1%E6%89%98.png
-images\ext\avatars\a_f2f09712f441_%E5%A4%B4%E5%83%8F_%E6%B5%8A%E5%BF%83%E6%96%AF%E5%8D%A1%E8%92%82.png
-images\ext\avatars\a_f4a13850acac_%E5%A4%B4%E5%83%8F_%E6%8F%90%E4%B8%B0.png
-images\ext\avatars\a_f6692e546bd1_%E5%A4%B4%E5%83%8F_%E9%BB%91.png
-images\ext\avatars\a_ff73bbd07809_%E5%A4%B4%E5%83%8F_%E9%B8%BF%E9%9B%AA.png
+images\ext\avatars\a_02f4352666e9.png
+images\ext\avatars\a_091c85ac68f5.png
+images\ext\avatars\a_0aa778d48eb3.png
+images\ext\avatars\a_0b817166c6d6.png
+images\ext\avatars\a_0c602d025ed2.png
+images\ext\avatars\a_0caf14fdd91b.png
+images\ext\avatars\a_0e3dae732af7.png
+images\ext\avatars\a_0e53e494a526.png
+images\ext\avatars\a_1324fe7893e3.png
+images\ext\avatars\a_16f33b600302.png
+images\ext\avatars\a_1839638e19d9.png
+images\ext\avatars\a_1868d351fd34.png
+images\ext\avatars\a_188fe91373cc.png
+images\ext\avatars\a_1a4b592d15e7.png
+images\ext\avatars\a_1db9a8a8d233.png
+images\ext\avatars\a_1f37e3ec49ac.png
+images\ext\avatars\a_22808296f480.png
+images\ext\avatars\a_24943641374a.png
+images\ext\avatars\a_28f25af02c28.png
+images\ext\avatars\a_29c05c5fe5f4.png
+images\ext\avatars\a_29da295cc92e.png
+images\ext\avatars\a_2b9c8d68edf6.png
+images\ext\avatars\a_2ba67662e5cd.png
+images\ext\avatars\a_2e9013a28242.png
+images\ext\avatars\a_2fbed195c7dc.png
+images\ext\avatars\a_3053aeb774c8.png
+images\ext\avatars\a_31e559877e86.png
+images\ext\avatars\a_372218ba9545.png
+images\ext\avatars\a_3803ad88c480.png
+images\ext\avatars\a_397f67edb028.png
+images\ext\avatars\a_39a4b0bafbce.png
+images\ext\avatars\a_39c1d6bacf7a.png
+images\ext\avatars\a_3acdc0a879e1.png
+images\ext\avatars\a_3bc552cdae68.png
+images\ext\avatars\a_3d0942e7307a.png
+images\ext\avatars\a_3d3ee707ee6b.png
+images\ext\avatars\a_3e7d377de2d4.png
+images\ext\avatars\a_3edf50e9ddd9.png
+images\ext\avatars\a_428c59454efb.png
+images\ext\avatars\a_47e4d6305017.png
+images\ext\avatars\a_482eb66424be.png
+images\ext\avatars\a_48c71229b011.png
+images\ext\avatars\a_4f948704b16c.png
+images\ext\avatars\a_50a8842098d7.png
+images\ext\avatars\a_512c2762ad4a.png
+images\ext\avatars\a_52e33f1ffd89.png
+images\ext\avatars\a_57e8a386b72f.png
+images\ext\avatars\a_58616d81bfad.png
+images\ext\avatars\a_5fac92fd29a6.png
+images\ext\avatars\a_621fba1b35e8.png
+images\ext\avatars\a_635805121ba5.png
+images\ext\avatars\a_63ebce9a4b68.png
+images\ext\avatars\a_64ab11152a3b.png
+images\ext\avatars\a_65b46cae61fe.png
+images\ext\avatars\a_65dcff018f88.png
+images\ext\avatars\a_66e99f240152.png
+images\ext\avatars\a_67794c9b8fb4.png
+images\ext\avatars\a_67bc92784da7.png
+images\ext\avatars\a_6820e0ed41b6.png
+images\ext\avatars\a_689558381bdf.png
+images\ext\avatars\a_6a3a74721228.png
+images\ext\avatars\a_6e45ead18095.png
+images\ext\avatars\a_70350eaf7739.png
+images\ext\avatars\a_72775ae9b1df.png
+images\ext\avatars\a_72991b20e625.png
+images\ext\avatars\a_72d1d2f91c9e.png
+images\ext\avatars\a_731ecefc7ba2.png
+images\ext\avatars\a_73269b2e424f.png
+images\ext\avatars\a_7575eb4ec378.png
+images\ext\avatars\a_767d7f5638ad.png
+images\ext\avatars\a_77e3c34059f0.png
+images\ext\avatars\a_78115e0d59f3.png
+images\ext\avatars\a_7df4debaeb38.png
+images\ext\avatars\a_7f686506941d.png
+images\ext\avatars\a_7fd7aac63e5d.png
+images\ext\avatars\a_8825ba0e84e6.png
+images\ext\avatars\a_8ae0de1c2fc3.png
+images\ext\avatars\a_8b72233e460f.png
+images\ext\avatars\a_8ba72482bb5b.png
+images\ext\avatars\a_8c410272eeab.png
+images\ext\avatars\a_8dbfbb6c53f5.png
+images\ext\avatars\a_8f61a2515844.png
+images\ext\avatars\a_900409dfb58a.png
+images\ext\avatars\a_902d6ce6cde9.png
+images\ext\avatars\a_907a95d8add5.png
+images\ext\avatars\a_90ff30988c2a.png
+images\ext\avatars\a_913a7c576a57.png
+images\ext\avatars\a_91a161fb85a6.png
+images\ext\avatars\a_92a2bd3e2df9.png
+images\ext\avatars\a_9496ab24ab1a.png
+images\ext\avatars\a_9845537da897.png
+images\ext\avatars\a_9c1fe644be90.png
+images\ext\avatars\a_9f9b5f06a1a8.png
+images\ext\avatars\a_a0f9ac044b98.png
+images\ext\avatars\a_a1d2bb611720.png
+images\ext\avatars\a_a62e2e180d0a.png
+images\ext\avatars\a_a65941739fe2.png
+images\ext\avatars\a_aa036f1afa13.png
+images\ext\avatars\a_abd6217c40b9.png
+images\ext\avatars\a_ac0c15b1d673.png
+images\ext\avatars\a_ac0fa0e7754d.png
+images\ext\avatars\a_ad532ec8146c.png
+images\ext\avatars\a_ae32cb529e6e.png
+images\ext\avatars\a_ae66d95886ae.png
+images\ext\avatars\a_aebba01cc816.png
+images\ext\avatars\a_af949367cabc.png
+images\ext\avatars\a_b5e4cb1d6d8e.png
+images\ext\avatars\a_b95336a82d7a.png
+images\ext\avatars\a_bfca0a6a396d.png
+images\ext\avatars\a_bff20305ba9b.png
+images\ext\avatars\a_c19fa8a49a77.png
+images\ext\avatars\a_c28b65f74f58.png
+images\ext\avatars\a_cc2ff5a9a281.png
+images\ext\avatars\a_cfa92d6560ea.png
+images\ext\avatars\a_d1795985c7f3.png
+images\ext\avatars\a_d3e4f32bdfbe.png
+images\ext\avatars\a_d6aef1e678ef.png
+images\ext\avatars\a_d76548b71319.png
+images\ext\avatars\a_d834dbe00252.png
+images\ext\avatars\a_dba6bf8f991d.png
+images\ext\avatars\a_dbe5091aa833.png
+images\ext\avatars\a_dc1e680c32cd.png
+images\ext\avatars\a_ddf826c76980.png
+images\ext\avatars\a_de93011c1c08.png
+images\ext\avatars\a_e1e400076a41.png
+images\ext\avatars\a_e378a6c3121c.png
+images\ext\avatars\a_e39100245d5b.png
+images\ext\avatars\a_e3c45f92d5f7.png
+images\ext\avatars\a_e3f92617e022.png
+images\ext\avatars\a_e5455cd3d9b6.png
+images\ext\avatars\a_e9b3dfe9cc26.png
+images\ext\avatars\a_ec9d024ceeb7.png
+images\ext\avatars\a_ed545f955eb7.png
+images\ext\avatars\a_ef0a6e95d43a.png
+images\ext\avatars\a_efae2b856f29.png
+images\ext\avatars\a_f0e6930365ff.png
+images\ext\avatars\a_f20543c6185d.png
+images\ext\avatars\a_f2f09712f441.png
+images\ext\avatars\a_f4a13850acac.png
+images\ext\avatars\a_f6692e546bd1.png
+images\ext\avatars\a_ff73bbd07809.png
 images\ext\covers\c_00e90a3bd559.jpg
 images\ext\covers\c_00f9be90c6b4.jpg
 images\ext\covers\c_010e68162d87.jpg
@@ -1522,3 +1664,4 @@ sync_themes_auto.py
 tailwind.css
 theme-videos.html
 worker.js
+版本说明.txt
