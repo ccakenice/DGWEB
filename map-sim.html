@@ -325,7 +325,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1032,7 +1032,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815b';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815c';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1842,6 +1842,30 @@
             // 传送门出口路线（extraRoutes）追加在主线路线之后，routeIndex = extraRouteBase + action_index
             state.extraRouteBase = state.routes.length;
             state.routes = state.routes.concat(buildRoutePaths(level, level.extraRoutes || [], { rawStart: true }));
+            // 飞行单位固定飞行高度：取路线全程最高地形顶 + 余量（不再随高台/低地逐帧起伏）
+            state.routeFlyY = {};
+            state.routes.forEach((pts, ri) => {
+                let top = 0;
+                const add = p => {
+                    if (p && p.row != null && p.col != null) {
+                        const y = tileSurfaceY(level, Math.round(p.row), Math.round(p.col));
+                        if (y > top) top = y;
+                    }
+                };
+                pts.forEach(add);
+                // 检查点之间的线段也按 0.25 格采样，覆盖途经墙顶/高台，避免飞行穿墙
+                for (let i = 1; i < pts.length; i++) {
+                    const a = pts[i - 1], b = pts[i];
+                    if (!a || !b || a.row == null || b.row == null) continue;
+                    const dx = b.col - a.col, dy = b.row - a.row;
+                    const dist = Math.max(Math.abs(dx), Math.abs(dy));
+                    const steps = Math.max(1, Math.ceil(dist * 4));
+                    for (let s = 1; s < steps; s++) {
+                        add({ row: a.row + dy * s / steps, col: a.col + dx * s / steps });
+                    }
+                }
+                state.routeFlyY[ri] = top + 0.25;
+            });
             state.routes.forEach((pts, ri) => {
                 if (pts.length < 2) return;
                 const vectors = pts.map(p => new THREE.Vector3(p.col + 0.5, 0.55, p.row + 0.5));
@@ -2550,7 +2574,9 @@
                     if (en.shadow) en.shadow.visible = true;
                     if (pts && pts.length) {
                         const p = samplePath(pts, 0);
-                        const surfY = tileSurfaceY(state.level, Math.round(p.row), Math.round(p.col));
+                        const groundY = tileSurfaceY(state.level, Math.round(p.row), Math.round(p.col));
+                        const flyY = (en.motion === 'FLY' && state.routeFlyY && state.routeFlyY[en.route] != null) ? state.routeFlyY[en.route] : null;
+                        const surfY = flyY != null ? flyY : groundY;
                         const scl = (en.mesh.scale && en.mesh.scale.x) || 1;
                         const anim = state.spineData[en.id];
                         const foot = anim && anim.bodyBottom ? anim.bodyBottom : 0.5;
@@ -2558,7 +2584,7 @@
                         if (en.shadow) {
                             en.shadow.position.set(
                                 p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0),
-                                surfY - 0.03,
+                                groundY - 0.03,
                                 p.row + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.z : 0)
                             );
                         }
@@ -2626,13 +2652,15 @@
                     if (en.shadow) en.shadow.visible = false;
                     return;
                 }
-                const surfY = tileSurfaceY(state.level, Math.round(p.row), Math.round(p.col));
+                const groundY = tileSurfaceY(state.level, Math.round(p.row), Math.round(p.col));
+                const flyY = (en.motion === 'FLY' && state.routeFlyY && state.routeFlyY[en.route] != null) ? state.routeFlyY[en.route] : null;
+                const surfY = flyY != null ? flyY : groundY;
                 const scl = (en.mesh.scale && en.mesh.scale.x) || 1;
                 // 准点绑定：身体脚底（Spine 帧实测）严格贴地
                 const anim = state.spineData[en.id];
                 const foot = anim && anim.bodyBottom ? anim.bodyBottom : 0.5;
                 en.mesh.position.set(p.col + 0.5, modelBottomY(surfY, scl, foot), p.row + 0.5 + modelLeanShift(scl));
-                if (en.shadow) en.shadow.position.set(p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0), surfY - 0.03, p.row + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.z : 0));
+                if (en.shadow) en.shadow.position.set(p.col + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.x : 0), groundY - 0.03, p.row + 0.5 + (en.shadow.userData.off ? en.shadow.userData.off.z : 0));
                 // 面朝移动方向：Sprite 水平镜像（Spine 帧默认朝右，朝左时翻转贴图）
                 if (en.mesh.userData && en.mesh.userData.flip) {
                     const ahead = samplePath(pts, Math.min(1, en.progress + 0.03));
