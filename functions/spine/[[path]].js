@@ -69,7 +69,8 @@ export async function onRequest(context) {
         return await fetchData(suffix, bodyText, request.headers.get('Content-Type'));
     }
     if (suffix.startsWith('trap/')) {
-        return await fetchAsset('trap/' + suffix);
+        // suffix 已含 trap/ 前缀，GitHub 路径为 public/trap/...，直接拼接
+        return await fetchAsset(suffix);
     }
     return await fetchAsset('spine/' + suffix);
 }
