@@ -2034,20 +2034,21 @@
             canvas.height = 128;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, 128, 128);
+            // 回退标记底部对齐画布底部（圆心偏下），模型脚底贴地时不悬浮
             ctx.fillStyle = 'rgba(0,0,0,.42)';
             ctx.beginPath();
-            ctx.arc(64, 64, 54, 0, Math.PI * 2);
+            ctx.arc(64, 92, 36, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#' + color.toString(16).padStart(6, '0');
-            ctx.lineWidth = 8;
+            ctx.lineWidth = 7;
             ctx.beginPath();
-            ctx.arc(64, 64, 54, 0, Math.PI * 2);
+            ctx.arc(64, 92, 36, 0, Math.PI * 2);
             ctx.stroke();
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 28px Space Grotesk, sans-serif';
+            ctx.font = 'bold 24px Space Grotesk, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(id.replace('enemy_', '').slice(0, 2).toUpperCase(), 64, 64);
+            ctx.fillText(id.replace('enemy_', '').slice(0, 2).toUpperCase(), 64, 90);
             const fallback = new THREE.CanvasTexture(canvas);
             const model = makeFlatModel(fallback, scale, false);
             let tex = state.textureCache[id];
@@ -2055,7 +2056,20 @@
                 const loader = new THREE.TextureLoader();
                 loader.setCrossOrigin('anonymous');
                 tex = loader.load(enemyIconUrl(id), t => {
-                    model.material.map = t;
+                    // 头像/立绘底部对齐画布底部：半身像不会悬浮在半空
+                    const img = t.image;
+                    const c = document.createElement('canvas');
+                    c.width = 128;
+                    c.height = 128;
+                    const c2 = c.getContext('2d');
+                    c2.clearRect(0, 0, 128, 128);
+                    const s = Math.min(128 / (img.width || 128), 128 / (img.height || 128));
+                    const iw = (img.width || 0) * s;
+                    const ih = (img.height || 0) * s;
+                    c2.drawImage(img, (128 - iw) / 2, 128 - ih, iw, ih);
+                    const ct = new THREE.CanvasTexture(c);
+                    ct.encoding = THREE.sRGBEncoding;
+                    model.material.map = ct;
                     model.material.needsUpdate = true;
                 }, undefined, () => {});
                 state.textureCache[id] = tex;
@@ -2172,7 +2186,7 @@
                             if (pts.length) {
                                 const p0 = pts[0];
                                 const surfY = tileSurfaceY(level, Math.round(p0.row), Math.round(p0.col));
-                                sprite.position.set(p0.col + 0.5, modelBottomY(surfY, scale, 0.92), p0.row + 0.5);
+                                sprite.position.set(p0.col + 0.5, modelBottomY(surfY, scale, 0.97), p0.row + 0.5);
                                 shadow.position.set(p0.col + 0.5 + (shadow.userData.off ? shadow.userData.off.x : 0), surfY - 0.03, p0.row + 0.5 + (shadow.userData.off ? shadow.userData.off.z : 0));
                             }
                             state.scene.add(sprite);
