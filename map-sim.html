@@ -2028,24 +2028,6 @@
             return surfY - (1 - bb) * scl * Math.cos(ENEMY_MODEL_TILT);
         }
 
-        // 头像/立绘底部对齐到 128x128 画布底部，避免半身像悬浮
-        function bottomAlignAvatar(img) {
-            const c = document.createElement('canvas');
-            c.width = 128;
-            c.height = 128;
-            const c2 = c.getContext('2d');
-            c2.clearRect(0, 0, 128, 128);
-            const iw0 = img.width || img.naturalWidth || 128;
-            const ih0 = img.height || img.naturalHeight || 128;
-            const s = Math.min(128 / iw0, 128 / ih0);
-            const iw = iw0 * s;
-            const ih = ih0 * s;
-            c2.drawImage(img, (128 - iw) / 2, 128 - ih, iw, ih);
-            const ct = new THREE.CanvasTexture(c);
-            ct.encoding = THREE.sRGBEncoding;
-            return ct;
-        }
-
         function makeEnemySprite(id, color, scale) {
             const canvas = document.createElement('canvas');
             canvas.width = 128;
@@ -2067,30 +2049,10 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(id.replace('enemy_', '').slice(0, 2).toUpperCase(), 64, 90);
+            // 按用户要求：Spine 加载失败时不再显示头像立绘（会悬浮），只保留位置标记（底部对齐圆标 + 阴影）
             const fallback = new THREE.CanvasTexture(canvas);
             const model = makeFlatModel(fallback, scale, false);
-            let tex = state.textureCache[id];
-            if (!tex) {
-                // 立即用底部对齐的圆标占位；头像加载完成后底部对齐并更新缓存
-                tex = fallback;
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => {
-                    const ct = bottomAlignAvatar(img);
-                    state.textureCache[id] = ct;
-                    model.material.map = ct;
-                    model.material.needsUpdate = true;
-                };
-                img.onerror = () => {};
-                img.src = enemyIconUrl(id);
-                state.textureCache[id] = tex;
-            } else if (tex.image && tex.image.naturalWidth && !tex.image.getContext) {
-                // 缓存命中但仍是原 IMG 纹理（旧路径/未对齐）：立即底部对齐
-                const ct = bottomAlignAvatar(tex.image);
-                state.textureCache[id] = ct;
-                tex = ct;
-            }
-            model.material.map = tex;
+            model.material.map = fallback;
             model.material.needsUpdate = true;
             return model;
         }
