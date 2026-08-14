@@ -463,8 +463,8 @@
                     try {
                         const shared = getSharedSpineRenderer();
                         const output = document.createElement('canvas');
-                        output.width = 128;
-                        output.height = 128;
+                        output.width = 256;
+                        output.height = 256;
                         const outCtx = output.getContext('2d');
                         const { atlas, binary } = await loadSpineAssetPair(
                             'spine/' + key + '/' + entry.atlas,
@@ -490,9 +490,9 @@
                         const probeSize = new spine.Vector2();
                         skeleton.getBounds(probeOffset, probeSize);
                         const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
-                        const scaleK = Math.max(0.15, 108 / probeSpan);
-                        const centerX = 64 - (probeOffset.x + probeSize.x / 2) * scaleK;
-                        const centerY = 64 - (probeOffset.y + probeSize.y / 2) * scaleK;
+                        const scaleK = Math.max(0.15, 216 / probeSpan);
+                        const centerX = 128 - (probeOffset.x + probeSize.x / 2) * scaleK;
+                        const centerY = 128 - (probeOffset.y + probeSize.y / 2) * scaleK;
                         const texture = new THREE.CanvasTexture(output);
                         texture.encoding = THREE.sRGBEncoding;
                         texture.flipY = true;
@@ -615,8 +615,8 @@
                         try {
                             const shared = getSharedSpineRenderer();
                             const output = document.createElement('canvas');
-                            output.width = 128;
-                            output.height = 128;
+                            output.width = 256;
+                            output.height = 256;
                             const outCtx = output.getContext('2d');
                             const { atlas, binary } = await loadSpineAssetPair(
                                 'trap/spine/' + entry.atlas + '/' + entry.atlas + '.atlas',
@@ -640,9 +640,9 @@
                             const probeSize = new spine.Vector2();
                             skeleton.getBounds(probeOffset, probeSize);
                             const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
-                            const scaleK = Math.max(0.15, 108 / probeSpan);
-                            const centerX = 64 - (probeOffset.x + probeSize.x / 2) * scaleK;
-                            const centerY = 64 - (probeOffset.y + probeSize.y / 2) * scaleK;
+                            const scaleK = Math.max(0.15, 216 / probeSpan);
+                            const centerX = 128 - (probeOffset.x + probeSize.x / 2) * scaleK;
+                            const centerY = 128 - (probeOffset.y + probeSize.y / 2) * scaleK;
                             const texture = new THREE.CanvasTexture(output);
                             texture.encoding = THREE.sRGBEncoding;
                             texture.flipY = true;
@@ -678,7 +678,7 @@
                         (anim.textures = anim.textures || []).push(tex);
                         // 按参考站：敌人网格乘 z1（默认 0.9），道具不乘缩放（1.0）
                         // 道具正确尺寸 = 敌人公式 ÷ 0.9（= ×1.111），即 19.2/anim.scale/0.9
-                        const scl = 19.2 / anim.scale / 0.9 * MODEL_SCALE_MULT;
+                        const scl = 38.4 / anim.scale / 0.9 * MODEL_SCALE_MULT;
                         sprite = makeFlatModel(tex, scl, true);
                         sprite.position.set(tr.col + 0.5, modelBottomY(surfY, scl, anim.bodyBottom), tr.row + 0.5 + modelLeanShift(scl));
                     } else if (anim.imageUrl) {
@@ -761,40 +761,40 @@
                 const shared = state.spineShared;
                 if (!shared) return;
                 const gl = shared.context.gl;
-                gl.viewport(0, 0, 128, 128);
+                gl.viewport(0, 0, 256, 256);
                 gl.clearColor(0, 0, 0, 0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
-                shared.renderer.camera.position.set(64, 64, 0);
+                shared.renderer.camera.position.set(128, 128, 0);
                 shared.renderer.camera.update();
                 shared.renderer.begin();
                 shared.renderer.drawSkeleton(anim.skeleton, false);
                 shared.renderer.end();
-                if (!anim.pixels) anim.pixels = new Uint8Array(128 * 128 * 4);
-                gl.readPixels(0, 0, 128, 128, gl.RGBA, gl.UNSIGNED_BYTE, anim.pixels);
-                const imageData = anim.outCtx.createImageData(128, 128);
-                for (let y = 0; y < 128; y++) {
-                    const src = (127 - y) * 512;
-                    const dst = y * 512;
+                if (!anim.pixels) anim.pixels = new Uint8Array(256 * 256 * 4);
+                gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, anim.pixels);
+                const imageData = anim.outCtx.createImageData(256, 256);
+                for (let y = 0; y < 256; y++) {
+                    const src = (255 - y) * 1024;
+                    const dst = y * 1024;
                     imageData.data.set(anim.pixels.subarray(src, src + 512), dst);
                 }
                 anim.outCtx.putImageData(imageData, 0, 0);
                 if (!anim.measured) {
                     const d = imageData.data;
-                    let x0 = 128, y0 = 128, x1 = -1, y1 = -1;
+                    let x0 = 256, y0 = 256, x1 = -1, y1 = -1;
                     for (let i = 0; i < d.length; i += 4) {
                         if (d[i + 3] > 8) {
                             const pi = i / 4;
-                            const cx = pi % 128, cy = Math.floor(pi / 128);
+                            const cx = pi % 256, cy = Math.floor(pi / 256);
                             if (cx < x0) x0 = cx;
                             if (cx > x1) x1 = cx;
                             if (cy < y0) y0 = cy;
                             if (cy > y1) y1 = cy;
                         }
                     }
-                    anim.bodyW = x1 >= x0 ? (x1 - x0 + 1) : 64;
-                    anim.bodyH = y1 >= y0 ? (y1 - y0 + 1) : 64;
+                    anim.bodyW = x1 >= x0 ? (x1 - x0 + 1) : 128;
+                    anim.bodyH = y1 >= y0 ? (y1 - y0 + 1) : 128;
                     // 脚底在贴图中的精确位置（canvas Y 向下，y1 为身体最低点）
-                    anim.bodyBottom = y1 >= y0 ? (y1 + 1) / 128 : 0.5;
+                    anim.bodyBottom = y1 >= y0 ? (y1 + 1) / 256 : 0.5;
                     anim.measured = true;
                     const _tt = anim.animationState.getCurrent(0);
                     anim._loopDur = _tt && _tt.animation ? _tt.animation.duration : 1;
@@ -808,13 +808,13 @@
                     anim._loopT = (anim._loopT || 0) + delta;
                     const d = imageData.data;
                     let y1 = -1;
-                    for (let y = 0; y < 128; y++) {
-                        for (let x = 0; x < 128; x++) {
-                            if (d[(y * 128 + x) * 4 + 3] > 8) { y1 = y; }
+                    for (let y = 0; y < 256; y++) {
+                        for (let x = 0; x < 256; x++) {
+                            if (d[(y * 256 + x) * 4 + 3] > 8) { y1 = y; }
                         }
                     }
                     if (y1 >= 0) {
-                        const bb = (y1 + 1) / 128;
+                        const bb = (y1 + 1) / 256;
                         if (bb > anim.bodyBottom) anim.bodyBottom = bb;
                     }
                     if (anim._loopT > (anim._loopDur || 1) * 1.3) anim._bottomLocked = true;
@@ -2171,7 +2171,7 @@
                 // 骨骼原始宽 = bodyW / canvasScale → 贴图缩放 = 0.9*128/(6*canvasScale) = 19.2/canvasScale
                 if (en.mesh && !en.mesh.userData.sized) {
                     const z1 = ENEMY_SCALE_OVERRIDES[normalizeEnemyKey(en.id)] || 0.9;
-                    const scl = 19.2 / anim.scale * (z1 / 0.9) * MODEL_SCALE_MULT;
+                    const scl = 38.4 / anim.scale * (z1 / 0.9) * MODEL_SCALE_MULT;
                     en.mesh.scale.set(scl, scl, 1);
                     en.mesh.userData.sized = true;
                 }
@@ -2179,7 +2179,7 @@
                 if (en.shadow) {
                     en.shadow.scale.set(0.56, 0.12, 1);
                     // 偏移按身体高度比例缩放，避免小体型敌人阴影相对悬浮
-                    const k = (anim.bodyH || 64) / 128;
+                    const k = (anim.bodyH || 128) / 256;
                     en.shadow.userData.off = { x: 0.12 * k, z: 0.24 * k };
                 }
             });
