@@ -294,10 +294,10 @@
         // 本地 http 预览仍直连参考站后端。
         const SPINE_ASSET_BASES = location.protocol === 'https:'
             ? [
-                'https://cdn.jsdelivr.net/gh/serine-qing/MapSimulatorBackend@master/public',
-                'https://raw.githubusercontent.com/serine-qing/MapSimulatorBackend/master/public',
+                'https://cdn.jsdelivr.net/gh/serine-qing/MapSimulatorBackend@master/public/',
+                'https://raw.githubusercontent.com/serine-qing/MapSimulatorBackend/master/public/',
             ]
-            : ['http://152.136.189.98:3000'];
+            : ['http://152.136.189.98:3000/'];
 
         // 依次尝试各资源源加载 Spine atlas + skel；返回 atlas/binary
         async function loadSpineAssetPair(relAtlas, relSkel) {
@@ -632,7 +632,7 @@
                             console.warn('Trap spine setup failed', key, e);
                         }
                     } else if (imageMap[key]) {
-                        byKey[key] = { imageUrl: SPINE_ASSET_BASES[0] + '/trap/image/' + imageMap[key].image + '.png' };
+                        byKey[key] = { imageUrl: SPINE_ASSET_BASES[0] + 'trap/image/' + imageMap[key].image + '.png' };
                     }
                 }));
                 state.trapSpines = byKey;
