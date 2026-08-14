@@ -775,7 +775,7 @@
                 for (let y = 0; y < 256; y++) {
                     const src = (255 - y) * 1024;
                     const dst = y * 1024;
-                    imageData.data.set(anim.pixels.subarray(src, src + 512), dst);
+                    imageData.data.set(anim.pixels.subarray(src, src + 1024), dst);
                 }
                 anim.outCtx.putImageData(imageData, 0, 0);
                 if (!anim.measured) {
@@ -1032,7 +1032,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260814f';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260814g';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
