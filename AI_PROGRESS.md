@@ -135,14 +135,15 @@
 | **V0.26** | 草稿 | PV 质量降级保护 + BILI_SESSDATA 更新（恢复 1080P） |
 | **V0.27** | 草稿 | API 验证 |
 | **V0.28** | 草稿 | 本地头像修复（141 张官方头像）/ 社区工具修正（特米米、公招计算）/ PV 质量降级保护 |
-| **V0.29** | 草稿（当前） | 3D 关卡地图模拟 map-sim.html（Three.js + ArknightsGameData + Spine 动画） |
+| **V0.29** | 🔒 定格（2026-08-15） | 3D 关卡地图模拟 map-sim.html（Three.js + ArknightsGameData + Spine 动画） |
+| **V0.30** | 草稿（当前） | 官方地块固有色：地图模拟切换官方配色（data/tile_colors.json） |
 
 **同步流程**：
 1. 主目录 (`E:\WebProjects\DGWEB`) 修改
-2. 同步到 `E:\WebProjects\versions\DGWEB\DGWEB_V0.29\`
+2. 同步到 `E:\WebProjects\versions\DGWEB\DGWEB_V0.30\`
 3. 上传 GitHub → CF Pages 自动部署（1~3 分钟）
 4. 线上验证（网络波动时多轮重试）
-5. 更新 `V0.29\版本说明.txt`
+5. 更新 `V0.30\版本说明.txt`
 
 **版本变更历史（自动汇总）**：
 - 管理器「理解AI」每次点击时，自动扫描 versions 下**所有已定格版本**的版本说明.txt，
@@ -159,9 +160,15 @@
 6. **中文交流**: 与用户交流一律简体中文
 7. **文档同步**: 每次重大改动后更新 `AI_PROGRESS.md` 和 `版本说明.txt`
 
-## 当前进度 (2026-08-13)
+## 当前进度 (2026-08-15)
 
-### V0.29（草稿）
+### V0.30（草稿）
+- 【2026-08-15 V0.30 创建】V0.29 经用户确认定格并复刻为 V0.30（草稿）继续开发
+- 【2026-08-15 官方地块固有色】新增 data/tile_colors.json（61 条，覆盖本地关卡 36 种地块）：官方 gamedata 无配色字段，颜色取自参考站 MapSimulator 源码硬编码固有色（ref_solid）+ 官方地图纹理图集 tiles1.png 单元格采样（atlas）+ 参考站默认规则（ref_default，官方无专色的 creep/mire/rope 等）；红蓝门/绿门用官方描边色保持可见（v.border 优先）
+- 【2026-08-15 地图模拟官方配色】map-sim.html 新增 TILE_COLOR_URLS，init 时加载 tile_colors.json 覆盖默认深色 TILE_COLORS（失败保留原色兜底）：高台 #c1c1c1、路面 #747474、禁行 #191919、地面 #555146、深水 #086e8d、红门 #e03253、蓝门 #359dde；本地+线上验证 v20260815a，0-1 渲染采样到官方路面/高台色；版本标记 v20260814g→v20260815a
+
+### V0.29（定格 2026-08-15）
+- 【2026-08-15 定格】V0.29 经用户确认定格，复刻为 V0.30 继续开发
 - 【2026-08-14 部署上线】V0.29 全量上线：map-sim.html / enemy.html / data 索引与 36 个剿灭关卡本地数据 / functions/spine 代理 / Spine 库 / 官方地图贴图；补齐 camp_r_20、camp_r_23 本地关卡 JSON（此前 0 字节）；单次提交推送 GitHub，CF Pages 自动构建
   - 【2026-08-14 敌人模型修复】Spine 资源源改从 GitHub 公开仓库（参考站后端 serine-qing/MapSimulatorBackend 的 public/）经 jsDelivr / raw.githubusercontent 直接加载（敌人 spine/<key>/*、道具 trap/*）；/spine 代理仅保留数据接口（getMeshsKey/getTrapsKey）。原因：CF Worker 不能 fetch 裸 IP（1003）、sslip/nip 域名被参考站防盗链按 Host 白名单拦截、socket 在本项目不可用。线上验证：默祷圣祠 401/401 敌人应用 Spine 模型、0-1 11/11，资源全部 200
   - 【2026-08-14 回退占位贴地】Spine 资源加载失败时的回退占位（敌人头像/圆形标记）原为居中贴在 1:1 平面上导致悬浮；改为内容底部对齐画布底部（bottomAlignAvatar + 圆标下移），缓存命中路径同步修复；Spine 模型不受影响（实测仍 401/401 贴地）
@@ -268,7 +275,7 @@
 - [x] 集成战略主题自动同步脚本 sync_themes_auto.py
 
 ### 待办
-- V0.29（3D 地图模拟）已于 2026-08-14 部署上线（单次提交全量上线），待用户确认后定格；V0.26/V0.27/V0.28 草稿待定
+- V0.30（官方地块固有色）已部署上线试运行，待用户确认后定格；V0.26/V0.27/V0.28 草稿待定
 
 ## 常见问题与解决方案
 | 问题 | 解决方案 |
