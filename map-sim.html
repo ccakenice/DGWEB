@@ -146,6 +146,7 @@
                             <button id="mapOverlayBtn" class="btn">叠图</button>
                             <button id="deployBtn" class="btn" title="高亮可部署地块">部署格</button>
                             <button id="waitCdBtn" class="btn" title="显示/隐藏敌人罚站倒计时">罚站倒计时</button>
+                            <button id="enemyRangeBtn" class="btn" title="显示/隐藏敌人攻击范围（点击敌人单独查看可命中的部署格）">敌攻范围</button>
                         <button id="groundRefBtn" class="btn" title="诊断：显示地面高度参考环">地面参考</button>
                         <button id="zoomBtn" class="btn" title="开启/关闭地图缩放（默认锁定）">缩放:锁</button>
                         <button id="fullscreenBtn" class="btn" title="全屏/退出全屏关卡">全屏</button>
@@ -221,6 +222,7 @@
                         <div id="edDesc" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.75;max-height:110px;overflow:auto;border-left:2px solid var(--line);padding-left:10px"></div>
                         <div id="edStats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px"></div>
                         <div id="edExtra" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
+                        <div id="edRange" style="display:none;margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
                     </div>
                     <div id="opDetail" style="display:none;position:fixed;z-index:90;width:300px;max-height:72vh;overflow:auto;background:rgba(15,19,25,.97);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(5px)">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
@@ -394,7 +396,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0 };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], detailEnemy: null };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1113,7 +1115,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815k';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815l';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1290,6 +1292,17 @@
             ring.renderOrder = 5;
             ring.userData = { deployOp: true, row: op.row, col: op.col, opId: op.id, facing: op.facing };
             group.add(ring);
+            // 敌人攻击范围命中红圈（默认隐藏）
+            const hitRing = new THREE.Mesh(
+                new THREE.RingGeometry(0.34, 0.46, 28),
+                new THREE.MeshBasicMaterial({ color: 0xe05656, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide })
+            );
+            hitRing.rotation.x = -Math.PI / 2;
+            hitRing.position.set(0, 0.032, 0);
+            hitRing.renderOrder = 5;
+            hitRing.visible = false;
+            group.add(hitRing);
+            op._hitRing = hitRing;
             const tri = new THREE.BufferGeometry();
             tri.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.16, 0, 0.12, -0.1, 0, -0.12, -0.1, 0], 3));
             const arrow = new THREE.Mesh(
@@ -1482,6 +1495,96 @@
                 }
             });
         }
+        // ===== 敌人攻击范围显示（以官方 rangeRadius 为准）=====
+        function enemyRangeInfo(en) {
+            const st = enemyInfo(en.id).stats || {};
+            const rr = st.rangeRadius == null ? -1 : st.rangeRadius;
+            return { radius: rr, melee: rr <= 0 };
+        }
+        function enemyRangeCells(en) {
+            const g = enemyGridPos(en);
+            const { radius, melee } = enemyRangeInfo(en);
+            const map = state.level.mapData.map;
+            const cells = [];
+            const push = (r, c) => {
+                if (r >= 0 && c >= 0 && r < map.length && c < map[0].length) cells.push([r, c]);
+            };
+            if (melee) {
+                // 近战：官方 rangeRadius ≤ 0，显示相邻 4 格
+                const rr0 = Math.round(g.row), cc0 = Math.round(g.col);
+                push(rr0 - 1, cc0); push(rr0 + 1, cc0); push(rr0, cc0 - 1); push(rr0, cc0 + 1);
+            } else {
+                const R = Math.ceil(radius);
+                for (let r = Math.floor(g.row) - R; r <= Math.ceil(g.row) + R; r++) {
+                    for (let c = Math.floor(g.col) - R; c <= Math.ceil(g.col) + R; c++) {
+                        if (Math.hypot(r - g.row, c - g.col) <= radius) push(r, c);
+                    }
+                }
+            }
+            return cells;
+        }
+        function clearEnemyRange() {
+            state.rangeMeshes.forEach(m => { if (state.scene) state.scene.remove(m); });
+            state.rangeMeshes = [];
+            state.rangeOpRings.forEach(m => { if (state.scene) state.scene.remove(m); });
+            state.rangeOpRings = [];
+            const box = $('edRange');
+            if (box) box.style.display = 'none';
+        }
+        function renderEnemyRange(en) {
+            if (!state.showEnemyRange || !en || !state.level || !state.scene || en.done || !en.mesh || !en.mesh.visible) {
+                clearEnemyRange();
+                return;
+            }
+            const g = enemyGridPos(en);
+            const key = en.id + '|' + Math.round(g.row) + ',' + Math.round(g.col);
+            if (en._rangeKey === key) return; // 敌人未换格则复用
+            en._rangeKey = key;
+            clearEnemyRange();
+            const cells = enemyRangeCells(en);
+            const cellSet = new Set(cells.map(([r, c]) => r + ',' + c));
+            const { radius, melee } = enemyRangeInfo(en);
+            cells.forEach(([r, c]) => {
+                const y = tileSurfaceY(state.level, r, c);
+                const m = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.99, 0.99),
+                    new THREE.MeshBasicMaterial({ color: 0xe05656, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })
+                );
+                m.rotation.x = -Math.PI / 2;
+                m.position.set(c + 0.5, y + 0.11, r + 0.5);
+                m.renderOrder = 3;
+                state.scene.add(m);
+                state.rangeMeshes.push(m);
+            });
+            // 命中标记：攻击范围内的已部署干员加红圈
+            const hits = [];
+            state.deployOps.forEach(op => {
+                const inRange = cellSet.has(op.row + ',' + op.col);
+                if (op._hitRing) op._hitRing.visible = inRange;
+                if (inRange) hits.push(op);
+            });
+            const box = $('edRange');
+            if (box) {
+                box.style.display = 'block';
+                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 rangeRadius=' + (melee ? '近战' : radius) + '</div>'
+                    + (hits.length
+                        ? '可命中部署干员：<b style="color:#ff7b7b">' + hits.map(o => esc(o.name) + ' (' + o.row + ',' + o.col + ')').join('、') + '</b>'
+                        : '<span style="color:var(--ash)">范围内暂无部署干员</span>');
+            }
+        }
+        function toggleEnemyRange() {
+            state.showEnemyRange = !state.showEnemyRange;
+            const btn = $('enemyRangeBtn');
+            if (btn) {
+                btn.classList.toggle('active', state.showEnemyRange);
+                btn.textContent = state.showEnemyRange ? '敌攻范围:开' : '敌攻范围';
+            }
+            if (state.showEnemyRange) {
+                if (state.detailEnemy) renderEnemyRange(state.detailEnemy);
+            } else {
+                clearEnemyRange();
+            }
+        }
         function placeOperator(opData, row, col) {
             if (state.deployOps.some(o => o.row === row && o.col === col)) return false;
             const op = { id: opData.id, name: opData.name, profCn: opData.profCn, rarity: opData.rarity, ranges: opData.ranges, skills: opData.skills, row, col, facing: 0, activeRange: null, group: null, marker: null, spineMesh: null, spineAnim: null, spineReady: false, rangeMeshes: [] };
@@ -1625,6 +1728,10 @@
             state.deployMode = false;
             state.pendingOp = null;
             state.activeDeployOp = null;
+            state.showEnemyRange = false;
+            state.rangeEnemy = null;
+            state.detailEnemy = null;
+            clearEnemyRange();
             closeOpDetail();
         }
 
@@ -3005,6 +3112,8 @@
         }
 
         function openEnemyDetail(en, clientX, clientY) {
+            state.detailEnemy = en;
+            state.rangeEnemy = en;
             const info = enemyInfo(en.id);
             const st = info.stats || {};
             const dd = (window.ENEMY_DETAIL || {})[en.id] || {};
@@ -3055,11 +3164,15 @@
             box.style.left = Math.max(8, Math.min(clientX + 14, window.innerWidth - W - 8)) + 'px';
             box.style.top = Math.max(8, Math.min(clientY + 14, window.innerHeight - H - 8)) + 'px';
             box.style.display = 'block';
+            if (state.showEnemyRange) renderEnemyRange(en);
         }
 
         function closeEnemyDetail() {
             const box = $('enemyDetail');
             if (box) box.style.display = 'none';
+            state.detailEnemy = null;
+            state.rangeEnemy = null;
+            clearEnemyRange();
         }
 
         function onMapClick(e) {
@@ -3167,6 +3280,12 @@
             renderSpineAnimations(state.playing ? delta : 0);
             updateDeployedOpPositions();
             updateCombat();
+            if (state.showEnemyRange && state.rangeEnemy && state.rangeEnemy.mesh && state.rangeEnemy.mesh.visible && !state.rangeEnemy.done) {
+                renderEnemyRange(state.rangeEnemy);
+            } else if (state.rangeEnemy) {
+                state.rangeEnemy._rangeKey = null;
+                clearEnemyRange();
+            }
             updateWaitCountdowns();
             // 可部署地块高亮缓慢闪烁（绿色斜线排线）
             if (state.deployVisible && state.deployMeshes.length) {
@@ -3568,6 +3687,8 @@
             if (gb) gb.addEventListener('click', toggleGroundRef);
             const zb = document.getElementById('zoomBtn');
             if (zb) zb.addEventListener('click', toggleZoomLock);
+            const erb = document.getElementById('enemyRangeBtn');
+            if (erb) erb.addEventListener('click', toggleEnemyRange);
             const fsb = document.getElementById('fullscreenBtn');
             if (fsb) fsb.addEventListener('click', toggleFullscreen);
         });
