@@ -170,7 +170,12 @@
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;margin:12px 0">
                         <span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em">关卡进度</span>
-                        <input type="range" id="timeSlider" min="0" max="100" step="0.1" value="0" style="flex:1;accent-color:var(--acc)" />
+                        <div style="position:relative;flex:1;display:flex;align-items:center;height:18px">
+                            <input type="range" id="timeSlider" min="0" max="100" step="0.1" value="0" style="flex:1;width:100%;accent-color:var(--acc)" />
+                            <div id="markerTick" style="position:absolute;left:0;top:50%;width:2px;height:18px;background:#ffd76a;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:2;border-radius:1px;box-shadow:0 0 6px rgba(255,215,106,.7)"></div>
+                        </div>
+                        <button id="markerBtn" class="btn" style="padding:4px 10px;font-size:12px" title="在当前播放时间添加时间轴标记点（重播从标记点开始）">打点</button>
+                        <button id="clearMarkerBtn" class="btn" style="padding:4px 10px;font-size:12px;display:none" title="清除时间轴标记点">清除</button>
                         <span class="chip" id="progressPct">0%</span>
                         <span class="chip" id="killCount">击杀 0/0</span>
                     </div>
@@ -325,7 +330,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, markerT: null };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1032,13 +1037,35 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815c';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815d';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
             const q = params.get('id') || params.get('code') || '';
             if (q) { await loadStage(q); }
             bindUI();
+        }
+
+        // 时间轴标记点：打点后「重播」从标记点开始（重置仍从 0）
+        function updateMarkerUI() {
+            const has = state.markerT != null && state.maxTime > 0;
+            const tick = $('markerTick');
+            const btn = $('markerBtn');
+            const clr = $('clearMarkerBtn');
+            if (!tick || !btn || !clr) return;
+            if (has) {
+                const pct = Math.min(100, Math.max(0, state.markerT / state.maxTime * 100));
+                tick.style.left = pct + '%';
+                tick.style.display = 'block';
+                btn.textContent = '打点 ' + fmtTime(state.markerT);
+                btn.title = '更新标记点到当前时间';
+                clr.style.display = '';
+            } else {
+                tick.style.display = 'none';
+                btn.textContent = '打点';
+                btn.title = '在当前播放时间添加时间轴标记点（重播从标记点开始）';
+                clr.style.display = 'none';
+            }
         }
 
         function bindUI() {
@@ -1050,10 +1077,13 @@
             $('pauseBtn').textContent = state.playing ? '暂停' : '继续';
         }
         function resetSim(autoPlay) {
-            state.time = 0; state.last = 0; state.scrubbing = false;
+            // 重播从时间轴标记点开始；重置始终从 0 开始
+            const startT = (autoPlay && state.markerT != null) ? Math.min(state.markerT, state.maxTime || 0) : 0;
+            state.time = startT; state.last = 0; state.scrubbing = false;
             state.playing = !!autoPlay;
-            $('timeSlider').value = 0;
-            $('progressPct').textContent = '0%';
+            const pct = state.maxTime ? (startT / state.maxTime * 100) : 0;
+            $('timeSlider').value = pct;
+            $('progressPct').textContent = Math.round(pct) + '%';
             state.kills = 0;
             $('killCount').textContent = '击杀 0/' + state.totalEnemies;
             state.enemies.forEach(en => {
@@ -1095,6 +1125,15 @@
             state.last = 0;
         });
         $('timeSlider').addEventListener('change', () => { state.scrubbing = false; });
+            $('markerBtn').addEventListener('click', () => {
+                if (!state.level || state.maxTime <= 0) return;
+                state.markerT = Math.min(Math.max(0, state.time), state.maxTime);
+                updateMarkerUI();
+            });
+            $('clearMarkerBtn').addEventListener('click', () => {
+                state.markerT = null;
+                updateMarkerUI();
+            });
             $('speedSel').addEventListener('change', e => { state.speed = +e.target.value; });
             $('mapPreviewBtn').addEventListener('click', () => { if (state.currentStage) showMapPreview(state.currentStage); });
             $('mapPreviewClose').addEventListener('click', () => { $('mapPreview').style.display = 'none'; });
@@ -2329,6 +2368,9 @@
             $('timeSlider').value = 0;
             $('progressPct').textContent = '0%';
             $('killCount').textContent = '击杀 0/' + state.totalEnemies;
+            // 换关卡清空时间轴标记点
+            state.markerT = null;
+            updateMarkerUI();
         }
 
         function hideAllRoutes() {
