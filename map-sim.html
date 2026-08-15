@@ -399,7 +399,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], rangeCircle: null, detailEnemy: null };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], detailCardPos: null, spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], rangeCircle: null, detailEnemy: null };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1883,6 +1883,7 @@
             $('loadBtn').addEventListener('click', load);
             $('stageInput').addEventListener('keydown', e => { if (e.key === 'Enter') load(); });
             $('edClose').addEventListener('click', () => { closeEnemyDetail(); hideAllRoutes(); });
+            setupEnemyDetailDrag();
         function syncPlayBtns() {
             $('pauseBtn').textContent = state.playing ? '暂停' : '继续';
         }
@@ -3403,10 +3404,54 @@
             $('edExtra').innerHTML = '<a class="btn" href="enemy.html?id=' + encodeURIComponent(en.id) + '" target="_blank" rel="noopener" style="padding:6px 12px;font-size:12px;margin-right:10px">查看详情</a><span style="color:var(--muted);font-size:11px">已暂停 · 路线已高亮 · 点击空白处关闭</span>';
             const box = $('enemyDetail');
             const W = 320, H = 560;
-            box.style.left = Math.max(8, Math.min(clientX + 14, window.innerWidth - W - 8)) + 'px';
-            box.style.top = Math.max(8, Math.min(clientY + 14, window.innerHeight - H - 8)) + 'px';
+            if (state.detailCardPos) {
+                // 用户拖过卡片：保持在拖放位置，不跳回点击处
+                box.style.left = state.detailCardPos.x;
+                box.style.top = state.detailCardPos.y;
+            } else {
+                box.style.left = Math.max(8, Math.min(clientX + 14, window.innerWidth - W - 8)) + 'px';
+                box.style.top = Math.max(8, Math.min(clientY + 14, window.innerHeight - H - 8)) + 'px';
+            }
             box.style.display = 'block';
             if (state.showEnemyRange) renderEnemyRange(en);
+        }
+
+        // 敌人详情卡片自由拖动（松手放下；拖放后记住位置，后续打开保持）
+        function setupEnemyDetailDrag() {
+            const box = $('enemyDetail');
+            if (!box || box._dragBound) return;
+            box._dragBound = true;
+            let dragging = false, moved = false;
+            let sx = 0, sy = 0, sl = 0, st = 0;
+            box.addEventListener('pointerdown', e => {
+                if (e.button !== 0) return;
+                if (e.target.closest('a, button')) return; // 关闭/链接等交互元素不启动拖动
+                dragging = true; moved = false;
+                sx = e.clientX; sy = e.clientY;
+                sl = box.offsetLeft; st = box.offsetTop;
+                try { box.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+            });
+            box.addEventListener('pointermove', e => {
+                if (!dragging) return;
+                const dx = e.clientX - sx, dy = e.clientY - sy;
+                if (!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+                if (moved) {
+                    const W = box.offsetWidth, H = box.offsetHeight;
+                    // 自由拖动，只保留最小可见区域防止卡片被完全拖出视口
+                    box.style.left = Math.max(-W + 70, Math.min(sl + dx, window.innerWidth - 70)) + 'px';
+                    box.style.top = Math.max(8, Math.min(st + dy, window.innerHeight - 40)) + 'px';
+                    box.style.userSelect = 'none';
+                    e.preventDefault();
+                }
+            });
+            const up = () => {
+                if (!dragging) return;
+                dragging = false;
+                box.style.userSelect = '';
+                if (moved) state.detailCardPos = { x: box.style.left, y: box.style.top };
+            };
+            box.addEventListener('pointerup', up);
+            box.addEventListener('pointercancel', up);
         }
 
         function closeEnemyDetail() {
