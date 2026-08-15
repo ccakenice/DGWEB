@@ -33,6 +33,7 @@
         .wait-cd.wait-cd-min { font-size:10px; color:#9fe8c8; border-color:rgba(159,232,200,.4); }
         .snow-cd { position:absolute; transform:translate(-50%,-100%); font-family:'Space Grotesk',monospace; font-size:10px; color:#bfe3ff; background:rgba(20,40,70,.78); border:1px solid rgba(127,201,239,.55); padding:0 6px; border-radius:6px; white-space:nowrap; pointer-events:none; line-height:1.5; }
         .snow-cd.snow-frozen { color:#ffffff; background:rgba(50,110,180,.9); border-color:rgba(255,255,255,.75); font-weight:700; }
+        .route-wait-cd { position:absolute; transform:translate(-50%,-50%); font-family:'Space Grotesk',monospace; font-size:11px; font-weight:700; color:#201503; background:#ffd76a; border:2px solid rgba(255,215,106,.95); border-radius:50%; min-width:36px; height:36px; display:flex; align-items:center; justify-content:center; padding:0 5px; box-shadow:0 3px 10px rgba(0,0,0,.5); pointer-events:none; white-space:nowrap; }
         #mapCanvas { display:block; width:100%; height:100%; }
         #mapWrap:fullscreen { width:100vw; height:100vh; background:#000 !important; }
         #fsArea:fullscreen { height:100vh; display:flex; flex-direction:column; gap:12px; padding:14px 18px 18px; background:#000 !important; overflow:auto; box-sizing:border-box; }
@@ -206,6 +207,7 @@
                         <div id="hint3d">SCROLL / PINCH ZOOM</div>
                         <div id="waitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5"></div>
                         <div id="snowLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:6"></div>
+                        <div id="routeWaitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:7"></div>
                     </div>
                     <div id="enemyDetail" style="display:none;position:fixed;z-index:90;width:320px;max-height:76vh;overflow:auto;background:rgba(15,19,25,.97);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(5px)">
                         <div style="display:flex;gap:12px;align-items:flex-start">
@@ -399,7 +401,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], detailCardPos: null, spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], rangeCircle: null, detailEnemy: null };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], detailCardPos: null, highlightRoute: null, spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], rangeCircle: null, detailEnemy: null };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -3270,6 +3272,7 @@
         }
 
         function hideAllRoutes() {
+            state.highlightRoute = null;
             Object.keys(state.routeVisuals || {}).forEach(ri => {
                 const v = state.routeVisuals[ri];
                 if (!v) return;
@@ -3284,10 +3287,43 @@
             hideAllRoutes();
             const v = state.routeVisuals[en.route];
             if (!v) return;
+            state.highlightRoute = en.route;
             v.line.visible = true;
             v.points.visible = true;
             v.glow.visible = true;
             v.core.visible = true;
+        }
+
+        // 路线检查点罚站时间标注：显示路线时，在带 WAIT 时间的检查点上标出秒数（如 40s/20s/20s）
+        function updateRouteWaitLabels() {
+            const box = $('routeWaitLabels');
+            if (!box) return;
+            const ri = state.highlightRoute;
+            const v = ri != null ? state.routeVisuals[ri] : null;
+            if (!state.level || !state.camera || !v || !v.line.visible || !state.routes[ri]) {
+                if (box.childElementCount) box.innerHTML = '';
+                return;
+            }
+            const pts = state.routes[ri];
+            const waits = (pts && pts.waits) || [];
+            if (!waits.length) {
+                if (box.childElementCount) box.innerHTML = '';
+                return;
+            }
+            const wrap = $('mapWrap');
+            const W = wrap.clientWidth, H = wrap.clientHeight;
+            const cam = state.camera;
+            let html = '';
+            waits.forEach(w => {
+                const pos = samplePath(pts, w.frac);
+                const v3 = new THREE.Vector3(pos.col + 0.5, 0.55, pos.row + 0.5).project(cam);
+                const sx = (v3.x + 1) / 2 * W;
+                const sy = (1 - v3.y) / 2 * H;
+                const off = v3.z > 1 || v3.z < -1 || sx < -60 || sy < -60 || sx > W + 60 || sy > H + 60;
+                if (off) return;
+                html += '<div class="route-wait-cd" style="left:' + sx.toFixed(1) + 'px;top:' + sy.toFixed(1) + 'px">' + Math.round(w.time) + 's</div>';
+            });
+            if (box.innerHTML !== html) box.innerHTML = html;
         }
 
         function openEnemyDetail(en, clientX, clientY) {
@@ -3496,6 +3532,7 @@
             // 暂停/拖拽时也更新敌人位置，支持进度条前进/倒退观察
             updateEnemyPositions(delta);
             updateSnowLabels();
+            updateRouteWaitLabels();
             if (state.groundRefVisible) updateGroundRefs();
             $('simTime').textContent = fmtTime(state.time);
             const pct = state.maxTime ? Math.min(100, state.time / state.maxTime * 100) : 0;
