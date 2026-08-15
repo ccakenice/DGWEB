@@ -1039,7 +1039,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815e';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815f';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1107,6 +1107,17 @@
             $('progressPct').textContent = Math.round(pct) + '%';
         }
 
+        // 恢复关卡初始缩放（相机位姿）
+        function resetZoom() {
+            if (!state.camera || !state.controls || !state.camHome) return;
+            state.camera.position.copy(state.camHome.pos);
+            state.camera.up.copy(state.camHome.up);
+            if (state.controls.target) state.controls.target.copy(state.camHome.tgt);
+            state.camera.lookAt(state.camHome.tgt);
+            state.camera.updateProjectionMatrix();
+            state.controls.update();
+        }
+
         function bindUI() {
             const load = () => loadStage($('stageInput').value.trim());
             $('loadBtn').addEventListener('click', load);
@@ -1133,6 +1144,8 @@
             });
             $('playBtn').textContent = '重播';
             syncPlayBtns();
+            // 点「重置」时同时恢复关卡初始缩放；重播保持当前缩放
+            if (!autoPlay) resetZoom();
         }
         $('playBtn').addEventListener('click', () => { resetSim(true); });
         $('pauseBtn').addEventListener('click', () => {
@@ -2031,6 +2044,8 @@
             camera.updateProjectionMatrix();
             const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
             camera.projectionMatrix.multiply(mirror);
+            // 保存初始相机位姿：点「重置」时恢复关卡缩放
+            state.camHome = { pos: camera.position.clone(), tgt: camTgt.clone(), up: camera.up.clone() };
             state.controls = controls;
             if (!state._clickBound) {
                 renderer.domElement.addEventListener('click', onMapClick);
