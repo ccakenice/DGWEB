@@ -55,7 +55,7 @@
 - 本地+线上 v20260815k 验证：银灰放路线中段，t=20 双方互相索敌（opAnim=Interact / enemyAnim=Attack），无伤害
 
 2026-08-15 敌人攻击范围显示：
-- 新增「敌攻范围」开关按钮：开启后点击敌人，单独显示该敌人的攻击范围（红色半透明地块）+ 范围内已部署干员加红色命中圈，敌人详情卡显示「攻击范围 · 官方 rangeRadius」与可命中干员名单
-- 范围以官方数据库为准：官方 enemy_database.json 的 enemyData.rangeRadius（正值=半径格数圆形范围；≤0=近战，显示相邻 4 格）；已全量核对 2130/2130 敌人与官方完全一致（0 误差）
-- 敌人移动时范围实时跟随；关闭开关/关闭详情/换关卡自动清除
-- 本地+线上 v20260815l 验证：史莱姆（rangeRadius 0）近战 4 格、命中路线上的银灰
+- 新增「敌攻范围」开关按钮：开启后点击敌人，单独显示该敌人的攻击范围 + 范围内已部署干员加红色命中圈，敌人详情卡显示「攻击范围 · 官方 applyWay/rangeRadius」与可命中干员名单
+- 参考站（serine-qing/MapSimulator Enemy.ts）同款实现：远程敌人（applyWay=RANGED/ALL）画**红色半径圆环**（THREE.Line 椭圆曲线，半径=rangeRadius−0.25 格，贴地，depthTest:false，renderOrder=100），随敌人移动实时跟随；近战敌人不画范围（参考站同款），仅保留命中干员红圈与名单
+- 数据以官方数据库为准：官方 enemy_database.json 的 enemyData.applyWay（MELEE/RANGED/ALL/NONE）与 enemyData.rangeRadius；已将 applyWay 补入 enemy_index.json/.js（2130 名全量，官方字段 m_value），rangeRadius 全量核对 2130/2130 一致
+- 本地+线上 v20260815l/m 验证：远程莫科克（RANGED/1.75）红圈；近战史莱姆无圈但命中标记正常
