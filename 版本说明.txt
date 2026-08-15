@@ -65,3 +65,9 @@
 - 原实现远程用 rangeRadius+0.35、近战 1.15 有冗余，会把圈外干员误判为可攻击；已收紧并统一 attack/显示/命中检测三处
 - 详情卡标注「有效 xx」（远程）或「近战 · 相邻 1 格」
 - 本地+线上 v20260815n 验证：53 例范围内攻击正常、7+5 例圈外不再误伤、0 违例
+
+2026-08-15 字体本地化（修复 Google Fonts 404）：
+- 用户反馈 fonts.gstatic.com 的 woff2 大量 404（国内网络被墙）；全站 30+ 页面原引用 Google Fonts（Noto Sans SC + Space Grotesk）
+- 新增 fonts/fonts.css + fonts/SpaceGrotesk.woff2（google/fonts 仓库可变字体 TTF 转 woff2，48KB，覆盖 300-700 全字重）；Space Grotesk 改本地加载，中文改系统字体栈（PingFang SC/Microsoft YaHei）
+- 全站 31 个文件批量替换：删除 Google Fonts 链接与 preconnect，替换字体栈；彻底移除 fonts.googleapis/fonts.gstatic 依赖
+- 本地+线上 v20260815o 验证：仅请求本地 fonts.css + woff2、无任何 404、Space Grotesk 正常加载
