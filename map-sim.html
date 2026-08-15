@@ -396,7 +396,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], detailEnemy: null };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0, showEnemyRange: false, rangeEnemy: null, rangeMeshes: [], rangeOpRings: [], rangeCircle: null, detailEnemy: null };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1115,7 +1115,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815l';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815m';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1499,18 +1499,20 @@
         function enemyRangeInfo(en) {
             const st = enemyInfo(en.id).stats || {};
             const rr = st.rangeRadius == null ? -1 : st.rangeRadius;
-            return { radius: rr, melee: rr <= 0 };
+            const aw = (state.enemyIndex[en.id] || {}).applyWay || 'MELEE';
+            const ranged = aw === 'RANGED' || aw === 'ALL';
+            return { radius: rr, ranged, applyWay: aw, melee: !ranged };
         }
         function enemyRangeCells(en) {
             const g = enemyGridPos(en);
-            const { radius, melee } = enemyRangeInfo(en);
+            const { radius, ranged } = enemyRangeInfo(en);
             const map = state.level.mapData.map;
             const cells = [];
             const push = (r, c) => {
                 if (r >= 0 && c >= 0 && r < map.length && c < map[0].length) cells.push([r, c]);
             };
-            if (melee) {
-                // 近战：官方 rangeRadius ≤ 0，显示相邻 4 格
+            if (!ranged || radius <= 0) {
+                // 近战：可命中相邻 4 格
                 const rr0 = Math.round(g.row), cc0 = Math.round(g.col);
                 push(rr0 - 1, cc0); push(rr0 + 1, cc0); push(rr0, cc0 - 1); push(rr0, cc0 + 1);
             } else {
@@ -1524,6 +1526,12 @@
             return cells;
         }
         function clearEnemyRange() {
+            if (state.rangeCircle) {
+                state.scene.remove(state.rangeCircle);
+                if (state.rangeCircle.geometry) state.rangeCircle.geometry.dispose();
+                if (state.rangeCircle.material) state.rangeCircle.material.dispose();
+                state.rangeCircle = null;
+            }
             state.rangeMeshes.forEach(m => { if (state.scene) state.scene.remove(m); });
             state.rangeMeshes = [];
             state.rangeOpRings.forEach(m => { if (state.scene) state.scene.remove(m); });
@@ -1537,25 +1545,35 @@
                 return;
             }
             const g = enemyGridPos(en);
-            const key = en.id + '|' + Math.round(g.row) + ',' + Math.round(g.col);
-            if (en._rangeKey === key) return; // 敌人未换格则复用
-            en._rangeKey = key;
-            clearEnemyRange();
+            const info = enemyRangeInfo(en);
+            const key = en.id + '|' + info.applyWay + '|' + info.radius + '|' + Math.round(g.row) + ',' + Math.round(g.col);
+            if (en._rangeKey !== key) {
+                en._rangeKey = key;
+                clearEnemyRange();
+                // 参考站同款：远程敌人画红色半径圆环（半径 = rangeRadius - 0.25，贴地，最高渲染优先级）
+                if (info.ranged && info.radius > 0) {
+                    const r = Math.max(0.05, info.radius - 0.25);
+                    const pts = [];
+                    for (let i = 0; i <= 64; i++) {
+                        const a = i / 64 * Math.PI * 2;
+                        pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+                    }
+                    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+                    const mat = new THREE.LineBasicMaterial({ color: 0xff0000, depthTest: false, transparent: true });
+                    const line = new THREE.Line(geo, mat);
+                    line.renderOrder = 100;
+                    state.scene.add(line);
+                    state.rangeCircle = line;
+                }
+            }
+            // 圆环跟随敌人（每帧）
+            if (state.rangeCircle) {
+                const surfY = tileSurfaceY(state.level, Math.round(g.row), Math.round(g.col));
+                state.rangeCircle.position.set(g.col + 0.5, surfY + 0.12, g.row + 0.5);
+            }
+            // 命中判定与标记（近战=相邻 4 格；远程=半径内格）
             const cells = enemyRangeCells(en);
             const cellSet = new Set(cells.map(([r, c]) => r + ',' + c));
-            const { radius, melee } = enemyRangeInfo(en);
-            cells.forEach(([r, c]) => {
-                const y = tileSurfaceY(state.level, r, c);
-                const m = new THREE.Mesh(
-                    new THREE.PlaneGeometry(0.99, 0.99),
-                    new THREE.MeshBasicMaterial({ color: 0xe05656, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide })
-                );
-                m.rotation.x = -Math.PI / 2;
-                m.position.set(c + 0.5, y + 0.11, r + 0.5);
-                m.renderOrder = 3;
-                state.scene.add(m);
-                state.rangeMeshes.push(m);
-            });
             // 命中标记：攻击范围内的已部署干员加红圈
             const hits = [];
             state.deployOps.forEach(op => {
@@ -1566,7 +1584,7 @@
             const box = $('edRange');
             if (box) {
                 box.style.display = 'block';
-                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 rangeRadius=' + (melee ? '近战' : radius) + '</div>'
+                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (info.ranged ? ' · rangeRadius=' + info.radius : ' · 近战') + '</div>'
                     + (hits.length
                         ? '可命中部署干员：<b style="color:#ff7b7b">' + hits.map(o => esc(o.name) + ' (' + o.row + ',' + o.col + ')').join('、') + '</b>'
                         : '<span style="color:var(--ash)">范围内暂无部署干员</span>');
