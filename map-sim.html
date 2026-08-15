@@ -1480,9 +1480,9 @@
         function updateCombat() {
             if (!state.deployOps.length || !state.level) return;
             const active = state.enemies.filter(en => !en.done && en.mesh && en.mesh.visible);
-            // 干员索敌：攻击范围内（按当前朝向与范围模板）最近敌人
+            // 干员索敌：攻击范围内（按当前朝向与范围模板）最近敌人。
+            // 攻击判定不依赖 Spine 模型是否加载：模型未加载时仍可攻击（受击反馈生效），只是没有角色动画
             state.deployOps.forEach(op => {
-                if (!op.spineAnim) return;
                 const cells = opRangeCells(op);
                 let best = null, bestD = Infinity;
                 active.forEach(en => {
@@ -1494,6 +1494,12 @@
                     }
                 });
                 op.attacking = !!best;
+                // 受攻效果：攻击命中目标时目标短暂闪红（约每秒一次，模拟攻击间隔）
+                if (best && state.time - (op._lastHitT || -9) >= 1.0) {
+                    best.hitFlashUntil = state.time + 0.18;
+                    op._lastHitT = state.time;
+                }
+                if (!op.spineAnim) return; // 模型未加载：跳过动画/朝向，只保留攻击判定与受击反馈
                 const anim = op.spineAnim;
                 const want = best ? (anim._attackAnim || anim._idleAnim || anim._animName) : (anim._idleAnim || anim._animName);
                 if (want && want !== anim._animName) {
@@ -1569,6 +1575,13 @@
                         en.mesh.material.map = en._baseMap;
                     }
                 });
+            });
+            // 受攻闪红：被干员攻击命中的敌人短暂染红（纯视觉，不改变数据）
+            state.enemies.forEach(en => {
+                const m = en.mesh;
+                if (!m || !m.material || !m.material.color) return;
+                const want = en.hitFlashUntil && state.time < en.hitFlashUntil ? 0xff6655 : 0xffffff;
+                if (m.material.color.getHex() !== want) m.material.color.setHex(want);
             });
         }
         // ===== 敌人攻击范围显示（以官方 rangeRadius 为准）=====
