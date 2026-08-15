@@ -1473,11 +1473,6 @@
             const lean = -0.45 * scl * Math.sin(-0.5);
             return { row: e.mesh.position.z - 0.5 - lean, col: e.mesh.position.x - 0.5 };
         }
-        function enemyAttackRadius(en) {
-            // 攻击判定与显示圆环一致：远程=官方 rangeRadius−0.25（碰撞补偿），近战=相邻 1 格
-            const info = enemyRangeInfo(en);
-            return (info.ranged && info.radius > 0) ? Math.max(0.1, info.radius - 0.25) : 1.0;
-        }
         function updateCombat() {
             if (!state.deployOps.length || !state.level) return;
             const active = state.enemies.filter(en => !en.done && en.mesh && en.mesh.visible);
@@ -1516,13 +1511,26 @@
                     applyOpFacing(op); // 恢复用户朝向的镜像
                 }
             });
-            // 敌人索敌：与显示圆环/命中标记完全一致（enemyRangeCells：近战=相邻 4 格，远程=有效半径内格）
+            // 敌人索敌：远程=有效半径内格；近战=被干员阻挡才攻击阻挡者（行进方向下一格/当前格）
             state.enemies.forEach(en => {
                 if (en.done || !en.mesh || !en.mesh.visible) return;
                 const anim = state.spineData[en.id];
                 if (!anim || !anim._attackAnim) return;
-                const cellSet = new Set(enemyRangeCells(en).map(([r, c]) => r + ',' + c));
-                en.attacking = state.deployOps.some(op => cellSet.has(op.row + ',' + op.col));
+                const info = enemyRangeInfo(en);
+                if (info.ranged && info.radius > 0) {
+                    const cellSet = new Set(enemyRangeCells(en).map(([r, c]) => r + ',' + c));
+                    en.attacking = state.deployOps.some(op => cellSet.has(op.row + ',' + op.col));
+                } else if (en.motion === 'FLY') {
+                    // 飞行近战不会被阻挡：保持相邻格判定（不参与阻挡逻辑）
+                    const g = enemyGridPos(en);
+                    const rr0 = Math.round(g.row), cc0 = Math.round(g.col);
+                    en.attacking = state.deployOps.some(op =>
+                        (op.row === rr0 + 1 && op.col === cc0) || (op.row === rr0 - 1 && op.col === cc0) ||
+                        (op.col === cc0 + 1 && op.row === rr0) || (op.col === cc0 - 1 && op.row === rr0));
+                } else {
+                    // 近战（地面）：只有被干员阻挡（干员在其行进方向下一格/当前格）才攻击该阻挡者
+                    en.attacking = !!meleeBlocker(en);
+                }
             });
             // 敌人攻击动画（严格范围）：每个敌人按自己的 attacking 状态切换贴图——
             // 攻击中显示独立 Attack 骨架画面，同 id 其它敌人保持移动/待机，远处敌人不再误播攻击
@@ -1573,6 +1581,20 @@
             const ranged = aw === 'RANGED' || aw === 'ALL';
             return { radius: rr, ranged, applyWay: aw, melee: !ranged };
         }
+        // 近战阻挡判定：返回阻挡该敌人的干员（干员在其行进方向下一格，或敌人已重叠的当前格）
+        // 对应真实游戏「近战被阻挡才会攻击阻挡它的单位」；未被阻挡则返回 null
+        function meleeBlocker(en) {
+            if (!state.deployOps.length || !state.routes[en.route]) return null;
+            const pts = state.routes[en.route];
+            const prog = Math.max(0, Math.min(1, en.progress));
+            const step = 1 / Math.max(1, pathLen(pts)); // 一格约占整条路线的进度
+            const cur = samplePath(pts, prog);
+            const nxt = samplePath(pts, Math.min(1, prog + step));
+            const r0 = Math.round(cur.row), c0 = Math.round(cur.col);
+            const r1 = Math.round(nxt.row), c1 = Math.round(nxt.col);
+            return state.deployOps.find(op =>
+                (op.row === r1 && op.col === c1) || (op.row === r0 && op.col === c0)) || null;
+        }
         function enemyRangeCells(en) {
             if (NO_DIRECT_ATTACK_IDS.has(en.id)) return [];
             const g = enemyGridPos(en);
@@ -1583,9 +1605,9 @@
                 if (r >= 0 && c >= 0 && r < map.length && c < map[0].length) cells.push([r, c]);
             };
             if (!ranged || radius <= 0) {
-                // 近战：可命中相邻 4 格
-                const rr0 = Math.round(g.row), cc0 = Math.round(g.col);
-                push(rr0 - 1, cc0); push(rr0 + 1, cc0); push(rr0, cc0 - 1); push(rr0, cc0 + 1);
+                // 近战：只命中阻挡它的干员（未被阻挡则无命中格）
+                const blocker = meleeBlocker(en);
+                if (blocker) push(blocker.row, blocker.col);
             } else {
                 // 有效半径与显示圆环一致（官方 rangeRadius − 0.25）
                 const effR = Math.max(0.1, radius - 0.25);
@@ -1644,7 +1666,7 @@
                 const surfY = tileSurfaceY(state.level, Math.round(g.row), Math.round(g.col));
                 state.rangeCircle.position.set(g.col + 0.5, surfY + 0.12, g.row + 0.5);
             }
-            // 命中判定与标记（近战=相邻 4 格；远程=半径内格）
+            // 命中判定与标记（近战=阻挡干员；远程=半径内格）
             const cells = enemyRangeCells(en);
             const cellSet = new Set(cells.map(([r, c]) => r + ',' + c));
             // 命中标记：攻击范围内的已部署干员加红圈
@@ -1657,7 +1679,7 @@
             const box = $('edRange');
             if (box) {
                 box.style.display = 'block';
-                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (NO_DIRECT_ATTACK_IDS.has(en.id) ? ' · 信件机制（不直接攻击）' : (info.ranged ? ' · rangeRadius=' + info.radius + '（有效 ' + Math.max(0.1, info.radius - 0.25).toFixed(2) + '）' : ' · 近战 · 相邻 1 格')) + '</div>'
+                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (NO_DIRECT_ATTACK_IDS.has(en.id) ? ' · 信件机制（不直接攻击）' : (info.ranged ? ' · rangeRadius=' + info.radius + '（有效 ' + Math.max(0.1, info.radius - 0.25).toFixed(2) + '）' : ' · 近战 · 被阻挡时攻击阻挡者')) + '</div>'
                     + (hits.length
                         ? '可命中部署干员：<b style="color:#ff7b7b">' + hits.map(o => esc(o.name) + ' (' + o.row + ',' + o.col + ')').join('、') + '</b>'
                         : '<span style="color:var(--ash)">范围内暂无部署干员</span>');
