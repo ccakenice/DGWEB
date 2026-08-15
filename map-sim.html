@@ -1100,7 +1100,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815h';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815i';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1177,6 +1177,19 @@
             state.camera.lookAt(state.camHome.tgt);
             state.camera.updateProjectionMatrix();
             state.controls.update();
+        }
+        // 画布尺寸与相机 aspect 同步（全屏/容器尺寸变化/动态面板展开都调用）
+        function applyCanvasSize() {
+            if (!state.renderer || !state.camera) return;
+            const wrap = $('mapWrap');
+            if (!wrap) return;
+            const w = wrap.clientWidth, h = wrap.clientHeight;
+            if (w <= 0 || h <= 0) return;
+            state.renderer.setSize(w, h, false);
+            state.camera.aspect = w / Math.max(1, h);
+            state.camera.updateProjectionMatrix();
+            const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
+            state.camera.projectionMatrix.multiply(mirror);
         }
 
         // ===== 部署干员（PRTS.Map 风格）：选干员→点地块→调朝向→点干员看技能范围 =====
@@ -3411,27 +3424,22 @@
 
         document.addEventListener('fullscreenchange', () => {
             setTimeout(() => {
-                if (!state.renderer || !state.camera) return;
-                const wrap = $('mapWrap');
-                state.renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
-                state.camera.aspect = wrap.clientWidth / Math.max(1, wrap.clientHeight);
-                state.camera.updateProjectionMatrix();
-                const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
-                state.camera.projectionMatrix.multiply(mirror);
+                applyCanvasSize();
             }, 60);
             const btn = $('fullscreenBtn');
             if (btn) btn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
         });
 
         window.addEventListener('resize', () => {
-            if (!state.renderer || !state.camera) return;
-            const wrap = $('mapWrap');
-            state.renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
-            state.camera.aspect = wrap.clientWidth / Math.max(1, wrap.clientHeight);
-            state.camera.updateProjectionMatrix();
-            const mirror = new THREE.Matrix4().makeScale(1, 1, 1);
-            state.camera.projectionMatrix.multiply(mirror);
+            applyCanvasSize();
         });
+
+        // 容器尺寸变化（全屏、动态面板展开/收起、窗口缩放）都会同步画布，防止 CSS 拉伸压扁
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => requestAnimationFrame(applyCanvasSize));
+            const wrapEl = $('mapWrap');
+            if (wrapEl) ro.observe(wrapEl);
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             init();
