@@ -127,3 +127,8 @@
 - 官方 route.startPosition/endPosition 的 row 自底向上；本站翻转 toMap={row: rows-1-y, col: x} 后 7505 条路线 start 精确落在 tile_start/tile_flystart/tile_rabbithole_out、end 落在 tile_end（0-1、36 剿灭关、TO-EX-2 兔洞出口），方向性检验无上下颠倒
 - 参考站（serine-qing/MapSimulator）TileManager 对地图数组 .reverse()（同一翻转语义），parseEnemyRoutes 用 {x:col,y:row} 比对翻转后 startTiles——与本实现一致；PRTS.Map 关卡索引 data_path 直接指向官方 gamedata 同一份 JSON
 - 结论：路径坐标正确，无需改动代码
+
+2026-08-15 修正：路线折线展平（消除心电图锯齿，对齐参考站）：
+- 用户复看截图指出参考站/PRTS 的路线是直线、本站画成心电图；核查判断机制——三方检查点坐标数据逐条一致，但官方 FLY 检查点本身带 ±1 格锯齿（route 68/91/97），本站 3D 透视把每个格心折点放大成心电图（route 68 屏幕投影 y 出现 171→202→171 回折）
+- 修复：新增 flattenRoutePath——飞行路线沿线全部可飞时直线直达（route 68/91/97 变 (1,1)→(6,11) 单一直线）；地面路线仅剔除贴直线 ≤0.8 格的微锯齿，真实拐弯由可通行校验保护（巡逻往复保留）；罚站 frac 展平前按完整路径计算保留；传送门路线不展平
+- 验证：camp_r_33 全部 FLY ≤2 点、route68 屏幕投影单一直线、route43/52 地面拐弯保留、camp_01/TO-EX-2 回归 0 报错、全量 36 关无退化；版本标记 v20260815x→y
