@@ -1789,6 +1789,11 @@
             if (op.spineMesh) state.scene.remove(op.spineMesh);
             const i = state.deployOps.indexOf(op);
             if (i >= 0) state.deployOps.splice(i, 1);
+            // 撤离积雪干员：清空积雪清空历史（新部署重新开始叠层）
+            if (op.id === SNOW_OP && state.snow) {
+                state.snow.clearAt = {};
+                state.snow.sig = '';
+            }
             if (state.activeDeployOp === op) state.activeDeployOp = null;
             closeOpDetail();
             updateDeployCount();
@@ -3571,6 +3576,7 @@
             const map = state.level && state.level.mapData && state.level.mapData.map;
             const layers = {};
             if (!map || !state.deployOps.length) return layers;
+            const clearAt = (state.snow && state.snow.clearAt) || {};
             const R = map.length, C = map[0].length;
             const seeds = [];
             let overflow = 0; // 超过5层的部分累计为扩散次数（每超一层向外扩一格）
@@ -3578,8 +3584,6 @@
                 if (op.id !== SNOW_OP) return;
                 if (op.deployAt == null) op.deployAt = state.time;
                 const t = state.time;
-                // 每格积雪以「最近一次被敌人离开清空的时间」为基准重新叠层（从0层开始）
-                const clearAt = (state.snow && state.snow.clearAt) || {};
                 opRangeCells(op).forEach(k => {
                     const [r, c] = k.split(',').map(Number);
                     if (!isSnowGround(r, c)) return;
@@ -3611,7 +3615,8 @@
                     const [r, c] = queue.shift().split(',').map(Number);
                     for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
                         const rr = r + dr, cc = c + dc, k = snowTileKey(rr, cc);
-                        if (rr < 0 || cc < 0 || rr >= R || cc >= C || seen.has(k) || !isSnowGround(rr, cc)) continue;
+                        // 被敌人离开清空过的格不参与扩散补雪（保持清空，直到范围内重新叠层）
+                        if (rr < 0 || cc < 0 || rr >= R || cc >= C || seen.has(k) || !isSnowGround(rr, cc) || clearAt[k]) continue;
                         seen.add(k);
                         layers[k] = Math.max(layers[k] || 0, 1);
                         spread++;
