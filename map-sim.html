@@ -3572,6 +3572,7 @@
             if (!map || !state.deployOps.length) return layers;
             const R = map.length, C = map[0].length;
             const seeds = [];
+            let overflow = 0; // 超过5层的部分累计为扩散次数（每超一层向外扩一格）
             state.deployOps.forEach(op => {
                 if (op.id !== SNOW_OP) return;
                 if (op.deployAt == null) op.deployAt = state.time;
@@ -3589,15 +3590,19 @@
                     const [r, c] = k.split(',').map(Number);
                     if (!isSnowGround(r, c)) return;
                     layers[k] = Math.max(layers[k] || 0, Math.min(SNOW_MAX_LAYERS, raw));
-                    if (raw > SNOW_MAX_LAYERS) seeds.push(k);
+                    if (raw > SNOW_MAX_LAYERS) {
+                        seeds.push(k);
+                        overflow += raw - SNOW_MAX_LAYERS;
+                    }
                 });
             });
-            // 超5层向相邻格扩散一层（最多20格）
-            if (seeds.length) {
+            // 超5层向周围逐层扩散（每超一层扩一格，最多向外20格）
+            if (seeds.length && overflow > 0) {
                 const seen = new Set(seeds);
                 const queue = seeds.slice();
+                const cap = Math.min(SNOW_SPREAD_MAX, overflow);
                 let spread = 0;
-                while (queue.length && spread < SNOW_SPREAD_MAX) {
+                while (queue.length && spread < cap) {
                     const [r, c] = queue.shift().split(',').map(Number);
                     for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
                         const rr = r + dr, cc = c + dc, k = snowTileKey(rr, cc);
@@ -3605,7 +3610,8 @@
                         seen.add(k);
                         layers[k] = Math.max(layers[k] || 0, 1);
                         spread++;
-                        if (spread >= SNOW_SPREAD_MAX) break;
+                        queue.push(k); // 关键：扩散出的新格继续作为前沿，随溢出次数逐层向外推进
+                        if (spread >= cap) break;
                     }
                 }
             }
