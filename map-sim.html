@@ -483,6 +483,16 @@
             }
             return names[0] || 'Default';
         }
+        function pickEnemyAttackAnimation(skeletonData) {
+            const anims = (skeletonData && skeletonData.animations) || [];
+            for (const want of ['Attack', 'Attack_Loop', 'Attack_End', 'Skill', 'Battle']) {
+                const hit = anims.find(a => a.name === want && a.duration > 0);
+                if (hit) return hit.name;
+                const sub = anims.find(a => a.name.includes(want) && a.duration > 0);
+                if (sub) return sub.name;
+            }
+            return null;
+        }
 
         function pickTrapAnimation(skeletonData) {
             // 参考站（lutonada）同款：道具优先 Idle / Sleep / Default
@@ -568,7 +578,7 @@
                         texture.premultiplyAlpha = false;
                         texture.minFilter = THREE.LinearFilter;
                         texture.magFilter = THREE.LinearFilter;
-                        byId[id] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, _moveAnim, _idleAnim, _animName: _moveAnim };
+                        byId[id] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, _moveAnim, _idleAnim, _attackAnim: pickEnemyAttackAnimation(skeletonData), _animName: _moveAnim };
                     } catch (e) {
                         console.warn('Spine setup failed', id, e);
                     }
@@ -1103,7 +1113,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815j';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815k';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1306,6 +1316,17 @@
             }
             return (anims[0] && anims[0].name) || 'Default';
         }
+        // 干员 BattleFront 模型一般无 Attack 动画，用 Interact/Move 等有时长动画兜底作“攻击动作”
+        function pickOpAttackAnimation(skeletonData, fallback) {
+            const anims = (skeletonData && skeletonData.animations) || [];
+            for (const want of ['Attack', 'Battle', 'Skill', 'Skill1', 'Skill2', 'Interact', 'Move']) {
+                const hit = anims.find(a => a.name === want && a.duration > 0);
+                if (hit) return hit.name;
+                const sub = anims.find(a => a.name.includes(want) && a.duration > 0);
+                if (sub) return sub.name;
+            }
+            return fallback;
+        }
         async function loadOpSpine(op) {
             if (op.id in state.opSpineCache) return state.opSpineCache[op.id];
             const dir = op.id.slice('char_'.length);
@@ -1318,7 +1339,9 @@
                 const skeletonData = reader.readSkeletonData(binary);
                 const skeleton = new spine.Skeleton(skeletonData);
                 const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
-                animationState.setAnimation(0, pickOperatorAnimation(skeletonData), true);
+                const idleName = pickOperatorAnimation(skeletonData);
+                const attackName = pickOpAttackAnimation(skeletonData, idleName);
+                animationState.setAnimation(0, idleName, true);
                 skeleton.x = 0; skeleton.y = 0; skeleton.scaleX = 1; skeleton.scaleY = 1;
                 animationState.update(0); animationState.apply(skeleton); skeleton.updateWorldTransform();
                 const probeOffset = new spine.Vector2();
@@ -1337,7 +1360,7 @@
                 texture.premultiplyAlpha = false;
                 texture.minFilter = THREE.LinearFilter;
                 texture.magFilter = THREE.LinearFilter;
-                const anim = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, pixels: null, measured: false };
+                const anim = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, pixels: null, measured: false, _idleAnim: idleName, _attackAnim: attackName, _animName: idleName };
                 state.opSpines[op.id] = anim;
                 state.opSpineCache[op.id] = anim;
                 return anim;
@@ -1366,6 +1389,97 @@
                 const scl = (op.spineMesh.scale && op.spineMesh.scale.x) || OP_MODEL_SCALE;
                 const foot = op.spineAnim.bodyBottom || 0.5;
                 op.spineMesh.position.set(op.col + 0.5, modelBottomY(surfY, scl, foot), op.row + 0.5 + modelLeanShift(scl));
+            });
+        }
+        // ===== 索敌攻击（纯演示，不造成伤害）=====
+        function opRangeCells(op) {
+            const key = (op.facing || 0) + '|' + (op.activeRange ? op.activeRange.rid : '');
+            if (op._rangeKey === key && op._rangeCells) return op._rangeCells;
+            const cells = new Set();
+            const grids = state.deployData && state.deployData.ranges[op.activeRange && op.activeRange.rid];
+            if (grids) {
+                grids.forEach(([gr, gc]) => {
+                    const [dx, dz] = facingOffset(op.facing || 0, gr, gc);
+                    cells.add((op.row + dz) + ',' + (op.col + dx));
+                });
+            }
+            op._rangeKey = key;
+            op._rangeCells = cells;
+            return cells;
+        }
+        function enemyGridPos(e) {
+            const scl = (e.mesh.scale && e.mesh.scale.x) || 1;
+            const lean = -0.45 * scl * Math.sin(-0.5);
+            return { row: e.mesh.position.z - 0.5 - lean, col: e.mesh.position.x - 0.5 };
+        }
+        function enemyAttackRadius(en) {
+            const st = enemyInfo(en.id).stats || {};
+            const rr = st.rangeRadius;
+            return (rr == null || rr < 0) ? 1.15 : Math.max(rr + 0.35, 1.15);
+        }
+        function updateCombat() {
+            if (!state.deployOps.length || !state.level) return;
+            const active = state.enemies.filter(en => !en.done && en.mesh && en.mesh.visible);
+            // 干员索敌：攻击范围内（按当前朝向与范围模板）最近敌人
+            state.deployOps.forEach(op => {
+                if (!op.spineAnim) return;
+                const cells = opRangeCells(op);
+                let best = null, bestD = Infinity;
+                active.forEach(en => {
+                    const g = enemyGridPos(en);
+                    const r = Math.round(g.row), c = Math.round(g.col);
+                    if (cells.has(r + ',' + c)) {
+                        const d = (g.row - op.row) * (g.row - op.row) + (g.col - op.col) * (g.col - op.col);
+                        if (d < bestD) { bestD = d; best = en; }
+                    }
+                });
+                op.attacking = !!best;
+                const anim = op.spineAnim;
+                const want = best ? (anim._attackAnim || anim._idleAnim || anim._animName) : (anim._idleAnim || anim._animName);
+                if (want && want !== anim._animName) {
+                    anim.animationState.setAnimation(0, want, true);
+                    anim._animName = want;
+                }
+                if (best) {
+                    // 面朝目标（仅贴图左右镜像；朝向箭头/攻击范围保持用户设置）
+                    const g = enemyGridPos(best);
+                    const dx = g.col - op.col, dz = g.row - op.row;
+                    const flip = Math.abs(dx) > Math.abs(dz) && dx < 0;
+                    const map = op.spineMesh && op.spineMesh.material && op.spineMesh.material.map;
+                    if (map && (map.repeat.x < 0) !== flip) {
+                        map.repeat.x = flip ? -1 : 1;
+                        map.offset.x = flip ? 1 : 0;
+                        map.needsUpdate = true;
+                    }
+                } else {
+                    applyOpFacing(op); // 恢复用户朝向的镜像
+                }
+            });
+            // 敌人索敌：攻击范围内（rangeRadius，近战默认 1 格）最近干员
+            state.enemies.forEach(en => {
+                if (en.done || !en.mesh || !en.mesh.visible) return;
+                const anim = state.spineData[en.id];
+                if (!anim || !anim._attackAnim) return;
+                const g = enemyGridPos(en);
+                const range = enemyAttackRadius(en);
+                en.attacking = state.deployOps.some(op => {
+                    const d = Math.hypot(g.row - op.row, g.col - op.col);
+                    return d <= range;
+                });
+            });
+            // 敌人攻击动画：同 id 任一敌人在攻击 → 播 Attack；否则交还移动/待机逻辑
+            Object.keys(state.spineData).forEach(id => {
+                const anim = state.spineData[id];
+                if (!anim || !anim._attackAnim) return;
+                const anyAttack = state.enemies.some(e => e.id === id && !e.done && e.attacking);
+                if (anyAttack) {
+                    if (anim._attackAnim !== anim._animName) {
+                        anim.animationState.setAnimation(0, anim._attackAnim, true);
+                        anim._animName = anim._attackAnim;
+                    }
+                } else if (anim._animName === anim._attackAnim) {
+                    anim._animName = ''; // 让移动/待机逻辑重新接管
+                }
             });
         }
         function placeOperator(opData, row, col) {
@@ -3052,6 +3166,7 @@
             $('progressPct').textContent = Math.round(pct) + '%';
             renderSpineAnimations(state.playing ? delta : 0);
             updateDeployedOpPositions();
+            updateCombat();
             updateWaitCountdowns();
             // 可部署地块高亮缓慢闪烁（绿色斜线排线）
             if (state.deployVisible && state.deployMeshes.length) {
@@ -3258,7 +3373,8 @@
                     return false;
                 });
                 const want = allWaiting ? anim._idleAnim : anim._moveAnim;
-                if (want && want !== anim._animName) {
+                // 攻击动画优先：攻击中不切回移动/待机，避免每帧重置
+                if (want && want !== anim._animName && anim._animName !== anim._attackAnim) {
                     anim.animationState.setAnimation(0, want, true);
                     anim._animName = want;
                 }
