@@ -172,10 +172,12 @@
                         <span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em">关卡进度</span>
                         <div style="position:relative;flex:1;display:flex;align-items:center;height:18px">
                             <input type="range" id="timeSlider" min="0" max="100" step="0.1" value="0" style="flex:1;width:100%;accent-color:var(--acc)" />
-                            <div id="markerTick" style="position:absolute;left:0;top:50%;width:2px;height:18px;background:#ffd76a;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:2;border-radius:1px;box-shadow:0 0 6px rgba(255,215,106,.7)"></div>
+                            <div id="markerTick1" style="position:absolute;left:0;top:50%;width:2px;height:18px;background:#ffd76a;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:2;border-radius:1px;box-shadow:0 0 6px rgba(255,215,106,.7)"></div>
+                            <div id="markerTick2" style="position:absolute;left:0;top:50%;width:2px;height:18px;background:#4bc3b3;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:2;border-radius:1px;box-shadow:0 0 6px rgba(75,195,179,.7)"></div>
                         </div>
-                        <button id="markerBtn" class="btn" style="padding:4px 10px;font-size:12px" title="在当前播放时间添加时间轴标记点（重播从标记点开始）">打点</button>
-                        <button id="clearMarkerBtn" class="btn" style="padding:4px 10px;font-size:12px;display:none" title="清除时间轴标记点">清除</button>
+                        <button id="marker1Btn" class="btn" style="padding:4px 10px;font-size:12px" title="标记点1：设置在当前播放时间；重播从最早标记开始">打点1</button>
+                        <button id="marker2Btn" class="btn" style="padding:4px 10px;font-size:12px" title="标记点2：设置在当前播放时间；两个标记同时存在时在两点间循环播放">打点2</button>
+                        <button id="clearMarkerBtn" class="btn" style="padding:4px 10px;font-size:12px;display:none" title="清除全部标记点">清除</button>
                         <span class="chip" id="progressPct">0%</span>
                         <span class="chip" id="killCount">击杀 0/0</span>
                     </div>
@@ -330,7 +332,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, markerT: null };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1037,7 +1039,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815d';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815e';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1046,26 +1048,63 @@
             bindUI();
         }
 
-        // 时间轴标记点：打点后「重播」从标记点开始（重置仍从 0）
+        // 时间轴标记点：打点1/打点2；重播从最早标记开始；两个标记同时存在时在两点间循环播放
+        function markerStart() {
+            if (state.marker1 == null && state.marker2 == null) return null;
+            if (state.marker1 == null) return state.marker2;
+            if (state.marker2 == null) return state.marker1;
+            return Math.min(state.marker1, state.marker2);
+        }
         function updateMarkerUI() {
-            const has = state.markerT != null && state.maxTime > 0;
-            const tick = $('markerTick');
-            const btn = $('markerBtn');
+            const set1 = state.marker1 != null && state.maxTime > 0;
+            const set2 = state.marker2 != null && state.maxTime > 0;
+            const tick1 = $('markerTick1');
+            const tick2 = $('markerTick2');
+            const btn1 = $('marker1Btn');
+            const btn2 = $('marker2Btn');
             const clr = $('clearMarkerBtn');
-            if (!tick || !btn || !clr) return;
-            if (has) {
-                const pct = Math.min(100, Math.max(0, state.markerT / state.maxTime * 100));
-                tick.style.left = pct + '%';
-                tick.style.display = 'block';
-                btn.textContent = '打点 ' + fmtTime(state.markerT);
-                btn.title = '更新标记点到当前时间';
-                clr.style.display = '';
+            if (!tick1 || !tick2 || !btn1 || !btn2 || !clr) return;
+            if (set1) {
+                tick1.style.left = Math.min(100, Math.max(0, state.marker1 / state.maxTime * 100)) + '%';
+                tick1.style.display = 'block';
+                btn1.textContent = '1 ' + fmtTime(state.marker1);
             } else {
-                tick.style.display = 'none';
-                btn.textContent = '打点';
-                btn.title = '在当前播放时间添加时间轴标记点（重播从标记点开始）';
-                clr.style.display = 'none';
+                tick1.style.display = 'none';
+                btn1.textContent = '打点1';
             }
+            if (set2) {
+                tick2.style.left = Math.min(100, Math.max(0, state.marker2 / state.maxTime * 100)) + '%';
+                tick2.style.display = 'block';
+                btn2.textContent = '2 ' + fmtTime(state.marker2);
+            } else {
+                tick2.style.display = 'none';
+                btn2.textContent = '打点2';
+            }
+            clr.style.display = (set1 || set2) ? '' : 'none';
+            const loop = set1 && set2;
+            const seg = loop ? fmtTime(Math.min(state.marker1, state.marker2)) + ' → ' + fmtTime(Math.max(state.marker1, state.marker2)) : '';
+            btn1.title = loop ? '循环播放段 ' + seg : '标记点1：设置在当前播放时间；重播从最早标记开始';
+            btn2.title = loop ? '循环播放段 ' + seg : '标记点2：设置在当前播放时间；两个标记同时存在时在两点间循环播放';
+        }
+        // 循环段到头：回到起点并复位片段状态（片段内敌人重新播放；兔洞切换路线的敌人还原）
+        function applyLoopWrap() {
+            if (!state.playing) return;
+            if (state.marker1 == null || state.marker2 == null || state.maxTime <= 0) return;
+            const a = Math.min(state.marker1, state.marker2);
+            const b = Math.max(state.marker1, state.marker2);
+            if (b - a <= 0 || state.time < b) return;
+            state.kills = 0;
+            $('killCount').textContent = '击杀 0/' + state.totalEnemies;
+            state.enemies.forEach(en => {
+                en.progress = 0; en.done = false;
+                if (en._baseRoute != null) en.route = en._baseRoute;
+                if (en.mesh) en.mesh.visible = false;
+                if (en.shadow) en.shadow.visible = false;
+            });
+            state.time = a;
+            const pct = state.maxTime ? (a / state.maxTime * 100) : 0;
+            $('timeSlider').value = pct;
+            $('progressPct').textContent = Math.round(pct) + '%';
         }
 
         function bindUI() {
@@ -1077,8 +1116,9 @@
             $('pauseBtn').textContent = state.playing ? '暂停' : '继续';
         }
         function resetSim(autoPlay) {
-            // 重播从时间轴标记点开始；重置始终从 0 开始
-            const startT = (autoPlay && state.markerT != null) ? Math.min(state.markerT, state.maxTime || 0) : 0;
+            // 重播从最早标记点开始；重置始终从 0 开始
+            const ms = markerStart();
+            const startT = (autoPlay && ms != null) ? Math.min(ms, state.maxTime || 0) : 0;
             state.time = startT; state.last = 0; state.scrubbing = false;
             state.playing = !!autoPlay;
             const pct = state.maxTime ? (startT / state.maxTime * 100) : 0;
@@ -1125,13 +1165,19 @@
             state.last = 0;
         });
         $('timeSlider').addEventListener('change', () => { state.scrubbing = false; });
-            $('markerBtn').addEventListener('click', () => {
+            $('marker1Btn').addEventListener('click', () => {
                 if (!state.level || state.maxTime <= 0) return;
-                state.markerT = Math.min(Math.max(0, state.time), state.maxTime);
+                state.marker1 = Math.min(Math.max(0, state.time), state.maxTime);
+                updateMarkerUI();
+            });
+            $('marker2Btn').addEventListener('click', () => {
+                if (!state.level || state.maxTime <= 0) return;
+                state.marker2 = Math.min(Math.max(0, state.time), state.maxTime);
                 updateMarkerUI();
             });
             $('clearMarkerBtn').addEventListener('click', () => {
-                state.markerT = null;
+                state.marker1 = null;
+                state.marker2 = null;
                 updateMarkerUI();
             });
             $('speedSel').addEventListener('change', e => { state.speed = +e.target.value; });
@@ -2334,7 +2380,7 @@
                                 }
                             }
                             state.enemies.push({
-                                id: a.key, index: actionIndex++, wave: wi + 1, route: routeIdx,
+                                id: a.key, index: actionIndex++, wave: wi + 1, route: routeIdx, _baseRoute: routeIdx,
                                 spawnAt: spawnAt,
                                 progress: 0, done: false, counted: false, dur: dur, mesh: sprite, shadow: shadow, hole: hole, motion: motion,
                                 immobile: immobile, speed: spd, tele: tele
@@ -2369,7 +2415,8 @@
             $('progressPct').textContent = '0%';
             $('killCount').textContent = '击杀 0/' + state.totalEnemies;
             // 换关卡清空时间轴标记点
-            state.markerT = null;
+            state.marker1 = null;
+            state.marker2 = null;
             updateMarkerUI();
         }
 
@@ -2522,6 +2569,8 @@
             } else {
                 state.last = 0;
             }
+            // 两个标记点同时存在时：到达后点回到前点循环播放
+            applyLoopWrap();
             // 暂停/拖拽时也更新敌人位置，支持进度条前进/倒退观察
             updateEnemyPositions(delta);
             if (state.groundRefVisible) updateGroundRefs();
