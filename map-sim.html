@@ -360,6 +360,7 @@
             'https://cdn.jsdelivr.net/gh/isHarryh/Ark-Models@main/',
             'https://raw.githubusercontent.com/isHarryh/Ark-Models/main/'
         ];
+        const OP_MODEL_SCALE = 1.25; // 干员模型世界缩放（约 1 格高，比敌人略大）
         const PROFS = [
             ['', '全部'], ['PIONEER', '先锋'], ['WARRIOR', '近卫'], ['SNIPER', '狙击'],
             ['CASTER', '术师'], ['MEDIC', '医疗'], ['SUPPORT', '辅助'], ['TANK', '重装'], ['SPECIAL', '特种']
@@ -819,7 +820,9 @@
                 Object.keys(map).forEach(id => {
                     const anim = map[id];
                     if (!anim || !anim.skeleton) return;
-                anim.animationState.update(delta);
+                // 干员模型是规划标记：即使模拟暂停也持续播放待机动画
+                const d = (map === state.opSpines) ? (delta > 0 ? delta : 0.016) : delta;
+                anim.animationState.update(d);
                 anim.animationState.apply(anim.skeleton);
                 anim.skeleton.scaleX = anim.scale;
                 anim.skeleton.scaleY = anim.scale;
@@ -1100,7 +1103,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815i';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815j';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1293,13 +1296,15 @@
             return group;
         }
         function pickOperatorAnimation(skeletonData) {
-            const names = ((skeletonData && skeletonData.animations) || []).map(a => a.name);
-            for (const want of ['Idle', 'Default', 'Move', 'Battle', 'Attack', 'BattleStart']) {
-                if (names.includes(want)) return want;
-                const hit = names.find(n => n.includes(want));
-                if (hit) return hit;
+            // 干员 BattleFront 模型：Default 多为时长 0 的静态姿势，优先选有时长的站立/待机动画
+            const anims = (skeletonData && skeletonData.animations) || [];
+            for (const want of ['Relax', 'Idle', 'Move', 'Battle', 'Interact', 'Default']) {
+                const hit = anims.find(a => a.name === want && a.duration > 0);
+                if (hit) return hit.name;
+                const sub = anims.find(a => a.name.includes(want) && a.duration > 0);
+                if (sub) return sub.name;
             }
-            return names[0] || 'Default';
+            return (anims[0] && anims[0].name) || 'Default';
         }
         async function loadOpSpine(op) {
             if (op.id in state.opSpineCache) return state.opSpineCache[op.id];
@@ -1358,7 +1363,7 @@
             state.deployOps.forEach(op => {
                 if (!op.spineMesh || !op.spineAnim || !op.spineAnim.measured) return;
                 const surfY = tileSurfaceY(state.level, op.row, op.col);
-                const scl = (op.spineMesh.scale && op.spineMesh.scale.x) || 0.9;
+                const scl = (op.spineMesh.scale && op.spineMesh.scale.x) || OP_MODEL_SCALE;
                 const foot = op.spineAnim.bodyBottom || 0.5;
                 op.spineMesh.position.set(op.col + 0.5, modelBottomY(surfY, scl, foot), op.row + 0.5 + modelLeanShift(scl));
             });
@@ -1377,7 +1382,7 @@
                 const tex = anim.texture.clone();
                 tex.needsUpdate = true;
                 (anim.textures = anim.textures || []).push(tex);
-                const mesh = makeFlatModel(tex, 0.9, true);
+                const mesh = makeFlatModel(tex, OP_MODEL_SCALE, true);
                 mesh.renderOrder = 6;
                 mesh.userData = { deployOp: true, row: op.row, col: op.col, opId: op.id, facing: op.facing };
                 state.scene.add(mesh);
