@@ -2336,10 +2336,8 @@
                     const path = raw.length > 1 ? raw : [startPos, endPos];
                     attachRouteWaits(path, waits);
                     applyRouteTeleport(path, telePair);
-                    if (telePair) return path;
-                    const flat = flattenRoutePath(path, level, rt.motionMode);
-                    if (flat !== path) { flat.waits = path.waits; flat.tele = path.tele; }
-                    return flat;
+                    // 路线 = 检查点直连（飞行：起点→检查点→终点折线），不做展平——检查点坐标保持官方准确
+                    return path;
                 }
                 const raw = [startPos, ...via, endPos];
                 const path = [startGate];
@@ -2357,71 +2355,9 @@
                 const out = path.length > 1 ? path : raw;
                 attachRouteWaits(out, waits);
                 applyRouteTeleport(out, telePair);
-                if (telePair) return out;
-                const flatOut = flattenRoutePath(out, level, rt.motionMode);
-                if (flatOut !== out) { flatOut.waits = out.waits; flatOut.tele = out.tele; }
-                return flatOut;
-            });
-        }
-
-        // 路线折线展平（对齐参考站 SPFA flattening）：飞行路线整条直线可行时直达，
-        // 消除官方检查点 ±1 格锯齿在 3D 视角下的「心电图」观感；地面路线仅剔除贴直线的小锯齿，
-        // 真实拐弯（直线被墙/禁行阻断）由 lineClear 校验保留
-        function flattenRoutePath(pts, level, motion) {
-            if (!pts || pts.length <= 2) return pts;
-            const fly = (motion || '').toUpperCase() === 'FLY';
-            const map = level.mapData.map;
-            const rows = map.length, cols = map[0].length;
-            const clearTile = (r, c) => {
-                if (r < 0 || c < 0 || r >= rows || c >= cols) return false;
-                const t = level.mapData.tiles[map[r][c]] || {};
-                const mask = t.passableMask || '';
-                if (fly) return mask === 'ALL' || mask === 'FLY_ONLY';
-                return mask === 'ALL' && tileAccess(level, r, c) !== 9;
-            };
-            const lineClear = (a, b) => {
-                const dr = b.row - a.row, dc = b.col - a.col;
-                const dist = Math.max(Math.abs(dr), Math.abs(dc));
-                const steps = Math.max(1, Math.ceil(dist * 4));
-                for (let s = 1; s < steps; s++) {
-                    const r = Math.round(a.row + dr * s / steps);
-                    const c = Math.round(a.col + dc * s / steps);
-                    if (!clearTile(r, c)) return false;
-                }
-                return true;
-            };
-            if (fly) {
-                // 飞行：锚点→最远可直达点（沿线全部可飞），跳过多余检查点 → 直线
-                const out = [pts[0]];
-                let i = 0;
-                while (i < pts.length - 1) {
-                    let far = i + 1;
-                    for (let k = i + 2; k < pts.length; k++) {
-                        if (lineClear(pts[i], pts[k])) far = k;
-                        else break;
-                    }
-                    out.push(pts[far]);
-                    i = far;
-                }
+                // 地面：检查点之间 A* 寻路连接（官方检查点坐标保留），不做额外展平
                 return out;
-            }
-            // 地面：仅剔除「贴直线 ≤0.8 格」的小锯齿（真实拐弯由 lineClear 保护）
-            const out = [pts[0]];
-            for (let i = 1; i < pts.length - 1; i++) {
-                const a = out[out.length - 1];
-                const b = pts[i];
-                const c = pts[i + 1];
-                const vx = c.col - a.col, vy = c.row - a.row;
-                const len = Math.hypot(vx, vy);
-                let d = Infinity;
-                if (len > 0) {
-                    d = Math.abs(vy * (b.col - a.col) - vx * (b.row - a.row)) / len;
-                }
-                if (d <= 0.8 && lineClear(a, c)) continue;
-                out.push(b);
-            }
-            out.push(pts[pts.length - 1]);
-            return out;
+            });
         }
 
         function tileKeyAt(level, r, c) {
