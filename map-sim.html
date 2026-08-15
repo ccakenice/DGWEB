@@ -2504,6 +2504,7 @@
             // 清空积雪状态与标签
             state.snow = null;
             state._prevSimT = 0;
+            state._blueGateKey = null;
             const sl = $('snowLabels');
             if (sl) while (sl.firstChild) sl.removeChild(sl.firstChild);
             state.deployMode = false;
@@ -3510,7 +3511,9 @@
         // ===== 圣聆初雪「无垢的雪景」天赋 +「霜涛覆岭」二技能（演示：积雪/减速/冻结/寒冷）=====
         // 官方机制：天赋=攻击范围内地面每10秒产生1层积雪，每层使经过敌人移速-10%（最多5层）；
         // 二技能=范围内积雪加快、超5层向周围扩散（最多20格）、雪上敌人每秒受攻击力20%法术伤害、
-        // 离开积雪获得5秒寒冷、5层时地块冻结（其上敌人无法行动）。模拟器无 HP/伤害系统，
+        // 离开积雪获得5秒寒冷、积雪在蓝门（保护目标点）积累至5层时蓝门冻结（其上敌人无法行动）。
+        // 积雪只在地面蔓延，不上高台/墙体/禁行等非地面格。
+        // 模拟器无 HP/伤害系统，
         // 因此伤害以「减速/冻结」表现，伤害数值不模拟。
         const SNOW_OP = 'char_1046_sbell2';        // 圣聆初雪
         const SNOW_TALENT_INTERVAL = 10;           // 天赋1：范围内地面每10秒 +1 层
@@ -3519,6 +3522,35 @@
         const SNOW_SPREAD_MAX = 20;                // 超过5层向外扩散，最多20格
         const SNOW_COLD_SECONDS = 5;               // 离开积雪获得5秒寒冷
         function snowTileKey(r, c) { return r + ',' + c; }
+
+        // 是否为可积雪的地面格（高台与墙/禁行/围栏等非地面格不积雪）
+        function isSnowGround(r, c) {
+            const level = state.level;
+            const map = level && level.mapData && level.mapData.map;
+            if (!map || r < 0 || c < 0 || r >= map.length || c >= map[0].length) return false;
+            const t = (level.mapData.tiles || [])[map[r][c]] || {};
+            if (t.heightType === 'HIGHLAND') return false;
+            const k = t.tileKey || '';
+            if (k === 'tile_forbidden' || k === 'tile_wall' || k === 'tile_fence' || k === 'tile_fence_bound' ||
+                k === 'tile_passable_wall' || k === 'tile_passable_wall_forbidden') return false;
+            return true;
+        }
+
+        // 蓝门（保护目标点）所在格：地图中 tile_end
+        function blueGateTile() {
+            if (state._blueGateKey) return state._blueGateKey;
+            const level = state.level;
+            if (!level || !level.mapData || !level.mapData.map) return null;
+            const tiles = level.mapData.tiles || [];
+            const map = level.mapData.map;
+            for (let r = 0; r < map.length; r++) {
+                for (let c = 0; c < map[0].length; c++) {
+                    const t = tiles[map[r][c]] || {};
+                    if (t.tileKey === 'tile_end') { state._blueGateKey = snowTileKey(r, c); return state._blueGateKey; }
+                }
+            }
+            return null;
+        }
 
         // 计算当前积雪层数（确定性：由部署时间/技能开关时间推导，拖拽回看一致）
         function computeSnowState() {
@@ -3542,7 +3574,7 @@
                 if (raw <= 0) return;
                 opRangeCells(op).forEach(k => {
                     const [r, c] = k.split(',').map(Number);
-                    if (r < 0 || c < 0 || r >= R || c >= C) return;
+                    if (!isSnowGround(r, c)) return;
                     layers[k] = Math.max(layers[k] || 0, Math.min(SNOW_MAX_LAYERS, raw));
                     if (raw > SNOW_MAX_LAYERS) seeds.push(k);
                 });
@@ -3556,7 +3588,7 @@
                     const [r, c] = queue.shift().split(',').map(Number);
                     for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
                         const rr = r + dr, cc = c + dc, k = snowTileKey(rr, cc);
-                        if (rr < 0 || cc < 0 || rr >= R || cc >= C || seen.has(k)) continue;
+                        if (rr < 0 || cc < 0 || rr >= R || cc >= C || seen.has(k) || !isSnowGround(rr, cc)) continue;
                         seen.add(k);
                         layers[k] = Math.max(layers[k] || 0, 1);
                         spread++;
@@ -3596,7 +3628,7 @@
                 const [r, c] = k.split(',').map(Number);
                 if (r < 0 || c < 0 || r >= map.length || c >= map[0].length) return;
                 const n = layers[k];
-                const frozen = n >= SNOW_MAX_LAYERS;
+                const frozen = k === blueGateTile() && n >= SNOW_MAX_LAYERS; // 只有蓝门冻结，其余地块只减速
                 const y = tileSurfaceY(state.level, r, c);
                 const m = new THREE.Mesh(
                     new THREE.PlaneGeometry(0.98, 0.98),
@@ -3646,8 +3678,9 @@
             if (en.motion === 'FLY') return 1;
             if (!state.snow || !state.snow.layers) return 1;
             const g = enemyGridPos(en);
-            const n = state.snow.layers[snowTileKey(Math.round(g.row), Math.round(g.col))] || 0;
-            if (n >= SNOW_MAX_LAYERS) return 0;                 // 冻结地块：完全停止
+            const key = snowTileKey(Math.round(g.row), Math.round(g.col));
+            const n = state.snow.layers[key] || 0;
+            if (blueGateTile() === key && n >= SNOW_MAX_LAYERS) return 0; // 仅蓝门积雪5层时冻结
             let mul = 1;
             if (n > 0) mul *= Math.max(0.5, 1 - 0.1 * n);       // 每层 -10%，最低 50%
             if (en.coldUntil && state.time < en.coldUntil) mul *= 0.85; // 寒冷
