@@ -1115,7 +1115,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815m';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815n';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1426,9 +1426,9 @@
             return { row: e.mesh.position.z - 0.5 - lean, col: e.mesh.position.x - 0.5 };
         }
         function enemyAttackRadius(en) {
-            const st = enemyInfo(en.id).stats || {};
-            const rr = st.rangeRadius;
-            return (rr == null || rr < 0) ? 1.15 : Math.max(rr + 0.35, 1.15);
+            // 攻击判定与显示圆环一致：远程=官方 rangeRadius−0.25（碰撞补偿），近战=相邻 1 格
+            const info = enemyRangeInfo(en);
+            return (info.ranged && info.radius > 0) ? Math.max(0.1, info.radius - 0.25) : 1.0;
         }
         function updateCombat() {
             if (!state.deployOps.length || !state.level) return;
@@ -1516,10 +1516,12 @@
                 const rr0 = Math.round(g.row), cc0 = Math.round(g.col);
                 push(rr0 - 1, cc0); push(rr0 + 1, cc0); push(rr0, cc0 - 1); push(rr0, cc0 + 1);
             } else {
-                const R = Math.ceil(radius);
+                // 有效半径与显示圆环一致（官方 rangeRadius − 0.25）
+                const effR = Math.max(0.1, radius - 0.25);
+                const R = Math.ceil(effR);
                 for (let r = Math.floor(g.row) - R; r <= Math.ceil(g.row) + R; r++) {
                     for (let c = Math.floor(g.col) - R; c <= Math.ceil(g.col) + R; c++) {
-                        if (Math.hypot(r - g.row, c - g.col) <= radius) push(r, c);
+                        if (Math.hypot(r - g.row, c - g.col) <= effR) push(r, c);
                     }
                 }
             }
@@ -1584,7 +1586,7 @@
             const box = $('edRange');
             if (box) {
                 box.style.display = 'block';
-                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (info.ranged ? ' · rangeRadius=' + info.radius : ' · 近战') + '</div>'
+                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (info.ranged ? ' · rangeRadius=' + info.radius + '（有效 ' + Math.max(0.1, info.radius - 0.25).toFixed(2) + '）' : ' · 近战 · 相邻 1 格') + '</div>'
                     + (hits.length
                         ? '可命中部署干员：<b style="color:#ff7b7b">' + hits.map(o => esc(o.name) + ' (' + o.row + ',' + o.col + ')').join('、') + '</b>'
                         : '<span style="color:var(--ash)">范围内暂无部署干员</span>');
