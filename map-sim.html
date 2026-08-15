@@ -1895,11 +1895,12 @@
             state.enemies.forEach(en => {
                 en.progress = 0; en.done = false;
                 en.tOff = 0; en.dur = en._baseDur || en.dur;
-                en._onSnow = false; en.coldUntil = 0; en._frozenAt = null;
+                en._onSnow = false; en._lastSnowTile = null; en.coldUntil = 0; en._frozenAt = null;
                 if (en.mesh) en.mesh.visible = false;
                 if (en.shadow) en.shadow.visible = false;
             });
             if (state.snow) state.snow.sig = ''; // 强制按新时间重建积雪
+            if (state.snow && state.snow.clearAt) state.snow.clearAt = {}; // 时间线重置：清空历史清空事件
             state._prevSimT = state.time;
             $('playBtn').textContent = '重播';
             syncPlayBtns();
@@ -3577,18 +3578,22 @@
                 if (op.id !== SNOW_OP) return;
                 if (op.deployAt == null) op.deployAt = state.time;
                 const t = state.time;
-                const talentN = Math.max(0, Math.floor((t - op.deployAt) / SNOW_TALENT_INTERVAL));
-                let s2N = 0;
-                if (op.skillActive && op.skillId === 'skchr_sbell2_2') {
-                    const end = op.skillClosedAt != null ? Math.min(t, op.skillClosedAt) : t;
-                    if (end > op.skillActivatedAt) s2N = Math.max(0, Math.floor((end - op.skillActivatedAt) / SNOW_S2_INTERVAL));
-                }
-                // 天赋层数封顶5层（官方 max_cast_cnt=5），二技能在其上继续叠加并触发扩散
-                const raw = Math.min(SNOW_MAX_LAYERS, talentN) + s2N;
-                if (raw <= 0) return;
+                // 每格积雪以「最近一次被敌人离开清空的时间」为基准重新叠层（从0层开始）
+                const clearAt = (state.snow && state.snow.clearAt) || {};
                 opRangeCells(op).forEach(k => {
                     const [r, c] = k.split(',').map(Number);
                     if (!isSnowGround(r, c)) return;
+                    const base = Math.max(op.deployAt, clearAt[k] || 0);
+                    const talentN = Math.max(0, Math.floor((t - base) / SNOW_TALENT_INTERVAL));
+                    let s2N = 0;
+                    if (op.skillActive && op.skillId === 'skchr_sbell2_2') {
+                        const s2Base = Math.max(op.skillActivatedAt, clearAt[k] || 0);
+                        const end = op.skillClosedAt != null ? Math.min(t, op.skillClosedAt) : t;
+                        if (end > s2Base) s2N = Math.max(0, Math.floor((end - s2Base) / SNOW_S2_INTERVAL));
+                    }
+                    // 天赋层数封顶5层（官方 max_cast_cnt=5），二技能在其上继续叠加并触发扩散
+                    const raw = Math.min(SNOW_MAX_LAYERS, talentN) + s2N;
+                    if (raw <= 0) return;
                     layers[k] = Math.max(layers[k] || 0, Math.min(SNOW_MAX_LAYERS, raw));
                     if (raw > SNOW_MAX_LAYERS) {
                         seeds.push(k);
@@ -3619,7 +3624,7 @@
         }
 
         function clearSnowMeshes() {
-            if (!state.snow) { state.snow = { layers: {}, meshes: [], sig: '', labels: {} }; return; }
+            if (!state.snow) { state.snow = { layers: {}, meshes: [], sig: '', labels: {}, clearAt: {} }; return; }
             (state.snow.meshes || []).forEach(m => {
                 if (state.scene) state.scene.remove(m);
                 if (m.geometry) m.geometry.dispose();
@@ -3633,7 +3638,7 @@
 
         // 每帧按当前积雪状态刷新地面网格与「雪N/冻」标签
         function updateSnow() {
-            if (!state.snow) state.snow = { layers: {}, meshes: [], sig: '', labels: {} };
+            if (!state.snow) state.snow = { layers: {}, meshes: [], sig: '', labels: {}, clearAt: {} };
             const layers = computeSnowState();
             const sig = JSON.stringify(layers);
             if (sig === state.snow.sig) return;
@@ -3720,12 +3725,18 @@
                 if (en._baseDur == null) en._baseDur = en.dur;
                 const effT = state.time - en.spawnAt - (en.tOff || 0);
                 const mul = enemySpeedMul(en);
-                // 寒冷触发：上一帧在积雪上、当前离开且未冻结
                 const g = enemyGridPos(en);
                 const key = snowTileKey(Math.round(g.row), Math.round(g.col));
-                const onSnow = (state.snow.layers[key] || 0) > 0 && mul > 0;
-                if (en._onSnow && !onSnow && !en.coldUntil) en.coldUntil = state.time + SNOW_COLD_SECONDS;
-                en._onSnow = onSnow;
+                // 敌人（地面）离开积雪格：该格积雪清空、从0层重新叠层，并获得寒冷
+                if (en.motion !== 'FLY') {
+                    const onSnowTile = (state.snow.layers[key] || 0) > 0;
+                    if (en._lastSnowTile && en._lastSnowTile !== key) {
+                        if (!state.snow.clearAt) state.snow.clearAt = {};
+                        state.snow.clearAt[en._lastSnowTile] = state.time;
+                        if (!en.coldUntil) en.coldUntil = state.time + SNOW_COLD_SECONDS;
+                    }
+                    en._lastSnowTile = onSnowTile ? key : null;
+                }
                 if (en.coldUntil && state.time >= en.coldUntil) en.coldUntil = 0;
                 if (mul <= 0) {
                     // 冻结：把这段模拟时间吸收进 tOff，进度保持原地
