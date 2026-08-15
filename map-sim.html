@@ -187,6 +187,14 @@
                             <input id="opSearch" placeholder="搜索干员名 / ID…" style="flex:1;min-width:160px;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text,#e8e8e8);font-size:13px" />
                             <span id="deployHint" class="mono" style="font-size:10px;color:var(--ash)"></span>
                         </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em">职业</span>
+                            <div id="opProfFilter" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em">星级</span>
+                            <div id="opRarFilter" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+                        </div>
                         <div id="opList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;max-height:190px;overflow:auto"></div>
                     </div>
                     <div id="mapWrap">
@@ -346,6 +354,16 @@
         // 稀有度颜色（PRTS 风格）：TIER1~6
         const RARITY_COLORS = ['#9aa0a6', '#a0d06a', '#4db3ff', '#c687ff', '#ffd76a', '#ff9a3c'];
         const FACING_NAMES = ['↑ 上', '→ 右', '↓ 下', '← 左'];
+        // 干员头像（Aceship/Arknight-Images）与干员 Spine 模型（isHarryh/Ark-Models，基础皮肤全覆盖）
+        const OP_AVATAR_BASE = 'https://cdn.jsdelivr.net/gh/Aceship/Arknight-Images@main/avatars/';
+        const OP_SPINE_BASES = [
+            'https://cdn.jsdelivr.net/gh/isHarryh/Ark-Models@main/',
+            'https://raw.githubusercontent.com/isHarryh/Ark-Models/main/'
+        ];
+        const PROFS = [
+            ['', '全部'], ['PIONEER', '先锋'], ['WARRIOR', '近卫'], ['SNIPER', '狙击'],
+            ['CASTER', '术师'], ['MEDIC', '医疗'], ['SUPPORT', '辅助'], ['TANK', '重装'], ['SPECIAL', '特种']
+        ];
         const SPINE_BASE = location.protocol === 'https:' ? '/spine/' : 'http://152.136.189.98:3000/';
         // 线上 Spine 资源直接走 GitHub 公开仓库（参考站后端源码 serine-qing/MapSimulatorBackend 的 public/），
         // 避免 CF Worker 出口被 jsDelivr/raw 的 WAF 拦截（error 1010）以及参考站防盗链（Host 白名单）。
@@ -358,9 +376,10 @@
             : ['http://152.136.189.98:3000/'];
 
         // 依次尝试各资源源加载 Spine atlas + skel；返回 atlas/binary
-        async function loadSpineAssetPair(relAtlas, relSkel) {
+        async function loadSpineAssetPair(relAtlas, relSkel, bases) {
             let lastErr = null;
-            for (const base of SPINE_ASSET_BASES) {
+            const list = bases || SPINE_ASSET_BASES;
+            for (const base of list) {
                 const manager = new spine.webgl.AssetManager(getSharedSpineRenderer().context, base);
                 try {
                     await Promise.all([
@@ -374,7 +393,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [] };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, opSpines: {}, opSpineCache: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [], deployFilterProf: '', deployFilterRarity: 0 };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -795,7 +814,7 @@
         }
 
         function renderSpineAnimations(delta) {
-            [state.spineData, state.trapSpines].forEach(map => {
+            [state.spineData, state.trapSpines, state.opSpines].forEach(map => {
                 if (!map) return;
                 Object.keys(map).forEach(id => {
                     const anim = map[id];
@@ -1081,7 +1100,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815g';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815h';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1168,17 +1187,45 @@
             return state.deployData;
         }
         function opRarityColor(r) { return RARITY_COLORS[Math.min(5, Math.max(0, (r || 1) - 1))]; }
+        function renderDeployFilters() {
+            const pf = $('opProfFilter');
+            const rf = $('opRarFilter');
+            if (!pf || !rf) return;
+            pf.innerHTML = PROFS.map(([v, n]) =>
+                `<button class="btn" data-v="${v}" style="padding:3px 9px;font-size:11px${state.deployFilterProf === v ? ';border-color:var(--acc);color:var(--acc)' : ''}">${n}</button>`).join('');
+            pf.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.deployFilterProf = btn.dataset.v;
+                    renderDeployFilters();
+                    renderOpList($('opSearch') ? $('opSearch').value : '');
+                });
+            });
+            const rarOpts = [['0', '全部'], ['1', '1★'], ['2', '2★'], ['3', '3★'], ['4', '4★'], ['5', '5★'], ['6', '6★']];
+            rf.innerHTML = rarOpts.map(([v, n]) =>
+                `<button class="btn" data-v="${v}" style="padding:3px 9px;font-size:11px${String(state.deployFilterRarity) === v ? ';border-color:var(--acc);color:var(--acc)' : ''}">${n}</button>`).join('');
+            rf.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.deployFilterRarity = +btn.dataset.v;
+                    renderDeployFilters();
+                    renderOpList($('opSearch') ? $('opSearch').value : '');
+                });
+            });
+        }
         function renderOpList(q) {
             const box = $('opList');
             const hint = $('deployHint');
             if (!box || !state.deployData) return;
             const kw = (q || '').trim().toLowerCase();
             let list = state.deployData.ops;
+            if (state.deployFilterProf) list = list.filter(o => o.prof === state.deployFilterProf);
+            if (state.deployFilterRarity) list = list.filter(o => o.rarity === state.deployFilterRarity);
             if (kw) list = list.filter(o => o.name.toLowerCase().includes(kw) || o.id.toLowerCase().includes(kw));
             if (!list.length) { box.innerHTML = '<span style="color:var(--ash);font-size:12px">没有匹配的干员</span>'; return; }
             box.innerHTML = list.slice(0, 80).map(o =>
                 `<button class="btn op-opt" data-id="${esc(o.id)}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;font-size:12px">
-                    <span style="width:8px;height:8px;border-radius:50%;background:${opRarityColor(o.rarity)};flex:none"></span>
+                    <span style="width:28px;height:28px;border-radius:50%;background:${opRarityColor(o.rarity)};display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:none;border:1px solid rgba(255,255,255,.18)">
+                        <img src="${OP_AVATAR_BASE + esc(o.id)}.png" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.visibility='hidden'" />
+                    </span>
                     <b>${esc(o.name)}</b>
                     <span class="mono" style="color:var(--ash);font-size:9px">${esc(o.profCn)}${o.rarity}★</span>
                 </button>`).join('');
@@ -1203,47 +1250,129 @@
             state.deployMode = false;
             updateDeployCount();
         }
-        function makeOpMarker(op) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 128, 128);
+        // 部署后的干员：Spine 小人模型 + 稀有度底座圆环 + 朝向箭头（箭头随朝向旋转）
+        function makeOpBase(op) {
+            const surfY = tileSurfaceY(state.level, op.row, op.col);
+            const group = new THREE.Group();
             const col = opRarityColor(op.rarity);
-            ctx.fillStyle = 'rgba(10,13,18,.9)';
-            ctx.beginPath(); ctx.arc(64, 66, 36, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = col; ctx.lineWidth = 6;
-            ctx.beginPath(); ctx.arc(64, 66, 36, 0, Math.PI * 2); ctx.stroke();
-            // 朝向箭头（画布上方，随整组 Y 旋转）
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.moveTo(64, 8); ctx.lineTo(50, 28); ctx.lineTo(78, 28); ctx.closePath(); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 24px "Space Grotesk", sans-serif';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText((op.name || '').slice(0, 2), 64, 66);
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
-            const mesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(1, 1),
-                new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide })
+            const ring = new THREE.Mesh(
+                new THREE.RingGeometry(0.28, 0.42, 28),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color(col), transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })
             );
-            mesh.rotation.x = ENEMY_MODEL_TILT;
-            mesh.renderOrder = 6;
-            mesh.userData = { deployOp: true, row: op.row, col: op.col, opId: op.id, facing: op.facing };
-            return mesh;
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.set(0, 0.022, 0);
+            ring.renderOrder = 5;
+            ring.userData = { deployOp: true, row: op.row, col: op.col, opId: op.id, facing: op.facing };
+            group.add(ring);
+            const tri = new THREE.BufferGeometry();
+            tri.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.16, 0, 0.12, -0.1, 0, -0.12, -0.1, 0], 3));
+            const arrow = new THREE.Mesh(
+                tri,
+                new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide })
+            );
+            arrow.rotation.x = -Math.PI / 2;
+            arrow.position.set(0, 0.035, 0.34);
+            arrow.renderOrder = 5;
+            group.add(arrow);
+            group.position.set(op.col + 0.5, surfY, op.row + 0.5);
+            group.rotation.y = op.facing * Math.PI / 2;
+            state.scene.add(group);
+            return group;
+        }
+        function pickOperatorAnimation(skeletonData) {
+            const names = ((skeletonData && skeletonData.animations) || []).map(a => a.name);
+            for (const want of ['Idle', 'Default', 'Move', 'Battle', 'Attack', 'BattleStart']) {
+                if (names.includes(want)) return want;
+                const hit = names.find(n => n.includes(want));
+                if (hit) return hit;
+            }
+            return names[0] || 'Default';
+        }
+        async function loadOpSpine(op) {
+            if (op.id in state.opSpineCache) return state.opSpineCache[op.id];
+            const dir = op.id.slice('char_'.length);
+            const rel = 'models/' + dir + '/build_' + op.id;
+            try {
+                const { atlas, binary } = await loadSpineAssetPair(rel + '.atlas', rel + '.skel', OP_SPINE_BASES);
+                const loader = new spine.AtlasAttachmentLoader(atlas);
+                const reader = new spine.SkeletonBinary(loader);
+                reader.scale = 0.019;
+                const skeletonData = reader.readSkeletonData(binary);
+                const skeleton = new spine.Skeleton(skeletonData);
+                const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                animationState.setAnimation(0, pickOperatorAnimation(skeletonData), true);
+                skeleton.x = 0; skeleton.y = 0; skeleton.scaleX = 1; skeleton.scaleY = 1;
+                animationState.update(0); animationState.apply(skeleton); skeleton.updateWorldTransform();
+                const probeOffset = new spine.Vector2();
+                const probeSize = new spine.Vector2();
+                skeleton.getBounds(probeOffset, probeSize);
+                const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
+                const scaleK = Math.max(0.15, 216 / probeSpan);
+                const centerX = 128 - (probeOffset.x + probeSize.x / 2) * scaleK;
+                const centerY = 128 - (probeOffset.y + probeSize.y / 2) * scaleK;
+                const output = document.createElement('canvas');
+                output.width = 256; output.height = 256;
+                const outCtx = output.getContext('2d');
+                const texture = new THREE.CanvasTexture(output);
+                texture.encoding = THREE.sRGBEncoding;
+                texture.flipY = true;
+                texture.premultiplyAlpha = false;
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                const anim = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, pixels: null, measured: false };
+                state.opSpines[op.id] = anim;
+                state.opSpineCache[op.id] = anim;
+                return anim;
+            } catch (e) {
+                state.opSpineCache[op.id] = null;
+                return null;
+            }
+        }
+        function applyOpFacing(op) {
+            if (op.group) op.group.rotation.y = op.facing * Math.PI / 2;
+            const map = op.spineMesh && op.spineMesh.material && op.spineMesh.material.map;
+            if (map) {
+                const flip = op.facing === 3; // 朝左镜像贴图（Spine 默认朝右）
+                if ((map.repeat.x < 0) !== flip) {
+                    map.repeat.x = flip ? -1 : 1;
+                    map.offset.x = flip ? 1 : 0;
+                    map.needsUpdate = true;
+                }
+            }
+        }
+        // 干员模型脚底贴地（Spine 帧测量完成后逐帧校正）
+        function updateDeployedOpPositions() {
+            state.deployOps.forEach(op => {
+                if (!op.spineMesh || !op.spineAnim || !op.spineAnim.measured) return;
+                const surfY = tileSurfaceY(state.level, op.row, op.col);
+                const scl = (op.spineMesh.scale && op.spineMesh.scale.x) || 0.9;
+                const foot = op.spineAnim.bodyBottom || 0.5;
+                op.spineMesh.position.set(op.col + 0.5, modelBottomY(surfY, scl, foot), op.row + 0.5 + modelLeanShift(scl));
+            });
         }
         function placeOperator(opData, row, col) {
             if (state.deployOps.some(o => o.row === row && o.col === col)) return false;
-            const surfY = tileSurfaceY(state.level, row, col);
-            const op = { id: opData.id, name: opData.name, profCn: opData.profCn, rarity: opData.rarity, ranges: opData.ranges, skills: opData.skills, row, col, facing: 0, activeRange: null, group: null, marker: null, rangeMeshes: [] };
-            const group = new THREE.Group();
-            const marker = makeOpMarker(op);
-            group.add(marker);
-            group.position.set(col + 0.5, surfY + 0.16, row + 0.5);
-            group.rotation.y = 0;
-            state.scene.add(group);
-            op.group = group;
-            op.marker = marker;
+            const op = { id: opData.id, name: opData.name, profCn: opData.profCn, rarity: opData.rarity, ranges: opData.ranges, skills: opData.skills, row, col, facing: 0, activeRange: null, group: null, marker: null, spineMesh: null, spineAnim: null, spineReady: false, rangeMeshes: [] };
+            op.group = makeOpBase(op);
+            op.marker = op.group.children[0]; // 模型加载前底座圆环可点击
             state.deployOps.push(op);
+            // 异步加载干员 Spine 模型（官方 Ark-Models）
+            loadOpSpine(op).then(anim => {
+                if (!state.deployOps.includes(op) || !anim) return;
+                op.spineAnim = anim;
+                op.spineReady = true;
+                const tex = anim.texture.clone();
+                tex.needsUpdate = true;
+                (anim.textures = anim.textures || []).push(tex);
+                const mesh = makeFlatModel(tex, 0.9, true);
+                mesh.renderOrder = 6;
+                mesh.userData = { deployOp: true, row: op.row, col: op.col, opId: op.id, facing: op.facing };
+                state.scene.add(mesh);
+                op.spineMesh = mesh;
+                op.marker = mesh;
+                applyOpFacing(op);
+                updateDeployedOpPositions();
+            });
             const rid = op.ranges && op.ranges.length ? op.ranges[op.ranges.length - 1] : null;
             op.activeRange = rid ? { kind: 'default', rid } : null;
             renderOpRange(op);
@@ -1292,6 +1421,7 @@
         function removeOperator(op) {
             clearOpRange(op);
             if (op.group) state.scene.remove(op.group);
+            if (op.spineMesh) state.scene.remove(op.spineMesh);
             const i = state.deployOps.indexOf(op);
             if (i >= 0) state.deployOps.splice(i, 1);
             if (state.activeDeployOp === op) state.activeDeployOp = null;
@@ -1318,8 +1448,7 @@
             fb.querySelectorAll('button').forEach(btn => {
                 btn.addEventListener('click', () => {
                     op.facing = +btn.dataset.facing;
-                    if (op.group) op.group.rotation.y = op.facing * Math.PI / 2;
-                    if (op.marker) op.marker.userData.facing = op.facing;
+                    applyOpFacing(op);
                     renderOpRange(op);
                     openOpDetail(op, clientX, clientY);
                 });
@@ -1464,9 +1593,10 @@
                     if (!state.deployData) {
                         const h = $('deployHint');
                         if (h) h.textContent = '加载干员数据…';
-                        try { await ensureDeployData(); }
+                    try { await ensureDeployData(); }
                         catch (err) { if (h) h.textContent = '干员数据加载失败'; return; }
                     }
+                    renderDeployFilters();
                     renderOpList($('opSearch') ? $('opSearch').value : '');
                 } else {
                     panel.style.display = 'none';
@@ -1968,6 +2098,8 @@
             state.spineShared = null;
             state.spineData = {};
             state.trapSpines = {};
+            state.opSpines = {};
+            state.opSpineCache = {};
             while (state.scene.children.length) state.scene.remove(state.scene.children[0]);
             state.enemyMeshes = [];
             state.enemies = [];
@@ -2901,6 +3033,7 @@
             if (!state.scrubbing) $('timeSlider').value = pct;
             $('progressPct').textContent = Math.round(pct) + '%';
             renderSpineAnimations(state.playing ? delta : 0);
+            updateDeployedOpPositions();
             updateWaitCountdowns();
             // 可部署地块高亮缓慢闪烁（绿色斜线排线）
             if (state.deployVisible && state.deployMeshes.length) {
