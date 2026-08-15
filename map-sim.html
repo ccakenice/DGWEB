@@ -1560,6 +1560,12 @@
             });
         }
         // ===== 敌人攻击范围显示（以官方 rangeRadius 为准）=====
+        // 信件机制敌人（PRTS）：「惊艳事热衷者」首击在目标所在格投放<惊喜信件>；「美食的奴隶」吞食信件、信件失效时爆炸。
+        // 官方 applyWay 虽为 MELEE，但实际不直接攻击干员；模拟器不模拟信件 → 不显示命中范围、不触发攻击动画
+        const NO_DIRECT_ATTACK_IDS = new Set([
+            'enemy_10226_agprnk', 'enemy_10226_agprnk_2',   // 好外号热衷者 / 惊艳事热衷者
+            'enemy_10228_agball', 'enemy_10228_agball_2'    // “美食的诱惑” / “美食的奴隶”
+        ]);
         function enemyRangeInfo(en) {
             const st = enemyInfo(en.id).stats || {};
             const rr = st.rangeRadius == null ? -1 : st.rangeRadius;
@@ -1568,6 +1574,7 @@
             return { radius: rr, ranged, applyWay: aw, melee: !ranged };
         }
         function enemyRangeCells(en) {
+            if (NO_DIRECT_ATTACK_IDS.has(en.id)) return [];
             const g = enemyGridPos(en);
             const { radius, ranged } = enemyRangeInfo(en);
             const map = state.level.mapData.map;
@@ -1650,7 +1657,7 @@
             const box = $('edRange');
             if (box) {
                 box.style.display = 'block';
-                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (info.ranged ? ' · rangeRadius=' + info.radius + '（有效 ' + Math.max(0.1, info.radius - 0.25).toFixed(2) + '）' : ' · 近战 · 相邻 1 格') + '</div>'
+                box.innerHTML = '<div class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 官方 applyWay=' + esc(info.applyWay) + (NO_DIRECT_ATTACK_IDS.has(en.id) ? ' · 信件机制（不直接攻击）' : (info.ranged ? ' · rangeRadius=' + info.radius + '（有效 ' + Math.max(0.1, info.radius - 0.25).toFixed(2) + '）' : ' · 近战 · 相邻 1 格')) + '</div>'
                     + (hits.length
                         ? '可命中部署干员：<b style="color:#ff7b7b">' + hits.map(o => esc(o.name) + ' (' + o.row + ',' + o.col + ')').join('、') + '</b>'
                         : '<span style="color:var(--ash)">范围内暂无部署干员</span>');
