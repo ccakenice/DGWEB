@@ -59,3 +59,9 @@
 - 参考站（serine-qing/MapSimulator Enemy.ts）同款实现：远程敌人（applyWay=RANGED/ALL）画**红色半径圆环**（THREE.Line 椭圆曲线，半径=rangeRadius−0.25 格，贴地，depthTest:false，renderOrder=100），随敌人移动实时跟随；近战敌人不画范围（参考站同款），仅保留命中干员红圈与名单
 - 数据以官方数据库为准：官方 enemy_database.json 的 enemyData.applyWay（MELEE/RANGED/ALL/NONE）与 enemyData.rangeRadius；已将 applyWay 补入 enemy_index.json/.js（2130 名全量，官方字段 m_value），rangeRadius 全量核对 2130/2130 一致
 - 本地+线上 v20260815l/m 验证：远程莫科克（RANGED/1.75）红圈；近战史莱姆无圈但命中标记正常
+
+2026-08-15 敌人攻击严格范围：
+- 敌人攻击判定与显示圆环严格一致：远程=官方 rangeRadius−0.25（有效半径，碰撞补偿），近战=相邻 1 格；干员不在该范围内敌人不攻击
+- 原实现远程用 rangeRadius+0.35、近战 1.15 有冗余，会把圈外干员误判为可攻击；已收紧并统一 attack/显示/命中检测三处
+- 详情卡标注「有效 xx」（远程）或「近战 · 相邻 1 格」
+- 本地+线上 v20260815n 验证：53 例范围内攻击正常、7+5 例圈外不再误伤、0 违例
