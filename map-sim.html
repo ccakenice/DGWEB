@@ -579,7 +579,25 @@
                         texture.premultiplyAlpha = false;
                         texture.minFilter = THREE.LinearFilter;
                         texture.magFilter = THREE.LinearFilter;
-                        byId[id] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, _moveAnim, _idleAnim, _attackAnim: pickEnemyAttackAnimation(skeletonData), _animName: _moveAnim };
+                        const _attackAnim = pickEnemyAttackAnimation(skeletonData);
+                        const animBase = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY, _moveAnim, _idleAnim, _attackAnim, _animName: _moveAnim, textures: [] };
+                        if (_attackAnim) {
+                            // 独立 Attack 骨架/画布：同 id 敌人共享移动骨架，攻击动作只给真正在范围内的敌人看
+                            const aSkeleton = new spine.Skeleton(skeletonData);
+                            const aState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                            const aOutput = document.createElement('canvas');
+                            aOutput.width = 256;
+                            aOutput.height = 256;
+                            const aCtx = aOutput.getContext('2d');
+                            const aTexture = new THREE.CanvasTexture(aOutput);
+                            aTexture.encoding = THREE.sRGBEncoding;
+                            aTexture.flipY = true;
+                            aTexture.premultiplyAlpha = false;
+                            aTexture.minFilter = THREE.LinearFilter;
+                            aTexture.magFilter = THREE.LinearFilter;
+                            animBase.attack = { skeleton: aSkeleton, animationState: aState, output: aOutput, outCtx: aCtx, texture: aTexture, textures: [], active: false, pixels: null };
+                        }
+                        byId[id] = animBase;
                     } catch (e) {
                         console.warn('Spine setup failed', id, e);
                     }
@@ -903,6 +921,37 @@
                 }
                 anim.texture.needsUpdate = true;
                 (anim.textures || []).forEach(t => { t.needsUpdate = true; });
+                if (anim.attack && anim.attack.active) {
+                    // 独立 Attack 骨架渲染（仅当该 id 有敌人在攻击）：内容写入 attack 画布，
+                    // 由 updateCombat 按每个敌人的 attacking 状态决定显示哪张画布
+                    const atk = anim.attack;
+                    atk.animationState.update(d);
+                    atk.animationState.apply(atk.skeleton);
+                    atk.skeleton.scaleX = anim.scale;
+                    atk.skeleton.scaleY = anim.scale;
+                    atk.skeleton.x = anim.centerX;
+                    atk.skeleton.y = anim.centerY;
+                    atk.skeleton.updateWorldTransform();
+                    gl.viewport(0, 0, 256, 256);
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    shared.renderer.camera.position.set(128, 128, 0);
+                    shared.renderer.camera.update();
+                    shared.renderer.begin();
+                    shared.renderer.drawSkeleton(atk.skeleton, false);
+                    shared.renderer.end();
+                    if (!atk.pixels) atk.pixels = new Uint8Array(256 * 256 * 4);
+                    gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, atk.pixels);
+                    const aData = atk.outCtx.createImageData(256, 256);
+                    for (let y = 0; y < 256; y++) {
+                        const src = (255 - y) * 1024;
+                        const dst = y * 1024;
+                        aData.data.set(atk.pixels.subarray(src, src + 1024), dst);
+                    }
+                    atk.outCtx.putImageData(aData, 0, 0);
+                    atk.texture.needsUpdate = true;
+                    (atk.textures || []).forEach(t => { t.needsUpdate = true; });
+                }
                 });
             });
         }
@@ -1467,31 +1516,47 @@
                     applyOpFacing(op); // 恢复用户朝向的镜像
                 }
             });
-            // 敌人索敌：攻击范围内（rangeRadius，近战默认 1 格）最近干员
+            // 敌人索敌：与显示圆环/命中标记完全一致（enemyRangeCells：近战=相邻 4 格，远程=有效半径内格）
             state.enemies.forEach(en => {
                 if (en.done || !en.mesh || !en.mesh.visible) return;
                 const anim = state.spineData[en.id];
                 if (!anim || !anim._attackAnim) return;
-                const g = enemyGridPos(en);
-                const range = enemyAttackRadius(en);
-                en.attacking = state.deployOps.some(op => {
-                    const d = Math.hypot(g.row - op.row, g.col - op.col);
-                    return d <= range;
-                });
+                const cellSet = new Set(enemyRangeCells(en).map(([r, c]) => r + ',' + c));
+                en.attacking = state.deployOps.some(op => cellSet.has(op.row + ',' + op.col));
             });
-            // 敌人攻击动画：同 id 任一敌人在攻击 → 播 Attack；否则交还移动/待机逻辑
+            // 敌人攻击动画（严格范围）：每个敌人按自己的 attacking 状态切换贴图——
+            // 攻击中显示独立 Attack 骨架画面，同 id 其它敌人保持移动/待机，远处敌人不再误播攻击
             Object.keys(state.spineData).forEach(id => {
                 const anim = state.spineData[id];
-                if (!anim || !anim._attackAnim) return;
+                if (!anim || !anim._attackAnim || !anim.attack) return;
                 const anyAttack = state.enemies.some(e => e.id === id && !e.done && e.attacking);
-                if (anyAttack) {
-                    if (anim._attackAnim !== anim._animName) {
-                        anim.animationState.setAnimation(0, anim._attackAnim, true);
-                        anim._animName = anim._attackAnim;
-                    }
-                } else if (anim._animName === anim._attackAnim) {
-                    anim._animName = ''; // 让移动/待机逻辑重新接管
+                if (anyAttack !== !!anim.attack.active) {
+                    anim.attack.active = anyAttack;
+                    if (anyAttack) anim.attack.animationState.setAnimation(0, anim._attackAnim, true);
                 }
+                state.enemies.forEach(en => {
+                    if (en.id !== id || en.done || !en.mesh || !en.mesh.material || !en.mesh.material.map || !en.mesh.visible) return;
+                    if (en.attacking) {
+                        if (!en._atkMap) {
+                            const t = anim.attack.texture.clone();
+                            t.repeat.copy(en.mesh.material.map.repeat);
+                            t.offset.copy(en.mesh.material.map.offset);
+                            t.needsUpdate = true;
+                            anim.attack.textures.push(t);
+                            en._baseMap = en.mesh.material.map;
+                            en._atkMap = t;
+                        } else if (en.mesh.material.map !== en._atkMap) {
+                            en._atkMap.repeat.copy(en.mesh.material.map.repeat);
+                            en._atkMap.offset.copy(en.mesh.material.map.offset);
+                        }
+                        en.mesh.material.map = en._atkMap;
+                    } else if (en._atkMap && en.mesh.material.map === en._atkMap) {
+                        en._baseMap.repeat.copy(en._atkMap.repeat);
+                        en._baseMap.offset.copy(en._atkMap.offset);
+                        en._baseMap.needsUpdate = true;
+                        en.mesh.material.map = en._baseMap;
+                    }
+                });
             });
         }
         // ===== 敌人攻击范围显示（以官方 rangeRadius 为准）=====
