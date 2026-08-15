@@ -181,6 +181,14 @@
                         <span class="chip" id="progressPct">0%</span>
                         <span class="chip" id="killCount">击杀 0/0</span>
                     </div>
+                    <div id="deployPanel" style="display:none;margin:0 0 12px;padding:12px 14px;background:var(--card,#151b22);border:1px solid var(--line);border-radius:12px">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                            <b style="font-size:13px">部署干员</b>
+                            <input id="opSearch" placeholder="搜索干员名 / ID…" style="flex:1;min-width:160px;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text,#e8e8e8);font-size:13px" />
+                            <span id="deployHint" class="mono" style="font-size:10px;color:var(--ash)"></span>
+                        </div>
+                        <div id="opList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;max-height:190px;overflow:auto"></div>
+                    </div>
                     <div id="mapWrap">
                         <canvas id="mapCanvas"></canvas>
                         <img id="mapOverlay" alt="" style="display:none" />
@@ -205,6 +213,26 @@
                         <div id="edDesc" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.75;max-height:110px;overflow:auto;border-left:2px solid var(--line);padding-left:10px"></div>
                         <div id="edStats" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px"></div>
                         <div id="edExtra" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
+                    </div>
+                    <div id="opDetail" style="display:none;position:fixed;z-index:90;width:300px;max-height:72vh;overflow:auto;background:rgba(15,19,25,.97);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(5px)">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                            <div>
+                                <b id="opName" style="font-size:14px"></b>
+                                <div class="mono" id="opMeta" style="font-size:10px;color:var(--ash);margin-top:4px"></div>
+                            </div>
+                            <button id="opClose" class="btn" style="padding:3px 9px;font-size:12px" title="关闭">×</button>
+                        </div>
+                        <div style="margin-top:10px">
+                            <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">朝向</div>
+                            <div id="opFacing" style="display:flex;gap:6px"></div>
+                        </div>
+                        <div style="margin-top:10px">
+                            <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em;margin-bottom:6px">攻击范围 · 点击技能查看开启后范围</div>
+                            <div id="opRanges" style="display:flex;flex-direction:column;gap:5px"></div>
+                        </div>
+                        <div style="margin-top:12px;display:flex;gap:8px">
+                            <button id="opRetreat" class="btn" style="flex:1;border-color:#e05656;color:#e05656">撤离</button>
+                        </div>
                     </div>
                     </div>
                     <div id="legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px"></div>
@@ -304,6 +332,20 @@
             'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/highland_colors.json',
             'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/highland_colors.json'
         ];
+        // 部署干员数据（PRTS.Map 风格）：干员表含技能/范围，range_table 单独一份
+        const OP_URLS = [
+            'data/operator_table.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/operator_table.json',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/operator_table.json'
+        ];
+        const RANGE_URLS = [
+            'data/range_table.json',
+            'https://cdn.jsdelivr.net/gh/ccakenice/DGWEB@main/data/range_table.json',
+            'https://raw.githubusercontent.com/ccakenice/DGWEB/main/data/range_table.json'
+        ];
+        // 稀有度颜色（PRTS 风格）：TIER1~6
+        const RARITY_COLORS = ['#9aa0a6', '#a0d06a', '#4db3ff', '#c687ff', '#ffd76a', '#ff9a3c'];
+        const FACING_NAMES = ['↑ 上', '→ 右', '↓ 下', '← 左'];
         const SPINE_BASE = location.protocol === 'https:' ? '/spine/' : 'http://152.136.189.98:3000/';
         // 线上 Spine 资源直接走 GitHub 公开仓库（参考站后端源码 serine-qing/MapSimulatorBackend 的 public/），
         // 避免 CF Worker 出口被 jsDelivr/raw 的 WAF 拦截（error 1010）以及参考站防盗链（Host 白名单）。
@@ -332,7 +374,7 @@
             }
             throw lastErr || new Error('spine assets unavailable: ' + relAtlas);
         }
-        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null };
+        const state = { stageIndex: [], enemyIndex: {}, cameraIndex: [], highlandColors: {}, level: null, enemies: [], traps: [], routes: [], routeFlyY: {}, routeVisuals: {}, rabbitHoles: { ins: [], outs: [] }, extraRouteBase: 0, playing: false, time: 0, speed: 1, last: 0, raf: 0, scene: null, camera: null, renderer: null, controls: null, enemyMeshes: [], textureCache: {}, mapOverlayVisible: false, underlayMesh: null, overlayOpacity: 35, overlayScale: 100, overlayOffsetX: 0, overlayOffsetY: 0, deployVisible: false, deployMeshes: [], spineManager: null, spineData: {}, trapSpines: {}, kills: 0, totalEnemies: 0, maxTime: 0, scrubbing: false, _clickBound: false, showWaitCountdown: false, groundRefs: [], groundRefVisible: false, zoomEnabled: false, marker1: null, marker2: null, deployData: null, deployMode: false, pendingOp: null, deployOps: [] };
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
@@ -1039,7 +1081,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815f';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815g';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1116,6 +1158,213 @@
             state.camera.lookAt(state.camHome.tgt);
             state.camera.updateProjectionMatrix();
             state.controls.update();
+        }
+
+        // ===== 部署干员（PRTS.Map 风格）：选干员→点地块→调朝向→点干员看技能范围 =====
+        async function ensureDeployData() {
+            if (state.deployData) return state.deployData;
+            const [ot, rt] = await Promise.all([fetchJSON(OP_URLS), fetchJSON(RANGE_URLS)]);
+            state.deployData = { ops: (ot && ot.ops) || [], ranges: (rt && rt.ranges) || {} };
+            return state.deployData;
+        }
+        function opRarityColor(r) { return RARITY_COLORS[Math.min(5, Math.max(0, (r || 1) - 1))]; }
+        function renderOpList(q) {
+            const box = $('opList');
+            const hint = $('deployHint');
+            if (!box || !state.deployData) return;
+            const kw = (q || '').trim().toLowerCase();
+            let list = state.deployData.ops;
+            if (kw) list = list.filter(o => o.name.toLowerCase().includes(kw) || o.id.toLowerCase().includes(kw));
+            if (!list.length) { box.innerHTML = '<span style="color:var(--ash);font-size:12px">没有匹配的干员</span>'; return; }
+            box.innerHTML = list.slice(0, 80).map(o =>
+                `<button class="btn op-opt" data-id="${esc(o.id)}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;font-size:12px">
+                    <span style="width:8px;height:8px;border-radius:50%;background:${opRarityColor(o.rarity)};flex:none"></span>
+                    <b>${esc(o.name)}</b>
+                    <span class="mono" style="color:var(--ash);font-size:9px">${esc(o.profCn)}${o.rarity}★</span>
+                </button>`).join('');
+            if (list.length > 80) box.insertAdjacentHTML('beforeend', '<span style="color:var(--ash);font-size:11px;align-self:center">…共 ' + list.length + ' 名，输入关键字过滤</span>');
+            hint.textContent = '点选干员后，点击高亮地块部署；再次点「部署格」或 Esc 取消';
+            box.querySelectorAll('.op-opt').forEach(btn => {
+                btn.addEventListener('click', () => selectDeployOp(btn.dataset.id));
+            });
+        }
+        function selectDeployOp(id) {
+            const o = (state.deployData.ops || []).find(x => x.id === id);
+            if (!o) return;
+            state.pendingOp = o;
+            state.deployMode = true;
+            state.deployVisible = true;
+            state.deployMeshes.forEach(m => { m.visible = true; });
+            const h = $('deployHint');
+            if (h) h.textContent = '已选 ' + o.name + '：点击高亮地块部署（Esc 取消）';
+        }
+        function cancelDeployPending() {
+            state.pendingOp = null;
+            state.deployMode = false;
+            updateDeployCount();
+        }
+        function makeOpMarker(op) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+            const col = opRarityColor(op.rarity);
+            ctx.fillStyle = 'rgba(10,13,18,.9)';
+            ctx.beginPath(); ctx.arc(64, 66, 36, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = col; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(64, 66, 36, 0, Math.PI * 2); ctx.stroke();
+            // 朝向箭头（画布上方，随整组 Y 旋转）
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.moveTo(64, 8); ctx.lineTo(50, 28); ctx.lineTo(78, 28); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText((op.name || '').slice(0, 2), 64, 66);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+            const mesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(1, 1),
+                new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide })
+            );
+            mesh.rotation.x = ENEMY_MODEL_TILT;
+            mesh.renderOrder = 6;
+            mesh.userData = { deployOp: true, row: op.row, col: op.col, opId: op.id, facing: op.facing };
+            return mesh;
+        }
+        function placeOperator(opData, row, col) {
+            if (state.deployOps.some(o => o.row === row && o.col === col)) return false;
+            const surfY = tileSurfaceY(state.level, row, col);
+            const op = { id: opData.id, name: opData.name, profCn: opData.profCn, rarity: opData.rarity, ranges: opData.ranges, skills: opData.skills, row, col, facing: 0, activeRange: null, group: null, marker: null, rangeMeshes: [] };
+            const group = new THREE.Group();
+            const marker = makeOpMarker(op);
+            group.add(marker);
+            group.position.set(col + 0.5, surfY + 0.16, row + 0.5);
+            group.rotation.y = 0;
+            state.scene.add(group);
+            op.group = group;
+            op.marker = marker;
+            state.deployOps.push(op);
+            const rid = op.ranges && op.ranges.length ? op.ranges[op.ranges.length - 1] : null;
+            op.activeRange = rid ? { kind: 'default', rid } : null;
+            renderOpRange(op);
+            openOpDetail(op, 0, 0);
+            cancelDeployPending();
+            return true;
+        }
+        // 范围格旋转：官方 grids 中 gr=侧向(正行)、gc=前方(正列)；world x=列、z=行（row 0 在地图顶部）
+        function facingOffset(facing, gr, gc) {
+            switch (facing) {
+                case 1: return [gc, gr];    // 朝右
+                case 2: return [-gr, gc];   // 朝下
+                case 3: return [-gc, -gr];  // 朝左
+                default: return [gr, -gc];  // 朝上：前方(col+)→-z，右侧(row+)→+x
+            }
+        }
+        function clearOpRange(op) {
+            (op.rangeMeshes || []).forEach(m => { state.scene.remove(m); });
+            op.rangeMeshes = [];
+        }
+        function renderOpRange(op) {
+            clearOpRange(op);
+            if (!op.activeRange || !state.deployData || !state.level) return;
+            const grids = state.deployData.ranges[op.activeRange.rid];
+            if (!grids) return;
+            const skill = op.activeRange.kind === 'skill';
+            const color = skill ? 0xffb84d : 0x35a6e0;
+            const opacity = skill ? 0.4 : 0.3;
+            const map = state.level.mapData.map;
+            grids.forEach(([gr, gc]) => {
+                const [dx, dz] = facingOffset(op.facing, gr, gc);
+                const rr = op.row + dz, cc = op.col + dx;
+                if (rr < 0 || cc < 0 || rr >= map.length || cc >= map[0].length) return;
+                const y = tileSurfaceY(state.level, rr, cc);
+                const m = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.99, 0.99),
+                    new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide })
+                );
+                m.rotation.x = -Math.PI / 2;
+                m.position.set(cc + 0.5, y + 0.09, rr + 0.5);
+                m.renderOrder = 3;
+                state.scene.add(m);
+                op.rangeMeshes.push(m);
+            });
+        }
+        function removeOperator(op) {
+            clearOpRange(op);
+            if (op.group) state.scene.remove(op.group);
+            const i = state.deployOps.indexOf(op);
+            if (i >= 0) state.deployOps.splice(i, 1);
+            if (state.activeDeployOp === op) state.activeDeployOp = null;
+            closeOpDetail();
+            updateDeployCount();
+        }
+        function updateDeployCount() {
+            const h = $('deployHint');
+            if (!h || state.pendingOp) return;
+            h.textContent = state.deployOps.length
+                ? '已部署 ' + state.deployOps.length + ' 名干员 · 点击地图上的干员可调整朝向/技能范围'
+                : '点选干员后点击高亮地块部署';
+        }
+        function openOpDetail(op, clientX, clientY) {
+            const box = $('opDetail');
+            if (!box) return;
+            state.activeDeployOp = op;
+            $('opName').textContent = op.name;
+            $('opMeta').textContent = op.profCn + ' · ' + op.rarity + '★ · (' + op.row + ',' + op.col + ')';
+            const fb = $('opFacing');
+            const col = opRarityColor(op.rarity);
+            fb.innerHTML = FACING_NAMES.map((n, i) =>
+                `<button class="btn" data-facing="${i}" style="flex:1;padding:5px 0;font-size:12px${i === op.facing ? ';border-color:' + col + ';color:' + col : ''}">${n}</button>`).join('');
+            fb.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    op.facing = +btn.dataset.facing;
+                    if (op.group) op.group.rotation.y = op.facing * Math.PI / 2;
+                    if (op.marker) op.marker.userData.facing = op.facing;
+                    renderOpRange(op);
+                    openOpDetail(op, clientX, clientY);
+                });
+            });
+            const rb = $('opRanges');
+            const defRid = op.ranges && op.ranges.length ? op.ranges[op.ranges.length - 1] : null;
+            const act = op.activeRange || {};
+            const rows = [];
+            rows.push(`<button class="btn op-range-opt" data-kind="default" data-rid="${defRid || ''}" style="text-align:left;padding:6px 9px;font-size:12px${act.kind === 'default' ? ';border-color:#35a6e0;color:#7fc9ef' : ''}"><b>默认</b><span class="mono" style="color:var(--ash);font-size:9px;margin-left:6px">${defRid || '--'}</span></button>`);
+            (op.skills || []).forEach((s, i) => {
+                const on = act.kind === 'skill' && act.skillIdx === i;
+                rows.push(`<button class="btn op-range-opt" data-kind="skill" data-idx="${i}" data-rid="${s.range || defRid || ''}" style="text-align:left;padding:6px 9px;font-size:12px${on ? ';border-color:#ffb84d;color:#ffd28a' : ''}"><b>${esc(s.name)}</b><span class="mono" style="color:var(--ash);font-size:9px;margin-left:6px">${s.range ? '范围 ' + s.range : '范围不变'}</span></button>`);
+            });
+            rb.innerHTML = rows.join('');
+            rb.querySelectorAll('.op-range-opt').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rid = btn.dataset.rid;
+                    if (btn.dataset.kind === 'skill') {
+                        op.activeRange = rid ? { kind: 'skill', rid, skillIdx: +btn.dataset.idx } : { kind: 'default', rid: defRid };
+                    } else {
+                        op.activeRange = rid ? { kind: 'default', rid } : null;
+                    }
+                    renderOpRange(op);
+                    openOpDetail(op, clientX, clientY);
+                });
+            });
+            const W = 300, H = 480;
+            box.style.left = Math.max(8, Math.min((clientX || 260) + 14, window.innerWidth - W - 8)) + 'px';
+            box.style.top = Math.max(8, Math.min((clientY || 140) + 14, window.innerHeight - H - 8)) + 'px';
+            box.style.display = 'block';
+        }
+        function closeOpDetail() {
+            const box = $('opDetail');
+            if (box) box.style.display = 'none';
+        }
+        function clearDeployPlans() {
+            (state.deployOps || []).forEach(op => {
+                clearOpRange(op);
+                if (op.group) state.scene.remove(op.group);
+            });
+            state.deployOps = [];
+            state.deployMode = false;
+            state.pendingOp = null;
+            state.activeDeployOp = null;
+            closeOpDetail();
         }
 
         function bindUI() {
@@ -1206,7 +1455,36 @@
             $('overlayScale').addEventListener('input', e => applyOverlayScale(e.target.value));
             $('overlayOffsetX').addEventListener('input', e => applyOverlayOffsetX(e.target.value));
             $('overlayOffsetY').addEventListener('input', e => applyOverlayOffsetY(e.target.value));
-            $('deployBtn').addEventListener('click', toggleDeployOverlay);
+            $('deployBtn').addEventListener('click', async () => {
+                toggleDeployOverlay();
+                const panel = $('deployPanel');
+                if (!panel) return;
+                if (state.deployVisible) {
+                    panel.style.display = 'block';
+                    if (!state.deployData) {
+                        const h = $('deployHint');
+                        if (h) h.textContent = '加载干员数据…';
+                        try { await ensureDeployData(); }
+                        catch (err) { if (h) h.textContent = '干员数据加载失败'; return; }
+                    }
+                    renderOpList($('opSearch') ? $('opSearch').value : '');
+                } else {
+                    panel.style.display = 'none';
+                    cancelDeployPending();
+                }
+            });
+            $('opSearch').addEventListener('input', e => renderOpList(e.target.value));
+            $('opClose').addEventListener('click', closeOpDetail);
+            $('opRetreat').addEventListener('click', () => {
+                if (state.activeDeployOp) removeOperator(state.activeDeployOp);
+            });
+            // Esc：取消待部署 / 关闭干员菜单
+            document.addEventListener('keydown', e => {
+                if (e.key !== 'Escape') return;
+                if (state.deployMode || state.pendingOp) { cancelDeployPending(); return; }
+                const d = $('opDetail');
+                if (d && d.style.display === 'block') closeOpDetail();
+            });
             $('waitCdBtn').addEventListener('click', toggleWaitCountdown);
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1699,6 +1977,12 @@
             state.extraRouteBase = 0;
             state.routeVisuals = {};
             state.deployMeshes = [];
+            // 换关卡清空部署规划（干员标记 + 范围）
+            state.deployOps = [];
+            state.deployMode = false;
+            state.pendingOp = null;
+            state.activeDeployOp = null;
+            closeOpDetail();
         }
 
         function deployTileTexture() {
@@ -2523,10 +2807,33 @@
                 -((e.clientY - rect.top) / rect.height) * 2 + 1
             );
             state.raycaster.setFromCamera(ndc, state.camera);
+            // 部署模式：点击高亮可部署格 → 放置干员
+            if (state.deployMode && state.pendingOp && state.deployMeshes.length) {
+                const dhits = state.raycaster.intersectObjects(state.deployMeshes, false);
+                if (dhits.length) {
+                    const pt = dhits[0].point;
+                    const col = Math.round(pt.x - 0.5), row = Math.round(pt.z - 0.5);
+                    if (placeOperator(state.pendingOp, row, col)) return;
+                }
+            }
+            // 点击已部署干员标记 → 打开干员菜单（朝向/技能范围）
+            const opMeshes = state.deployOps.filter(o => o.marker).map(o => o.marker);
+            if (opMeshes.length) {
+                const ohits = state.raycaster.intersectObjects(opMeshes, false);
+                if (ohits.length) {
+                    const hitOp = state.deployOps.find(o => o.marker === ohits[0].object);
+                    if (hitOp) {
+                        closeEnemyDetail();
+                        openOpDetail(hitOp, e.clientX, e.clientY);
+                        return;
+                    }
+                }
+            }
             const meshes = state.enemies.filter(en => en.mesh && en.mesh.visible).map(en => en.mesh);
             const hits = state.raycaster.intersectObjects(meshes, false);
             hideAllRoutes();
             closeEnemyDetail();
+            closeOpDetail();
             if (hits.length) {
                 const hit = state.enemies.find(en => en.mesh === hits[0].object);
                 if (hit) {
