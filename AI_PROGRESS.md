@@ -174,6 +174,7 @@
 - 【2026-08-18 干员部署移至右侧 Tab】干员部署面板移至右侧 Tab「部署」，干员列表改为纵向排列
 - 【2026-08-18 部署干员头像本地化】363 张可用头像下载到 images/ops 本地，缺失头像用稀有度色块占位，不再依赖远程头像加载
 - 【2026-08-18 Three.js 本地化】three.min.js 与 OrbitControls.js 下载到本地 js/，移除 cdn.jsdelivr 运行时依赖
+- 【2026-08-18 SEO 基础】首页增加 description/keywords/Open Graph/canonical，新增 robots.txt 与 sitemap.xml
 
 ### V0.30（已定格 2026-08-18）
 - 【2026-08-15 V0.30 创建】V0.29 经用户确认定格并复刻为 V0.30（草稿）继续开发
