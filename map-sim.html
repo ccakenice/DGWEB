@@ -48,8 +48,11 @@
         /* 地图容器：与全站卡片风格一致 */
         #mapWrap { border-radius:8px; box-shadow:var(--shadow), inset 0 0 80px rgba(0,0,0,.18); border-color:rgba(255,255,255,.08); }
         #mapWrap::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; box-shadow:inset 0 0 120px rgba(0,0,0,.35); z-index:4; }
-        #mapLoading { background:linear-gradient(180deg, rgba(0,0,0,.72), rgba(0,0,0,.55)); }
+        #mapLoading { background:var(--bg); z-index:20; }
         #mapLoading .spinner { width:28px; height:28px; border-width:2px; }
+        #loadingBarWrap { width:min(320px,70vw); height:3px; background:var(--line); border-radius:2px; overflow:hidden; }
+        #loadingBar { width:0%; height:100%; background:var(--acc); transition:width .25s ease; }
+        #loadingPct { font-family:'Space Grotesk',monospace; font-size:11px; color:var(--muted); letter-spacing:.1em; }
         /* 站点战术终端装饰 */
         .hero-glow { position:absolute; left:-10vw; bottom:-12vh; width:62vw; height:62vh; background:radial-gradient(ellipse at center, rgba(224,143,0,.07) 0%, transparent 65%); pointer-events:none; }
         .hero-mark { position:absolute; right:-2vw; top:4vh; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:clamp(6rem,14vw,13rem); line-height:.9; color:transparent; -webkit-text-stroke:1px rgba(255,255,255,.05); letter-spacing:-.03em; pointer-events:none; user-select:none; white-space:nowrap; }
@@ -270,7 +273,12 @@
                     <div id="mapWrap">
                         <canvas id="mapCanvas"></canvas>
                         <img id="mapOverlay" alt="" style="display:none" />
-                        <div id="mapLoading"><span class="spinner"></span>LOADING LEVEL &amp; MODELS</div>
+                        <div id="mapLoading">
+                            <span class="spinner"></span>
+                            <div id="loadingText" class="mono" style="font-size:12px;letter-spacing:.18em;color:var(--muted)">LOADING LEVEL &amp; MODELS</div>
+                            <div id="loadingBarWrap"><div id="loadingBar"></div></div>
+                            <div id="loadingPct">0%</div>
+                        </div>
                         <div id="hint3d">SCROLL / PINCH ZOOM</div>
                         <div id="waitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5"></div>
                         <div id="snowLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:6"></div>
@@ -458,13 +466,19 @@
             const list = bases || SPINE_ASSET_BASES;
             for (const base of list) {
                 const manager = new spine.webgl.AssetManager(getSharedSpineRenderer().context, base);
+                let timer = null;
                 try {
-                    await Promise.all([
-                        new Promise((res, rej) => manager.loadTextureAtlas(relAtlas, () => res(), (_, m) => rej(m))),
-                        new Promise((res, rej) => manager.loadBinary(relSkel, () => res(), (_, m) => rej(m)))
+                    await Promise.race([
+                        Promise.all([
+                            new Promise((res, rej) => manager.loadTextureAtlas(relAtlas, () => res(), (_, m) => rej(m))),
+                            new Promise((res, rej) => manager.loadBinary(relSkel, () => res(), (_, m) => rej(m)))
+                        ]),
+                        new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('asset load timeout')), 6000); })
                     ]);
+                    clearTimeout(timer);
                     return { atlas: manager.get(relAtlas), binary: manager.get(relSkel) };
                 } catch (e) {
+                    clearTimeout(timer);
                     lastErr = e;
                 }
             }
@@ -474,6 +488,15 @@
 
         const $ = id => document.getElementById(id);
         const fmt = n => String(Math.floor(n)).padStart(2, '0');
+
+        function setLoading(pct, label) {
+            const bar = $('loadingBar');
+            const pctEl = $('loadingPct');
+            const txt = $('loadingText');
+            if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+            if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+            if (txt && label) txt.textContent = label;
+        }
 
         function esc(s) {
             return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -607,10 +630,16 @@
             return state.spineShared;
         }
 
-        async function prepareEnemySpines() {
-            if (typeof spine === 'undefined' || !state.enemies.length) return;
+        async function prepareEnemySpines(onProgress) {
+            if (typeof spine === 'undefined' || !state.enemies.length) {
+                if (onProgress) onProgress(1);
+                return;
+            }
             const ids = Array.from(new Set(state.enemies.map(e => e.id)));
             const keys = ids.map(normalizeEnemyKey);
+            let done = 0;
+            const total = ids.length;
+            const tick = () => { done++; if (onProgress && total) onProgress(done / total); };
             try {
                 const resp = await fetch(SPINE_BASE + 'assets/getMeshsKey', {
                     method: 'POST',
@@ -620,13 +649,16 @@
                 const payload = await resp.json();
                 const data = (payload && payload.data) || payload || {};
                 const spineMap = data.spine || {};
-                if (!Object.keys(spineMap).length) return;
+                if (!Object.keys(spineMap).length) {
+                    if (onProgress) onProgress(1);
+                    return;
+                }
                 const byId = {};
                 await Promise.all(ids.map(async id => {
                     const key = normalizeEnemyKey(id);
                     const entry = spineMap[key];
-                    if (!entry) return;
                     try {
+                        if (!entry) return;
                         const shared = getSharedSpineRenderer();
                         const output = document.createElement('canvas');
                         output.width = 256;
@@ -686,6 +718,8 @@
                         byId[id] = animBase;
                     } catch (e) {
                         console.warn('Spine setup failed', id, e);
+                    } finally {
+                        tick();
                     }
                 }));
                 state.spineData = byId;
@@ -777,9 +811,15 @@
             });
         }
 
-        async function prepareTrapSpines() {
-            if (typeof spine === 'undefined' || !state.traps.length) return;
+        async function prepareTrapSpines(onProgress) {
+            if (typeof spine === 'undefined' || !state.traps.length) {
+                if (onProgress) onProgress(1);
+                return;
+            }
             const keys = Array.from(new Set(state.traps.map(t => t.key)));
+            let done = 0;
+            const total = keys.length;
+            const tick = () => { done++; if (onProgress && total) onProgress(done / total); };
             try {
                 const resp = await fetch(SPINE_BASE + 'assets/getTrapsKey', {
                     method: 'POST',
@@ -795,50 +835,54 @@
                 const byKey = {};
                 await Promise.all(keys.map(async key => {
                     const entry = spineMap[key];
-                    if (entry) {
-                        try {
-                            const shared = getSharedSpineRenderer();
-                            const output = document.createElement('canvas');
-                            output.width = 256;
-                            output.height = 256;
-                            const outCtx = output.getContext('2d');
-                            const { atlas, binary } = await loadSpineAssetPair(
-                                'trap/spine/' + entry.atlas + '/' + entry.atlas + '.atlas',
-                                'trap/spine/' + entry.skel + '/' + entry.skel + '.skel'
-                            );
-                            const loader = new spine.AtlasAttachmentLoader(atlas);
-                            const reader = new spine.SkeletonBinary(loader);
-                            reader.scale = 0.019;
-                            const skeletonData = reader.readSkeletonData(binary);
-                            const skeleton = new spine.Skeleton(skeletonData);
-                            const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
-                            animationState.setAnimation(0, pickTrapAnimation(skeletonData), true);
-                            skeleton.x = 0;
-                            skeleton.y = 0;
-                            skeleton.scaleX = 1;
-                            skeleton.scaleY = 1;
-                            animationState.update(0);
-                            animationState.apply(skeleton);
-                            skeleton.updateWorldTransform();
-                            const probeOffset = new spine.Vector2();
-                            const probeSize = new spine.Vector2();
-                            skeleton.getBounds(probeOffset, probeSize);
-                            const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
-                            const scaleK = Math.max(0.15, 216 / probeSpan);
-                            const centerX = 128 - (probeOffset.x + probeSize.x / 2) * scaleK;
-                            const centerY = 128 - (probeOffset.y + probeSize.y / 2) * scaleK;
-                            const texture = new THREE.CanvasTexture(output);
-                            texture.encoding = THREE.sRGBEncoding;
-                            texture.flipY = true;
-                            texture.premultiplyAlpha = false;
-                            texture.minFilter = THREE.LinearFilter;
-                            texture.magFilter = THREE.LinearFilter;
-                            byKey[key] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY };
-                        } catch (e) {
-                            console.warn('Trap spine setup failed', key, e);
+                    try {
+                        if (entry) {
+                            try {
+                                const shared = getSharedSpineRenderer();
+                                const output = document.createElement('canvas');
+                                output.width = 256;
+                                output.height = 256;
+                                const outCtx = output.getContext('2d');
+                                const { atlas, binary } = await loadSpineAssetPair(
+                                    'trap/spine/' + entry.atlas + '/' + entry.atlas + '.atlas',
+                                    'trap/spine/' + entry.skel + '/' + entry.skel + '.skel'
+                                );
+                                const loader = new spine.AtlasAttachmentLoader(atlas);
+                                const reader = new spine.SkeletonBinary(loader);
+                                reader.scale = 0.019;
+                                const skeletonData = reader.readSkeletonData(binary);
+                                const skeleton = new spine.Skeleton(skeletonData);
+                                const animationState = new spine.AnimationState(new spine.AnimationStateData(skeletonData));
+                                animationState.setAnimation(0, pickTrapAnimation(skeletonData), true);
+                                skeleton.x = 0;
+                                skeleton.y = 0;
+                                skeleton.scaleX = 1;
+                                skeleton.scaleY = 1;
+                                animationState.update(0);
+                                animationState.apply(skeleton);
+                                skeleton.updateWorldTransform();
+                                const probeOffset = new spine.Vector2();
+                                const probeSize = new spine.Vector2();
+                                skeleton.getBounds(probeOffset, probeSize);
+                                const probeSpan = Math.max(probeSize.x, probeSize.y, 0.001);
+                                const scaleK = Math.max(0.15, 216 / probeSpan);
+                                const centerX = 128 - (probeOffset.x + probeSize.x / 2) * scaleK;
+                                const centerY = 128 - (probeOffset.y + probeSize.y / 2) * scaleK;
+                                const texture = new THREE.CanvasTexture(output);
+                                texture.encoding = THREE.sRGBEncoding;
+                                texture.flipY = true;
+                                texture.premultiplyAlpha = false;
+                                texture.minFilter = THREE.LinearFilter;
+                                texture.magFilter = THREE.LinearFilter;
+                                byKey[key] = { skeleton, animationState, output, outCtx, texture, scale: scaleK, centerX, centerY };
+                            } catch (e) {
+                                console.warn('Trap spine setup failed', key, e);
+                            }
+                        } else if (imageMap[key]) {
+                            byKey[key] = { imageUrl: SPINE_ASSET_BASES[0] + 'trap/image/' + imageMap[key].image + '.png' };
                         }
-                    } else if (imageMap[key]) {
-                        byKey[key] = { imageUrl: SPINE_ASSET_BASES[0] + 'trap/image/' + imageMap[key].image + '.png' };
+                    } finally {
+                        tick();
                     }
                 }));
                 state.trapSpines = byKey;
@@ -2126,22 +2170,26 @@
             $('stageCode').textContent = stage.code;
             $('stageName').textContent = stage.name || '';
             $('mapLoading').style.display = 'flex';
+            setLoading(4, 'LOADING LEVEL DATA');
             if (!stage.file) { renderError('该关卡没有地图数据（可能为剧情关）'); return; }
             // 本地关卡数据优先（data/levels/），失败再走 CDN，避免 CDN 不可达导致白屏
             const localPath = 'data/levels/' + stage.file.split('/').pop();
             const level = await fetchJSON([localPath, GAMEDATA_BASE + stage.file, RAW_BASE + stage.file]);
             if (!level) { renderError('关卡数据加载失败：' + stage.code); return; }
+            setLoading(18, 'PREPARING SCENE');
             state.level = level;
             state.currentStage = stage;
             hideMapOverlay();
             state.spineData = {};
             build3D(level);
-            // 同步加载敌人/道具 Spine：先构建场景，再等待模型首次加载完成（最多 6 秒），
-            // 避免“场景先出现、敌人模型后弹入”的割裂感
-            await Promise.race([
-                Promise.all([prepareEnemySpines(), prepareTrapSpines()]),
-                new Promise(res => setTimeout(res, 6000))
+            // 同步加载敌人/道具 Spine：Loading 保留到模型全部就绪，场景和模型一起显示
+            setLoading(30, 'LOADING ENEMY MODELS');
+            await Promise.all([
+                prepareEnemySpines(p => setLoading(30 + p * 50, 'LOADING ENEMY MODELS')),
+                prepareTrapSpines(p => setLoading(80 + p * 20, 'LOADING TRAPS'))
             ]);
+            setLoading(100, 'READY');
+            await new Promise(r => setTimeout(r, 150));
             $('mapLoading').style.display = 'none';
             renderSummary(stage, level);
             renderTabs(stage, level);
