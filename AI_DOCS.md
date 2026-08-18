@@ -7,11 +7,11 @@
 - AI 进度文档：E:\WebProjects\DGWEB\AI_PROGRESS.md
 - opencode 记录：E:\WebProjects\DGWEB\opencode_log.md
 - 项目日志：E:\SoftwareProjects\网站开发管理器\logs\DGWEB.md
-- 最新版本说明：E:\WebProjects\versions\DGWEB\DGWEB_V0.29\版本说明.txt
+- 最新版本说明：E:\WebProjects\versions\DGWEB\DGWEB_V0.31\版本说明.txt
 - 版本变更历史：E:\WebProjects\DGWEB\ai_handoff\版本变更历史.md
 - 同步副本：E:\WebProjects\DGWEB\ai_handoff\AI_PROGRESS.md  /  E:\WebProjects\DGWEB\ai_handoff\最新版本说明.txt  /  E:\WebProjects\DGWEB\ai_handoff\版本变更历史.md  /  E:\WebProjects\DGWEB\ai_handoff\项目日志.md
 
 扩展说明：
 - 项目日志：E:\SoftwareProjects\网站开发管理器\logs\DGWEB.md
-- 最新版本说明：E:\WebProjects\versions\DGWEB\DGWEB_V0.29\版本说明.txt
+- 最新版本说明：E:\WebProjects\versions\DGWEB\DGWEB_V0.31\版本说明.txt
 - 版本变更历史：E:\WebProjects\DGWEB\ai_handoff\版本变更历史.md
