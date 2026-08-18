@@ -270,7 +270,7 @@
                     <div id="mapWrap">
                         <canvas id="mapCanvas"></canvas>
                         <img id="mapOverlay" alt="" style="display:none" />
-                        <div id="mapLoading"><span class="spinner"></span>LOADING LEVEL DATA</div>
+                        <div id="mapLoading"><span class="spinner"></span>LOADING LEVEL &amp; MODELS</div>
                         <div id="hint3d">SCROLL / PINCH ZOOM</div>
                         <div id="waitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5"></div>
                         <div id="snowLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:6"></div>
@@ -2130,15 +2130,19 @@
             // 本地关卡数据优先（data/levels/），失败再走 CDN，避免 CDN 不可达导致白屏
             const localPath = 'data/levels/' + stage.file.split('/').pop();
             const level = await fetchJSON([localPath, GAMEDATA_BASE + stage.file, RAW_BASE + stage.file]);
-            $('mapLoading').style.display = 'none';
             if (!level) { renderError('关卡数据加载失败：' + stage.code); return; }
             state.level = level;
             state.currentStage = stage;
             hideMapOverlay();
             state.spineData = {};
             build3D(level);
-            prepareEnemySpines();
-            prepareTrapSpines();
+            // 同步加载敌人/道具 Spine：先构建场景，再等待模型首次加载完成（最多 6 秒），
+            // 避免“场景先出现、敌人模型后弹入”的割裂感
+            await Promise.race([
+                Promise.all([prepareEnemySpines(), prepareTrapSpines()]),
+                new Promise(res => setTimeout(res, 6000))
+            ]);
+            $('mapLoading').style.display = 'none';
             renderSummary(stage, level);
             renderTabs(stage, level);
             // 选择关卡后自动播放
