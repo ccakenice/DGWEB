@@ -1,47 +1,103 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>低配挂机研讨会 — 3D 关卡地图模拟</title>
     <link rel="stylesheet" href="fonts/fonts.css" />
+    <link rel="stylesheet" href="tailwind.css" />
     <style>
-        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; --paper:#fff; --charcoal:#333; --smoke:#555; --graphite:#1a1a1a; --fog:#0a0a0a; --ash:#888; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        :root { --bg:#000; --fg:#fff; --muted:#888; --line:#222; --paper:#fff; --charcoal:#333; --smoke:#555; --graphite:#1a1a1a; --fog:#0a0a0a; --ash:#888; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); --card-bg:#15181e; --shadow:0 8px 32px rgba(0,0,0,.5); }
         * { margin:0; padding:0; box-sizing:border-box; scrollbar-width:thin; scrollbar-color:#333 #000; }
         *::-webkit-scrollbar { width:4px; }
         *::-webkit-scrollbar-track { background:#000; }
         *::-webkit-scrollbar-thumb { background:#333; border-radius:0; }
         body { background:var(--bg); color:var(--fg); font-family:'PingFang SC','Microsoft YaHei',sans-serif; overflow-x:hidden; }
         body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9998; opacity:0.4; }
-        ::selection { background:#fff; color:#000; }
-        .display { font-family:'Space Grotesk','PingFang SC','Microsoft YaHei',sans-serif; font-weight:700; letter-spacing:0; line-height:.95; }
+        ::selection { background:var(--acc); color:#000; }
+        .display { font-family:'Space Grotesk','PingFang SC','Microsoft YaHei',sans-serif; font-weight:700; letter-spacing:-0.02em; line-height:.95; }
         .mono { font-family:'Space Grotesk',monospace; font-weight:400; letter-spacing:.05em; }
-        .card { border:1px solid var(--line); background:var(--graphite); }
-        .chip { border:1px solid var(--line); padding:3px 9px; font-size:10px; color:var(--muted); font-family:'Space Grotesk',monospace; letter-spacing:.08em; }
-        .btn { border:1px solid var(--line); background:transparent; color:var(--fg); padding:8px 14px; font-family:'PingFang SC','Microsoft YaHei',sans-serif; font-size:12px; cursor:pointer; transition:all .25s; }
-        .btn:hover { border-color:var(--acc); color:var(--acc); }
-        .input { background:var(--fog); border:1px solid var(--line); color:var(--fg); padding:11px 14px; font-size:14px; outline:none; width:100%; transition:border-color .25s; }
-        .input:focus { border-color:var(--acc); }
-        .tab-btn { border:1px solid var(--line); background:transparent; color:var(--muted); padding:9px 16px; font-size:11px; cursor:pointer; letter-spacing:.08em; }
-        .tab-btn.active { color:var(--fg); border-color:var(--paper); background:var(--charcoal); }
-        .enemy-row { border-bottom:1px solid var(--line); padding:13px 0; display:flex; gap:12px; align-items:flex-start; }
+        .card { border:1px solid var(--line); background:var(--card-bg); border-radius:8px; transition:border-color .3s ease; }
+        .card:hover { border-color:rgba(255,255,255,.08); }
+        .chip { border:1px solid var(--line); padding:3px 9px; font-size:10px; color:var(--muted); font-family:'Space Grotesk',monospace; letter-spacing:.08em; transition:all .25s; }
+        .btn { border:1px solid var(--line); background:transparent; color:var(--fg); padding:7px 12px; font-family:'PingFang SC','Microsoft YaHei',sans-serif; font-size:11px; cursor:pointer; transition:all .25s; letter-spacing:.04em; }
+        .btn:hover { border-color:var(--acc); color:var(--acc); background:var(--acc-dim); }
+        .btn.active { border-color:var(--acc); color:var(--acc); background:var(--acc-dim); }
+        .btn-sm { padding:4px 9px; font-size:10px; }
+        .input { background:var(--fog); border:1px solid var(--line); color:var(--fg); padding:11px 14px; font-size:14px; outline:none; width:100%; transition:border-color .25s, box-shadow .25s; }
+        .input:focus { border-color:var(--acc); box-shadow:0 0 0 2px var(--acc-dim); }
+        .tab-btn { border:1px solid var(--line); background:transparent; color:var(--muted); padding:9px 16px; font-size:11px; cursor:pointer; letter-spacing:.08em; transition:all .3s; font-family:'Space Grotesk',monospace; }
+        .tab-btn:hover { color:var(--fg); border-color:var(--acc); background:var(--acc-dim); }
+        .tab-btn.active { color:var(--fg); border-color:var(--acc); background:var(--acc-dim); font-weight:500; }
+        .enemy-row { border-bottom:1px solid var(--line); padding:13px 0; display:flex; gap:12px; align-items:flex-start; transition:background .25s; }
+        .enemy-row:hover { background:rgba(255,255,255,.02); }
         .enemy-row:last-child { border-bottom:none; }
         .stat { font-family:'Space Grotesk',monospace; font-size:11px; color:var(--muted); }
         .stat b { color:var(--fg); font-weight:500; }
-        #mapWrap { position:relative; height:clamp(300px, calc(100vh - 475px), 720px); border:1px solid var(--line); background:var(--fog); overflow:hidden; }
+        #mapWrap { position:relative; height:clamp(300px, 50vh, 680px); border:1px solid var(--line); background:var(--fog); overflow:hidden; border-radius:0; transition:height .3s ease; }
+        @media (min-width:1024px) { #mapWrap { height:clamp(400px, calc(100vh - 380px), 820px); } }
         .wait-cd { position:absolute; transform:translate(-50%,-100%); font-family:'Space Grotesk',monospace; font-size:12px; color:#ffd76a; background:rgba(10,13,18,.82); border:1px solid rgba(255,215,106,.45); padding:1px 7px; border-radius:6px; white-space:nowrap; pointer-events:none; line-height:1.4; }
         .wait-cd.wait-cd-min { font-size:10px; color:#9fe8c8; border-color:rgba(159,232,200,.4); }
         .snow-cd { position:absolute; transform:translate(-50%,-100%); font-family:'Space Grotesk',monospace; font-size:10px; color:#bfe3ff; background:rgba(20,40,70,.78); border:1px solid rgba(127,201,239,.55); padding:0 6px; border-radius:6px; white-space:nowrap; pointer-events:none; line-height:1.5; }
         .snow-cd.snow-frozen { color:#ffffff; background:rgba(50,110,180,.9); border-color:rgba(255,255,255,.75); font-weight:700; }
         .route-wait-cd { position:absolute; transform:translate(-50%,-50%); font-family:'Space Grotesk',monospace; font-size:11px; font-weight:700; color:#201503; background:#ffd76a; border:2px solid rgba(255,215,106,.95); border-radius:50%; min-width:36px; height:36px; display:flex; align-items:center; justify-content:center; padding:0 5px; box-shadow:0 3px 10px rgba(0,0,0,.5); pointer-events:none; white-space:nowrap; }
         #mapCanvas { display:block; width:100%; height:100%; }
-        #mapWrap:fullscreen { width:100vw; height:100vh; background:#000 !important; }
+        #mapWrap:fullscreen { width:100vw; height:100vh; background:#000 !important; border-radius:0; box-shadow:none; }
         #fsArea:fullscreen { height:100vh; display:flex; flex-direction:column; gap:12px; padding:14px 18px 18px; background:#000 !important; overflow:auto; box-sizing:border-box; }
         #fsArea:fullscreen #mapWrap { flex:1; height:auto; min-height:300px; }
+        /* 地图容器：与全站卡片风格一致 */
+        #mapWrap { border-radius:8px; box-shadow:var(--shadow), inset 0 0 80px rgba(0,0,0,.18); border-color:rgba(255,255,255,.08); }
+        #mapWrap::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; box-shadow:inset 0 0 120px rgba(0,0,0,.35); z-index:4; }
+        #mapLoading { background:linear-gradient(180deg, rgba(0,0,0,.72), rgba(0,0,0,.55)); }
+        #mapLoading .spinner { width:28px; height:28px; border-width:2px; }
+        /* 站点战术终端装饰 */
+        .hero-glow { position:absolute; left:-10vw; bottom:-12vh; width:62vw; height:62vh; background:radial-gradient(ellipse at center, rgba(224,143,0,.07) 0%, transparent 65%); pointer-events:none; }
+        .hero-mark { position:absolute; right:-2vw; top:4vh; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:clamp(6rem,14vw,13rem); line-height:.9; color:transparent; -webkit-text-stroke:1px rgba(255,255,255,.05); letter-spacing:-.03em; pointer-events:none; user-select:none; white-space:nowrap; }
+        html.light #mapWrap { box-shadow:var(--shadow), inset 0 0 80px rgba(0,0,0,.05); }
+        html.light .hero-mark { -webkit-text-stroke-color:rgba(0,0,0,.08); }
+        html.light .hero-glow { background:radial-gradient(ellipse at center, rgba(224,143,0,.06) 0%, transparent 65%); }
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:1px solid var(--acc); outline-offset:2px; }
+        /* 侧栏页签：站点下划线风格 */
+        .sidebar-panel .tab-header .tab-btn { flex:1; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); padding:13px 16px; }
+        .sidebar-panel .tab-header .tab-btn:hover { color:var(--fg); background:var(--acc-dim); border-bottom-color:var(--acc); }
+        .sidebar-panel .tab-header .tab-btn.active { color:var(--fg); background:transparent; border-bottom-color:var(--acc); font-weight:600; }
+        .enemy-row:hover { box-shadow:inset 2px 0 0 var(--acc); }
+        /* 桌面端左右分栏布局 */
+        .map-layout { display:grid; grid-template-columns:1fr; gap:20px; }
+        @media (min-width:1024px) { .map-layout { grid-template-columns:1fr 380px; } }
+        @media (min-width:1400px) { .map-layout { grid-template-columns:1fr 440px; } }
+        .sidebar-panel { border:1px solid var(--line); background:var(--card-bg); border-radius:8px; overflow:hidden; transition:border-color .25s; }
+        .sidebar-panel:hover { border-color:rgba(255,255,255,.08); }
+        .sidebar-panel .tab-header { display:flex; gap:0; border-bottom:1px solid var(--line); }
+        .sidebar-panel .tab-content { min-height:360px; max-height:calc(100vh - 340px); overflow:auto; }
+        @media (max-width:1023px) { .sidebar-panel .tab-content { min-height:280px; max-height:480px; } }
+        /* 工具栏分组 */
+        .toolbar-group { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .toolbar-divider { width:1px; height:20px; background:var(--line); flex-shrink:0; margin:0 4px; }
+        /* 进度条区域 */
+        .progress-bar-wrap { position:relative; flex:1; display:flex; align-items:center; height:18px; }
+        .progress-bar-wrap input[type="range"] { flex:1; width:100%; accent-color:var(--acc); }
+        /* 站点风格的 reveal 动画 */
+        .reveal-up { opacity:0; transform:translateY(30px); transition:all .8s cubic-bezier(.16,1,.3,1); }
+        .reveal-up.visible { opacity:1; transform:translateY(0); }
+        /* 敌我标签等覆盖层统一样式 */
+        .label-overlay { position:absolute; pointer-events:none; overflow:hidden; z-index:5; }
+        /* 卡片内滚动条 */
+        .tab-content::-webkit-scrollbar, .sidebar-panel ::-webkit-scrollbar { width:3px; }
+        .tab-content::-webkit-scrollbar-track, .sidebar-panel ::-webkit-scrollbar-track { background:transparent; }
+        .tab-content::-webkit-scrollbar-thumb, .sidebar-panel ::-webkit-scrollbar-thumb { background:var(--line); border-radius:0; }
+        /* 进度条打磨 */
+        .progress-bar-wrap input[type="range"] { -webkit-appearance:none; appearance:none; height:4px; background:var(--line); border-radius:2px; outline:none; accent-color:var(--acc); }
+        .progress-bar-wrap input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%; background:var(--fg); border:2px solid var(--acc); cursor:pointer; transition:transform .2s; }
+        .progress-bar-wrap input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+        .progress-bar-wrap input[type="range"]::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--fg); border:2px solid var(--acc); cursor:pointer; }
+        /* 加载动画 */
+        @keyframes spin { to { transform:rotate(360deg); } }
         #mapOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:.5; pointer-events:none; z-index:1; }
-        #mapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); font-family:'Space Grotesk',monospace; font-size:11px; letter-spacing:.15em; color:var(--muted); z-index:2; }
-        #hint3d { position:absolute; left:12px; bottom:10px; z-index:2; pointer-events:none; font-size:10px; letter-spacing:.12em; color:var(--muted); font-family:'Space Grotesk',monospace; }
-        html.light { --bg:#f4f4f2; --fg:#141414; --muted:#787878; --line:#e2e2df; --paper:#141414; --charcoal:#c6c6c3; --smoke:#6a6a68; --graphite:#ececea; --fog:#efefed; --ash:#8a8a88; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); }
+        #mapLoading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:rgba(0,0,0,.55); font-family:'Space Grotesk',monospace; font-size:13px; letter-spacing:.25em; color:var(--muted); z-index:2; transition:opacity .6s ease; }
+        #mapLoading .spinner { width:24px; height:24px; border:2px solid var(--line); border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite; }
+        #hint3d { position:absolute; left:12px; bottom:10px; z-index:2; pointer-events:none; font-size:10px; letter-spacing:.12em; color:var(--muted); font-family:'Space Grotesk',monospace; opacity:.7; }
+        html.light { --bg:#f4f4f2; --fg:#141414; --muted:#787878; --line:#e2e2df; --paper:#141414; --charcoal:#c6c6c3; --smoke:#6a6a68; --graphite:#ececea; --fog:#efefed; --ash:#8a8a88; --acc:#e08f00; --acc-dim:rgba(224,143,0,.10); --card-bg:#ececea; --shadow:0 8px 32px rgba(0,0,0,.12); }
         html.light body::before { filter:invert(1); opacity:.5; }
         html.light *::-webkit-scrollbar-track { background:#ececea; }
         html.light *::-webkit-scrollbar-thumb { background:#c4c4c1; }
@@ -103,115 +159,126 @@
     </nav>
 
     <main style="padding-top:64px">
-        <section style="border-bottom:1px solid var(--line)">
-            <div style="max-width:1400px;margin:0 auto;padding:24px 24px 16px">
+        <section style="position:relative;overflow:hidden;border-bottom:1px solid var(--line)">
+            <div class="hero-glow"></div>
+            <div class="hero-mark">MAP</div>
+            <div style="position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:24px 24px 16px" class="reveal-up visible">
                 <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.2em;margin-bottom:14px">3D STAGE MAP SIMULATOR / 3D 关卡地图模拟</div>
-                <h1 class="display" style="font-size:clamp(24px,4vw,40px);letter-spacing:0;max-width:760px">3D 地形、路线与波次</h1>
-                <div style="display:flex;gap:10px;margin-top:30px;flex-wrap:wrap">
+                <h1 class="display" style="font-size:clamp(24px,4vw,40px);letter-spacing:-0.02em;max-width:760px">3D 地形、路线与波次</h1>
+                <div style="display:flex;gap:10px;margin-top:28px;flex-wrap:wrap">
                     <input id="stageInput" class="input" list="stageList" placeholder="输入关卡代号，如 UR-1 / 1-7 / H10-4" style="max-width:420px" />
                     <datalist id="stageList"></datalist>
-                    <button id="loadBtn" class="btn">载入关卡</button>
+                    <button id="loadBtn" class="btn" style="padding:8px 18px">载入关卡</button>
                     <span class="chip" id="dataStatus">INDEX --</span>
                 </div>
-                <div id="zonePicker" class="card" style="margin-top:18px;padding:18px">
-                    <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.2em;margin-bottom:14px">关卡选择 / STAGE SELECT</div>
-                    <div id="modeTabs" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-                    <div id="zonePickRow" style="display:flex;gap:10px;margin-top:14px;align-items:center">
+                <div id="zonePicker" class="card reveal-up visible" style="margin-top:18px;padding:16px;border-radius:0">
+                    <div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.2em;margin-bottom:12px">关卡选择 / STAGE SELECT</div>
+                    <div id="modeTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+                    <div id="zonePickRow" style="display:flex;gap:10px;margin-top:12px;align-items:center">
                         <span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em">活动</span>
                         <select id="zoneSelect" class="input" style="flex:1;max-width:420px"></select>
                     </div>
-                    <div id="stageListBox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px;max-height:260px;overflow:auto"></div>
+                    <div id="stageListBox" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:12px;max-height:260px;overflow:auto"></div>
                 </div>
             </div>
         </section>
 
         <section style="max-width:1400px;margin:0 auto;padding:20px 24px 40px">
             <div id="summary" style="display:none;margin-bottom:20px"></div>
-            <div style="display:grid;grid-template-columns:1fr;gap:22px">
+            <div class="map-layout reveal-up visible" style="margin-top:0">
                 <div>
                     <div id="fsArea">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap">
-                        <div style="display:flex;gap:8px;align-items:center">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+                        <div class="toolbar-group">
                             <span class="chip" id="stageCode">--</span>
                             <span class="chip" id="stageName">--</span>
                         </div>
-                        <div style="display:flex;gap:8px;align-items:center">
-                            <button id="pauseBtn" class="btn">暂停</button>
-                            <button id="playBtn" class="btn">重播</button>
-                            <button id="resetBtn" class="btn">重置</button>
-                            <select id="speedSel" class="btn" style="padding:6px 10px">
+                        <div class="toolbar-group">
+                            <button id="pauseBtn" class="btn btn-sm">暂停</button>
+                            <button id="playBtn" class="btn btn-sm">重播</button>
+                            <button id="resetBtn" class="btn btn-sm">重置</button>
+                            <select id="speedSel" class="btn btn-sm" style="padding:3px 8px">
                                 <option value="1">1x</option>
                                 <option value="2">2x</option>
                                 <option value="4">4x</option>
                             </select>
-                            <button id="mapPreviewBtn" class="btn">官方地图</button>
-                            <button id="mapOverlayBtn" class="btn">叠图</button>
-                            <button id="deployBtn" class="btn" title="高亮可部署地块">部署格</button>
-                            <button id="waitCdBtn" class="btn" title="显示/隐藏敌人罚站倒计时">罚站倒计时</button>
-                            <button id="enemyRangeBtn" class="btn" title="显示/隐藏敌人攻击范围（点击敌人单独查看可命中的部署格）">敌攻范围</button>
-                        <button id="groundRefBtn" class="btn" title="诊断：显示地面高度参考环">地面参考</button>
-                        <button id="zoomBtn" class="btn" title="开启/关闭地图缩放（默认锁定）">缩放:锁</button>
-                        <button id="fullscreenBtn" class="btn" title="全屏/退出全屏关卡">全屏</button>
-                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-                                透明度
-                                <input type="range" id="overlayOpacity" min="5" max="100" step="1" value="35" style="width:90px;accent-color:var(--acc)" />
-                            </label>
-                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-                                缩放
-                                <input type="range" id="overlayScale" min="50" max="200" step="1" value="100" style="width:90px;accent-color:var(--acc)" />
-                            </label>
-                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-                                X
-                                <input type="range" id="overlayOffsetX" min="-100" max="100" step="1" value="0" style="width:90px;accent-color:var(--acc)" />
-                            </label>
-                            <label class="overlay-ctl" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-                                Y
-                                <input type="range" id="overlayOffsetY" min="-100" max="100" step="1" value="0" style="width:90px;accent-color:var(--acc)" />
-                            </label>
+                            <div class="toolbar-divider"></div>
+                            <button id="fullscreenBtn" class="btn btn-sm" title="全屏/退出全屏关卡">全屏</button>
                             <span class="chip" id="simTime">00:00</span>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;margin:12px 0">
+                    <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
                         <span class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.14em">关卡进度</span>
-                        <div style="position:relative;flex:1;display:flex;align-items:center;height:18px">
+                        <div class="progress-bar-wrap">
                             <input type="range" id="timeSlider" min="0" max="100" step="0.1" value="0" style="flex:1;width:100%;accent-color:var(--acc)" />
                             <div id="markerTick1" style="position:absolute;left:0;top:50%;width:2px;height:18px;background:#ffd76a;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:2;border-radius:1px;box-shadow:0 0 6px rgba(255,215,106,.7)"></div>
                             <div id="markerTick2" style="position:absolute;left:0;top:50%;width:2px;height:18px;background:#4bc3b3;transform:translate(-50%,-50%);pointer-events:none;display:none;z-index:2;border-radius:1px;box-shadow:0 0 6px rgba(75,195,179,.7)"></div>
                         </div>
-                        <button id="marker1Btn" class="btn" style="padding:4px 10px;font-size:12px" title="标记点1：设置在当前播放时间；重播从最早标记开始">打点1</button>
-                        <button id="marker2Btn" class="btn" style="padding:4px 10px;font-size:12px" title="标记点2：设置在当前播放时间；两个标记同时存在时在两点间循环播放">打点2</button>
-                        <button id="clearMarkerBtn" class="btn" style="padding:4px 10px;font-size:12px;display:none" title="清除全部标记点">清除</button>
+                        <button id="marker1Btn" class="btn btn-sm" title="标记点1：设置在当前播放时间；重播从最早标记开始">打点1</button>
+                        <button id="marker2Btn" class="btn btn-sm" title="标记点2：设置在当前播放时间；两个标记同时存在时在两点间循环播放">打点2</button>
+                        <button id="clearMarkerBtn" class="btn btn-sm" style="display:none" title="清除全部标记点">清除</button>
                         <span class="chip" id="progressPct">0%</span>
                         <span class="chip" id="killCount">击杀 0/0</span>
                     </div>
-                    <div id="deployPanel" style="display:none;margin:0 0 12px;padding:12px 14px;background:var(--card,#151b22);border:1px solid var(--line);border-radius:12px">
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                            <b style="font-size:13px">部署干员</b>
-                            <input id="opSearch" placeholder="搜索干员名 / ID…" style="flex:1;min-width:160px;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text,#e8e8e8);font-size:13px" />
+                    <div style="display:flex;align-items:center;gap:6px;margin:6px 0 10px;flex-wrap:wrap">
+                        <div class="toolbar-group">
+                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em;margin-right:2px">视图</span>
+                            <button id="mapPreviewBtn" class="btn btn-sm">官方地图</button>
+                            <button id="mapOverlayBtn" class="btn btn-sm">叠图</button>
+                            <button id="zoomBtn" class="btn btn-sm" title="开启/关闭地图缩放（默认锁定）">缩放:锁</button>
+                            <button id="groundRefBtn" class="btn btn-sm" title="诊断：显示地面高度参考环">地面参考</button>
+                        </div>
+                        <div class="toolbar-divider"></div>
+                        <div class="toolbar-group">
+                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em;margin-right:2px">工具</span>
+                            <button id="deployBtn" class="btn btn-sm" title="高亮可部署地块">部署格</button>
+                            <button id="waitCdBtn" class="btn btn-sm" title="显示/隐藏敌人罚站倒计时">罚站</button>
+                            <button id="enemyRangeBtn" class="btn btn-sm" title="显示/隐藏敌人攻击范围（点击敌人单独查看可命中的部署格）">敌攻范围</button>
+                        </div>
+                        <div class="toolbar-divider"></div>
+                        <div class="toolbar-group" id="overlayCtrls" style="display:none">
+                            <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+                                透明 <input type="range" id="overlayOpacity" min="5" max="100" step="1" value="35" style="width:60px;accent-color:var(--acc)" />
+                            </label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+                                缩放 <input type="range" id="overlayScale" min="50" max="200" step="1" value="100" style="width:60px;accent-color:var(--acc)" />
+                            </label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+                                X <input type="range" id="overlayOffsetX" min="-100" max="100" step="1" value="0" style="width:60px;accent-color:var(--acc)" />
+                            </label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+                                Y <input type="range" id="overlayOffsetY" min="-100" max="100" step="1" value="0" style="width:60px;accent-color:var(--acc)" />
+                            </label>
+                        </div>
+                    </div>
+                    <div id="deployPanel" style="display:none;margin:0 0 10px;padding:10px 12px;background:var(--card-bg);border:1px solid var(--line);border-radius:8px">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em">部署干员</span>
+                            <input id="opSearch" placeholder="搜索干员名 / ID…" style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--fg);font-size:12px;outline:none;transition:border-color .25s" />
                             <span id="deployHint" class="mono" style="font-size:10px;color:var(--ash)"></span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
-                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em">职业</span>
-                            <div id="opProfFilter" style="display:flex;gap:5px;flex-wrap:wrap"></div>
-                        </div>
                         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+                            <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em">职业</span>
+                            <div id="opProfFilter" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">
                             <span class="mono" style="font-size:9px;color:var(--ash);letter-spacing:.12em">星级</span>
-                            <div id="opRarFilter" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+                            <div id="opRarFilter" style="display:flex;gap:4px;flex-wrap:wrap"></div>
                         </div>
                         <div id="opList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;max-height:190px;overflow:auto"></div>
                     </div>
                     <div id="mapWrap">
                         <canvas id="mapCanvas"></canvas>
                         <img id="mapOverlay" alt="" style="display:none" />
-                        <div id="mapLoading">LOADING LEVEL DATA</div>
+                        <div id="mapLoading"><span class="spinner"></span>LOADING LEVEL DATA</div>
                         <div id="hint3d">SCROLL / PINCH ZOOM</div>
                         <div id="waitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5"></div>
                         <div id="snowLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:6"></div>
                         <div id="routeWaitLabels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:7"></div>
                     </div>
-                    <div id="enemyDetail" style="display:none;position:fixed;z-index:90;width:320px;max-height:76vh;overflow:auto;background:rgba(15,19,25,.97);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(5px)">
+                    <div id="enemyDetail" style="display:none;position:fixed;z-index:90;width:340px;max-height:76vh;overflow:auto;background:rgba(15,19,25,.95);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(12px)">
                         <div style="display:flex;gap:12px;align-items:flex-start">
-                            <img id="edIcon" alt="" style="width:56px;height:56px;object-fit:contain;background:var(--fog);border:1px solid var(--line);border-radius:8px;flex:none" referrerpolicy="no-referrer" />
+                            <img id="edIcon" alt="" style="width:56px;height:56px;object-fit:contain;background:var(--fog);border:1px solid var(--line);border-radius:8px;flex:none" referrerpolicy="no-referrer" decoding="async" />
                             <div style="flex:1;min-width:0">
                                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                                     <b id="edName" style="font-size:14px"></b>
@@ -219,7 +286,7 @@
                                 </div>
                                 <div class="mono" id="edId" style="font-size:10px;color:var(--ash);margin-top:4px;word-break:break-all"></div>
                             </div>
-                            <button id="edClose" class="btn" style="padding:3px 9px;font-size:12px;flex:none" title="关闭">×</button>
+                            <button id="edClose" class="btn" style="padding:2px 8px;font-size:14px;flex:none;line-height:1;border-radius:4px" title="关闭">✕</button>
                         </div>
                         <div id="edMeta" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
                         <div id="edAbility" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;max-height:96px;overflow:auto"></div>
@@ -228,7 +295,7 @@
                         <div id="edExtra" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
                         <div id="edRange" style="display:none;margin-top:10px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:9px"></div>
                     </div>
-                    <div id="opDetail" style="display:none;position:fixed;z-index:90;width:300px;max-height:72vh;overflow:auto;background:rgba(15,19,25,.97);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(5px)">
+                    <div id="opDetail" style="display:none;position:fixed;z-index:90;width:320px;max-height:72vh;overflow:auto;background:rgba(15,19,25,.95);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.6);backdrop-filter:blur(12px)">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
                             <div>
                                 <b id="opName" style="font-size:14px"></b>
@@ -250,17 +317,17 @@
                         </div>
                     </div>
                     </div>
-                    <div id="legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px"></div>
+                    <div id="legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px"></div>
                 </div>
-                <div class="card">
-                    <div style="display:flex;gap:0;border-bottom:1px solid var(--line)">
+                <div class="sidebar-panel">
+                    <div class="tab-header">
                         <button class="tab-btn active" data-tab="enemies">敌人</button>
                         <button class="tab-btn" data-tab="waves">波次</button>
                         <button class="tab-btn" data-tab="routes">路线</button>
                     </div>
-                    <div id="tabEnemies" class="tab-panel" style="padding:18px;min-height:420px;max-height:720px;overflow:auto"></div>
-                    <div id="tabWaves" class="tab-panel" style="display:none;padding:18px;min-height:420px;max-height:720px;overflow:auto"></div>
-                    <div id="tabRoutes" class="tab-panel" style="display:none;padding:18px;min-height:420px;max-height:720px;overflow:auto"></div>
+                    <div id="tabEnemies" class="tab-content" style="padding:16px"></div>
+                    <div id="tabWaves" class="tab-content" style="display:none;padding:16px"></div>
+                    <div id="tabRoutes" class="tab-content" style="display:none;padding:16px"></div>
                 </div>
             </div>
         </section>
@@ -282,7 +349,7 @@
     </footer>
 
     <div id="mapPreview" style="display:none;position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.9);align-items:center;justify-content:center;padding:24px;flex-direction:column;gap:14px">
-        <button id="mapPreviewClose" class="btn" style="align-self:flex-end">关闭</button>
+        <button id="mapPreviewClose" class="btn" style="align-self:flex-end;padding:6px 14px">关闭 ✕</button>
         <img id="mapPreviewImg" alt="官方地图预览" style="max-width:92vw;max-height:80vh;border:1px solid var(--line);background:var(--fog)" />
         <span class="mono" style="font-size:10px;color:var(--muted);letter-spacing:.12em" id="mapPreviewMeta"></span>
     </div>
@@ -452,13 +519,24 @@
             ];
         }
 
+        const ENEMY_ICON_HOSTS = [
+            'https://gcore.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/',
+            'https://cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/',
+            'https://fastly.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/',
+            'https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/'
+        ];
         function enemyIconUrl(id) {
-            return 'https://cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/enemy/' + id + '.png';
+            return ENEMY_ICON_HOSTS[0] + 'enemy/' + id + '.png';
         }
 
         window.__enemyIconFallback = function (img) {
-            const next = img.src.replace('cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/', 'raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/');
-            if (next && next !== img.src) { img.onerror = null; img.src = next; }
+            const cur = img.src || '';
+            const idx = ENEMY_ICON_HOSTS.findIndex(h => cur.indexOf(h) === 0);
+            if (idx >= 0 && idx < ENEMY_ICON_HOSTS.length - 1) {
+                img.src = ENEMY_ICON_HOSTS[idx + 1] + cur.slice(ENEMY_ICON_HOSTS[idx].length);
+            } else {
+                img.style.visibility = 'hidden';
+            }
         };
 
         function normalizeEnemyKey(id) {
@@ -1003,7 +1081,7 @@
             state.mapOverlayVisible = true;
             if (state.underlayMesh) state.underlayMesh.visible = true;
             $('mapOverlayBtn').classList.add('active');
-            document.querySelectorAll('.overlay-ctl').forEach(el => el.style.display = 'flex');
+            const oc = $('overlayCtrls'); if (oc) oc.style.display = 'flex';
         }
 
         function hideMapOverlay() {
@@ -1011,7 +1089,7 @@
             if (state.underlayMesh) state.underlayMesh.visible = false;
             $('mapOverlay').style.display = 'none';
             $('mapOverlayBtn').classList.remove('active');
-            document.querySelectorAll('.overlay-ctl').forEach(el => el.style.display = 'none');
+            const oc2 = $('overlayCtrls'); if (oc2) oc2.style.display = 'none';
         }
 
         function applyOverlayOpacity(v) {
@@ -1070,9 +1148,7 @@
             box.innerHTML = '';
             state.zoneIndex.modes.forEach(m => {
                 const b = document.createElement('button');
-                b.className = 'chip';
-                b.style.padding = '7px 14px';
-                b.style.cursor = 'pointer';
+                b.style.cssText = 'border:1px solid var(--line);padding:6px 14px;cursor:pointer;font-family:Space Grotesk,monospace;font-size:10px;letter-spacing:.08em;transition:all .25s;border-radius:4px';
                 b.textContent = MODE_NAMES[m.key] || m.key;
                 if (m.key === currentMode) {
                     b.style.background = 'var(--acc)';
@@ -1084,6 +1160,8 @@
                 } else {
                     b.style.background = 'transparent';
                     b.style.color = 'var(--muted)';
+                    b.onmouseenter = () => { b.style.borderColor = 'var(--acc)'; b.style.color = 'var(--fg)'; };
+                    b.onmouseleave = () => { b.style.borderColor = 'var(--line)'; b.style.color = 'var(--muted)'; };
                 }
                 b.onclick = () => { currentMode = m.key; currentZone = null; renderModeTabs(); renderZones(); };
                 box.appendChild(b);
@@ -1132,19 +1210,13 @@
             box.innerHTML = '';
             (zone.stages || []).forEach(s => {
                 const b = document.createElement('button');
-                b.className = 'chip';
-                b.style.padding = '10px 12px';
-                b.style.display = 'flex';
-                b.style.flexDirection = 'column';
-                b.style.alignItems = 'flex-start';
-                b.style.gap = '3px';
-                b.style.textAlign = 'left';
-                b.style.cursor = 'pointer';
-                b.style.minWidth = '130px';
+                b.style.cssText = 'border:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;cursor:pointer;min-width:120px;background:transparent;color:var(--fg);font-family:inherit;transition:all .25s;border-radius:4px';
+                b.onmouseenter = () => { b.style.borderColor = 'var(--acc)'; b.style.background = 'var(--acc-dim)'; };
+                b.onmouseleave = () => { b.style.borderColor = 'var(--line)'; b.style.background = 'transparent'; };
                 if (currentMode === 'annihilation') {
-                    b.innerHTML = '<b style="font-size:13px">' + esc(s.name || s.code) + '</b><span style="font-size:11px;color:var(--ash)">' + esc(s.code) + '</span>';
+                    b.innerHTML = '<b style="font-size:13px;font-weight:500">' + esc(s.name || s.code) + '</b><span style="font-size:11px;color:var(--ash);font-family:Space Grotesk,monospace">' + esc(s.code) + '</span>';
                 } else {
-                    b.innerHTML = '<b style="font-size:13px">' + esc(s.code) + '</b><span style="font-size:11px;color:var(--ash)">' + esc(s.name) + '</span>';
+                    b.innerHTML = '<b style="font-size:13px;font-weight:500">' + esc(s.code) + '</b><span style="font-size:11px;color:var(--ash);font-family:Space Grotesk,monospace">' + esc(s.name) + '</span>';
                 }
                 b.onclick = () => loadStage(s.id || s.code);
                 box.appendChild(b);
@@ -1169,7 +1241,7 @@
             (enemyArr || []).forEach(e => { state.enemyIndex[e.id] = e; });
             state.cameraIndex = window.CAMERA_INDEX || [];
             state.highlandColors = await fetchJSON(HL_URLS) || {};
-            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260815o';
+            $('dataStatus').textContent = 'INDEX ' + state.stageIndex.length + ' · v20260818a';
             setupDatalist();
             loadZoneIndex();
             const params = new URLSearchParams(location.search);
@@ -1306,7 +1378,7 @@
             box.innerHTML = list.slice(0, 80).map(o =>
                 `<button class="btn op-opt" data-id="${esc(o.id)}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;font-size:12px">
                     <span style="width:28px;height:28px;border-radius:50%;background:${opRarityColor(o.rarity)};display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:none;border:1px solid rgba(255,255,255,.18)">
-                        <img src="${OP_AVATAR_BASE + esc(o.id)}.png" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.visibility='hidden'" />
+                        <img src="${OP_AVATAR_BASE + esc(o.id)}.png" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.visibility='hidden'" />
                     </span>
                     <b>${esc(o.name)}</b>
                     <span class="mono" style="color:var(--ash);font-size:9px">${esc(o.profCn)}${o.rarity}★</span>
@@ -1855,7 +1927,7 @@
                 sb.style.borderColor = '#7fc9ef';
                 sb.style.color = '#7fc9ef';
             }
-            const W = 300, H = 480;
+            const W = 320, H = 480;
             box.style.left = Math.max(8, Math.min((clientX || 260) + 14, window.innerWidth - W - 8)) + 'px';
             box.style.top = Math.max(8, Math.min((clientY || 140) + 14, window.innerHeight - H - 8)) + 'px';
             box.style.display = 'block';
@@ -2031,7 +2103,7 @@
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+                    document.querySelectorAll('.tab-content').forEach(p => p.style.display = 'none');
                     btn.classList.add('active');
                     const key = btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
                     $('tab' + key).style.display = 'block';
@@ -2612,9 +2684,12 @@
             dir.shadow.camera.top = 14;
             dir.shadow.camera.bottom = -14;
             scene.add(dir);
-            const rim = new THREE.PointLight(0xe08f00, 0.5, 20);
+            const rim = new THREE.PointLight(0xe08f00, 0.65, 22);
             rim.position.set(midC - 3, 5, midR + 3);
             scene.add(rim);
+            const rimCool = new THREE.PointLight(0x359dde, 0.35, 20);
+            rimCool.position.set(midC + 4, 4, midR - 3);
+            scene.add(rimCool);
 
             const floor = new THREE.Mesh(
                 new THREE.PlaneGeometry(cols + 4, rows + 4),
@@ -3334,8 +3409,7 @@
             const dd = (window.ENEMY_DETAIL || {})[en.id] || {};
             $('edIcon').src = enemyIconUrl(en.id);
             $('edIcon').onerror = function () {
-                const next = this.src.replace('cdn.jsdelivr.net/gh/yuanyan3060/ArknightsGameResource@main/', 'raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/');
-                if (next !== this.src) { this.onerror = null; this.src = next; }
+                window.__enemyIconFallback(this);
             };
             $('edName').textContent = info.name || en.id;
             $('edId').textContent = en.id;
@@ -3375,7 +3449,7 @@
             ).join('');
             $('edExtra').innerHTML = '<a class="btn" href="enemy.html?id=' + encodeURIComponent(en.id) + '" target="_blank" rel="noopener" style="padding:6px 12px;font-size:12px;margin-right:10px">查看详情</a><span style="color:var(--muted);font-size:11px">已暂停 · 路线已高亮 · 点击空白处关闭</span>';
             const box = $('enemyDetail');
-            const W = 320, H = 560;
+            const W = 340, H = 560;
             if (state.detailCardPos) {
                 // 用户拖过卡片：保持在拖放位置，不跳回点击处
                 box.style.left = state.detailCardPos.x;
@@ -4136,35 +4210,35 @@
                 item.count++; item.waves.add(en.wave); item.routes.add(en.route);
                 enemyMap.set(en.id, item);
             });
-            let enemiesHtml = '<div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.15em;margin-bottom:12px">' + enemyMap.size + ' 种敌人</div>';
+            let enemiesHtml = '<div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.15em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)">' + enemyMap.size + ' 种敌人 · ' + state.enemies.length + ' 个</div>';
             enemyMap.forEach(item => {
                 const info = enemyInfo(item.id);
                 const st = info.stats || {};
-                enemiesHtml += `<div class="enemy-row"><img src="${enemyIconUrl(item.id)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this); this.onerror=null" style="width:42px;height:42px;object-fit:contain;background:var(--fog);border:1px solid var(--line);flex:none" /><div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="width:10px;height:10px;background:${hashColor(item.id)}"></span><b style="font-size:14px">${esc(info.name)}</b><span class="chip">${esc(item.id)}</span></div><div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap"><span class="stat">生命 <b>${st.maxHp ?? '--'}</b></span><span class="stat">攻击 <b>${st.atk ?? '--'}</b></span><span class="stat">防御 <b>${st.def ?? '--'}</b></span><span class="stat">法抗 <b>${st.magicResistance ?? '--'}</b></span><span class="stat">移速 <b>${st.moveSpeed ?? '--'}</b></span><span class="stat">重量 <b>${st.weight ?? '--'}</b></span></div></div><div style="text-align:right"><div style="font-size:20px;font-weight:700">${item.count}</div><div class="mono" style="font-size:9px;color:var(--ash)">W ${[...item.waves].join(',')}</div></div></div>`;
+                enemiesHtml += `<div class="enemy-row"><img src="${enemyIconUrl(item.id)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this)" style="width:42px;height:42px;object-fit:contain;background:var(--fog);border:1px solid var(--line);flex:none;border-radius:4px" /><div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="width:10px;height:10px;border-radius:2px;background:${hashColor(item.id)};flex:none"></span><b style="font-size:14px;font-weight:500">${esc(info.name)}</b><span class="chip" style="font-size:9px">${esc(item.id)}</span></div><div style="margin-top:6px;display:flex;gap:12px;flex-wrap:wrap"><span class="stat" style="font-size:10px">HP <b style="font-size:11px">${st.maxHp ?? '--'}</b></span><span class="stat" style="font-size:10px">ATK <b style="font-size:11px">${st.atk ?? '--'}</b></span><span class="stat" style="font-size:10px">DEF <b style="font-size:11px">${st.def ?? '--'}</b></span><span class="stat" style="font-size:10px">RES <b style="font-size:11px">${st.magicResistance ?? '--'}</b></span><span class="stat" style="font-size:10px">SPD <b style="font-size:11px">${st.moveSpeed ?? '--'}</b></span><span class="stat" style="font-size:10px">WT <b style="font-size:11px">${st.weight ?? '--'}</b></span></div></div><div style="text-align:right;flex:none"><div style="font-size:22px;font-weight:700;line-height:1">${item.count}</div><div class="mono" style="font-size:9px;color:var(--ash);margin-top:2px">W ${[...item.waves].join(',')}</div></div></div>`;
             });
             $('tabEnemies').innerHTML = enemiesHtml;
 
             let wavesHtml = '';
             (level.waves || []).forEach((wave, wi) => {
-                wavesHtml += `<div class="mono" style="font-size:11px;color:var(--acc);margin:18px 0 8px">WAVE ${wi + 1}</div>`;
+                wavesHtml += `<div class="mono" style="font-size:11px;color:var(--acc);margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--acc-dim)">WAVE ${wi + 1}</div>`;
                 (wave.fragments || []).forEach((frag, fi) => {
                     const spawns = (frag.actions || []).filter(a => a.actionType === 'SPAWN');
                     if (!spawns.length) return;
-                    wavesHtml += `<div class="enemy-row"><div style="flex:1"><div class="mono" style="font-size:9px;color:var(--ash);margin-bottom:6px">FRAGMENT ${fi + 1} · PRE ${frag.preDelay || 0}s</div>`;
+                    wavesHtml += `<div class="enemy-row"><div style="flex:1"><div class="mono" style="font-size:9px;color:var(--ash);margin-bottom:6px;letter-spacing:.1em">FRAGMENT ${fi + 1} · PRE ${frag.preDelay || 0}s</div>`;
                     spawns.forEach(a => {
                         const info = enemyInfo(a.key);
-                        wavesHtml += `<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;align-items:center"><span style="display:flex;align-items:center;gap:8px;font-size:13px"><img src="${enemyIconUrl(a.key)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this); this.onerror=null" style="width:24px;height:24px;object-fit:contain;background:var(--fog);border:1px solid var(--line)" />${esc(info.name)}</span><span class="stat">x${a.count || 1} · R${a.routeIndex || 0}</span></div>`;
+                        wavesHtml += `<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;align-items:center;border-bottom:1px solid rgba(255,255,255,.03)"><span style="display:flex;align-items:center;gap:8px;font-size:13px"><img src="${enemyIconUrl(a.key)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this)" style="width:22px;height:22px;object-fit:contain;background:var(--fog);border:1px solid var(--line);border-radius:3px" />${esc(info.name)}</span><span class="stat" style="font-size:10px">x${a.count || 1} · R${a.routeIndex || 0}</span></div>`;
                     });
                     wavesHtml += '</div></div>';
                 });
             });
-            $('tabWaves').innerHTML = wavesHtml || '<p style="color:var(--muted)">无波次数据</p>';
+            $('tabWaves').innerHTML = wavesHtml || '<p style="color:var(--muted);padding:16px;font-size:13px">无波次数据</p>';
 
-            let routesHtml = '<div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.15em;margin-bottom:12px">' + state.routes.length + ' 条路线</div>';
+            let routesHtml = '<div class="mono" style="font-size:10px;color:var(--ash);letter-spacing:.15em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)">' + state.routes.length + ' 条路线</div>';
             state.routes.forEach((pts, ri) => {
                 const first = pos(state.level.routes[ri] ? state.level.routes[ri].startPosition : {});
                 const last = pts[pts.length - 1];
-                routesHtml += `<div class="enemy-row"><div style="width:12px;height:12px;background:${ROUTE_COLORS[ri % ROUTE_COLORS.length]};margin-top:3px"></div><div style="flex:1"><div style="font-size:14px;font-weight:500">ROUTE ${ri + 1}</div><div class="stat" style="margin-top:5px">${first.col},${first.row} → ${last.col},${last.row} · ${pts.length - 2} CHECKPOINTS</div></div></div>`;
+                routesHtml += `<div class="enemy-row"><div style="width:12px;height:12px;border-radius:2px;background:${ROUTE_COLORS[ri % ROUTE_COLORS.length]};margin-top:3px;flex:none"></div><div style="flex:1"><div style="font-size:14px;font-weight:500">ROUTE ${ri + 1}</div><div class="stat" style="margin-top:4px;font-size:10px">${first.col},${first.row} → ${last.col},${last.row} · ${pts.length - 2} 检查点</div></div></div>`;
             });
             $('tabRoutes').innerHTML = routesHtml;
         }
