@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /ai_handoff/
+Disallow: /c_drive_mirror/
+
+Sitemap: https://dgwebq.pages.dev/sitemap.xml
