@@ -437,7 +437,24 @@
         const RARITY_COLORS = ['#9aa0a6', '#a0d06a', '#4db3ff', '#c687ff', '#ffd76a', '#ff9a3c'];
         const FACING_NAMES = ['↑ 上', '→ 右', '↓ 下', '← 左'];
         // 干员头像（Aceship/Arknight-Images）与干员 Spine 模型（isHarryh/Ark-Models，基础皮肤全覆盖）
-        const OP_AVATAR_BASE = 'https://cdn.jsdelivr.net/gh/Aceship/Arknight-Images@main/avatars/';
+        const OP_AVATAR_HOSTS = [
+            'https://gcore.jsdelivr.net/gh/Aceship/Arknight-Images@main/',
+            'https://cdn.jsdelivr.net/gh/Aceship/Arknight-Images@main/',
+            'https://fastly.jsdelivr.net/gh/Aceship/Arknight-Images@main/',
+            'https://raw.githubusercontent.com/Aceship/Arknight-Images/main/'
+        ];
+        function opAvatarUrl(id) {
+            return OP_AVATAR_HOSTS[0] + 'avatars/' + id + '.png';
+        }
+        window.__opAvatarFallback = function (img) {
+            const cur = img.src || '';
+            const idx = OP_AVATAR_HOSTS.findIndex(h => cur.indexOf(h) === 0);
+            if (idx >= 0 && idx < OP_AVATAR_HOSTS.length - 1) {
+                img.src = OP_AVATAR_HOSTS[idx + 1] + cur.slice(OP_AVATAR_HOSTS[idx].length);
+            } else {
+                img.style.visibility = 'hidden';
+            }
+        };
         const OP_SPINE_BASES = [
             'https://cdn.jsdelivr.net/gh/isHarryh/Ark-Models@main/',
             'https://raw.githubusercontent.com/isHarryh/Ark-Models/main/'
@@ -1424,7 +1441,7 @@
             box.innerHTML = list.slice(0, 80).map(o =>
                 `<button class="btn op-opt" data-id="${esc(o.id)}" style="display:flex;width:100%;align-items:center;gap:7px;padding:6px 10px;font-size:12px;text-align:left">
                     <span style="width:28px;height:28px;border-radius:50%;background:${opRarityColor(o.rarity)};display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:none;border:1px solid rgba(255,255,255,.18)">
-                        <img src="${OP_AVATAR_BASE + esc(o.id)}.png" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.visibility='hidden'" />
+                        <img src="${opAvatarUrl(o.id)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="window.__opAvatarFallback(this)" />
                     </span>
                     <b>${esc(o.name)}</b>
                     <span class="mono" style="color:var(--ash);font-size:9px">${esc(o.profCn)}${o.rarity}★</span>
