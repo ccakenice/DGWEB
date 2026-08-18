@@ -445,7 +445,9 @@
         // 本地 http 预览仍直连参考站后端。
         const SPINE_ASSET_BASES = location.protocol === 'https:'
             ? [
+                'https://gcore.jsdelivr.net/gh/serine-qing/MapSimulatorBackend@master/public/',
                 'https://cdn.jsdelivr.net/gh/serine-qing/MapSimulatorBackend@master/public/',
+                'https://fastly.jsdelivr.net/gh/serine-qing/MapSimulatorBackend@master/public/',
                 'https://raw.githubusercontent.com/serine-qing/MapSimulatorBackend/master/public/',
             ]
             : ['http://152.136.189.98:3000/'];
