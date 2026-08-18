@@ -15,6 +15,7 @@
 - 去掉圆形加载动画，Loading 仅保留文字与百分比进度条
 - 干员部署面板移至右侧 Tab「部署」，干员列表改为纵向排列
 - 部署干员头像加载优化：首选 gcore.jsdelivr，并支持 cdn/fastly/raw 多级回退
+- Three.js 本地化：three.min.js 与 OrbitControls.js 下载到本地 js/，移除 cdn.jsdelivr 运行时依赖
 
 2026-08-15 官方地块固有色：
 - 新增 data/tile_colors.json 官方地块固有色表（61 条，覆盖本地关卡 36 种地块）：官方 gamedata 无配色字段，颜色取自参考站 MapSimulator 源码硬编码固有色 + 官方地图纹理图集 tiles1.png 单元格采样；并注明 ref_solid/atlas/ref_default 三种来源
