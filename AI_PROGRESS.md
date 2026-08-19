@@ -175,6 +175,7 @@
 - 【2026-08-18 部署干员头像本地化】363 张可用头像下载到 images/ops 本地，缺失头像用稀有度色块占位，不再依赖远程头像加载
 - 【2026-08-18 Three.js 本地化】three.min.js 与 OrbitControls.js 下载到本地 js/，移除 cdn.jsdelivr 运行时依赖
 - 【2026-08-18 SEO 基础】首页增加 description/keywords/Open Graph/canonical，新增 robots.txt 与 sitemap.xml
+- 【2026-08-18 命名调整】codex-会话.md 统一改名为 AI会话管理器.md，管理器脚本同步更新
 
 ### V0.30（已定格 2026-08-18）
 - 【2026-08-15 V0.30 创建】V0.29 经用户确认定格并复刻为 V0.30（草稿）继续开发
@@ -239,7 +240,7 @@
 - 使用官方相机数据（map_camera_views/summary.json）设置并锁定官方视角
 - 官方视角统一使用 `view_default`，Unity Y/Z 映射为 Three.js 深度/高度，呈现高视角 3/4 视图，避免 `view_by_side` 把部分关卡带成侧视歪斜
 - 红蓝门左右校准：对照参考站确认 `0-1` 红门右、蓝门左，相机投影矩阵做 X 镜像，缩放保留、旋转锁定不变
-- 版本回退保障：`c_drive_mirror\tools\version-mgmt\` 提供 manifest / 版本清单 / 完整性校验 / 回退脚本；新版本自动生成 `codex-会话.md`
+- 版本回退保障：`c_drive_mirror\tools\version-mgmt\` 提供 manifest / 版本清单 / 完整性校验 / 回退脚本；新版本自动生成 `AI会话管理器.md`
 - 选关「活动」模式活动名修正：活动名改用官方 activity_table `basicInfo`（`zoneToActivity` 关联 zone→活动），不再显示子区域名/zoneId；按活动开始时间倒序排列（最新活动「奇象巡展」置顶）；隐藏带「不展示」标记的 RPG 关卡区
 - 场地道具渲染：解析关卡 `predefines.tokenInsts` 预置部署物（如「直到大地变成一颗酸橙」的信箱 `trap_334_agmbox`），用官方 Spine 动画（`trap/spine/...`，Trap_Idle）渲染到对应格位并脚底贴地；`functions/spine/[[path]].js` 同源代理扩展支持 `getTrapsKey` 接口与 `trap/` 资源路径；静态贴图道具走 `trap/image/` 兜底，加载前显示占位标记
 - 活动传送门机制（兔洞）：解析 `tile_rabbithole_in_*` / `tile_rabbithole_out_*` 传送格，敌人踩到入口后消失 3 秒，再按出口 `prob` 权重随机从出口出现，并改走 `extraRoutes[action_index]` 出口路线（按官方检查点折线，出2 出口会沿洞区走进地穴被击杀）抵达蓝门；出口概率百分比直接标在地面（参考站同款样式）
