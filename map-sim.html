@@ -67,10 +67,11 @@
         html.light .hero-mark { -webkit-text-stroke-color:rgba(0,0,0,.08); }
         html.light .hero-glow { background:radial-gradient(ellipse at center, rgba(224,143,0,.06) 0%, transparent 65%); }
         a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:1px solid var(--acc); outline-offset:2px; }
-        /* 侧栏页签：站点下划线风格 */
-        .sidebar-panel .tab-header .tab-btn { flex:1; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); padding:13px 16px; }
-        .sidebar-panel .tab-header .tab-btn:hover { color:var(--fg); background:var(--acc-dim); border-bottom-color:var(--acc); }
-        .sidebar-panel .tab-header .tab-btn.active { color:var(--fg); background:transparent; border-bottom-color:var(--acc); font-weight:600; }
+        /* 侧栏页签：卡片式 tab */
+        .sidebar-panel .tab-header { gap:6px; padding:8px; border-bottom:1px solid var(--line); }
+        .sidebar-panel .tab-header .tab-btn { flex:1; border:1px solid var(--line); border-radius:6px; background:transparent; color:var(--muted); padding:10px 8px; }
+        .sidebar-panel .tab-header .tab-btn:hover { border-color:var(--acc); color:var(--fg); background:var(--acc-dim); }
+        .sidebar-panel .tab-header .tab-btn.active { border-color:var(--acc); color:#000; background:var(--acc); font-weight:600; }
         .enemy-row:hover { box-shadow:inset 2px 0 0 var(--acc); }
         /* 桌面端左右分栏布局 */
         .map-layout { display:grid; grid-template-columns:1fr; gap:20px; }
