@@ -17,6 +17,7 @@
 - 部署干员头像本地化：363 张可用头像下载到 images/ops 本地，缺失头像用稀有度色块占位，不再依赖远程头像加载
 - Three.js 本地化：three.min.js 与 OrbitControls.js 下载到本地 js/，移除 cdn.jsdelivr 运行时依赖
 - SEO 基础：首页增加 description/keywords/Open Graph/canonical，新增 robots.txt 与 sitemap.xml
+- 命名调整：codex-会话.md 统一改名为 AI会话管理器.md，管理器脚本同步更新
 
 2026-08-15 官方地块固有色：
 - 新增 data/tile_colors.json 官方地块固有色表（61 条，覆盖本地关卡 36 种地块）：官方 gamedata 无配色字段，颜色取自参考站 MapSimulator 源码硬编码固有色 + 官方地图纹理图集 tiles1.png 单元格采样；并注明 ref_solid/atlas/ref_default 三种来源
