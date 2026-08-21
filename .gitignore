@@ -6,4 +6,9 @@ opencode_log.md
 ai_handoff/
 c_drive_mirror/
 logs/
-versions/软件开发管理器_V0.01/
+
+# 本地素材/工具/备份目录（体积大、非站点内容，禁止进仓库）
+# tools/  = ArknightsGameResource 等参考资源克隆（约 4 GB / 3200 文件）
+# versions/ = 管理器自身的嵌套备份（约 260 MB / 2978 文件）
+tools/
+versions/
