@@ -1,10 +1,13 @@
-/* img-progressive.js - 低清占位 + 后台高清替换 (DGWEB v0.23)
+/* img-progressive.js - 低清占位 + 高清懒加载替换 (DGWEB v0.23 / lazy 优化 v0.31)
  * 原理:
  *   1) 异步拉取 images/lowres/manifest.json
  *      { "images/xx.png":        {"hi":"images/xx.png","lo":"lowres/xx.png"},
  *        "https://外部URL.jpg":  {"hi":"images/ext/...","lo":"lowres/ext/..."} }
- *   2) 命中清单的 <img> 立即切到低清(lo), 并后台预载高清(hi)
- *   3) 高清就绪后淡入替换; 未命中的沿用原 URL
+ *   2) 命中清单的 <img> 立即切到低清(lo)
+ *   3) 高清(hi) 懒加载: 图片接近视口(600px 内)才开始预载, 就绪后淡入替换
+ *      —— 屏外图片不再后台全量预载高清; 无 IntersectionObserver 的老内核回退为
+ *         低清 load 后即预载(原 v0.23 行为)
+ *   4) 未命中的沿用原 URL
  * 支持: 静态 <img>、动态渲染(JS innerHTML), MutationObserver 全程接管
  */
 (function () {
@@ -73,14 +76,40 @@
       }, 0);
     };
 
+    var startHi = function () { preload(hi, done); };
+
     // 立即切低清
     img.src = lo;
+
+    // 高清预载: 接近视口才启动 (lazy load)
+    if (lazyIO) {
+      img.__lqStart = startHi;
+      lazyIO.observe(img);
+      return;
+    }
+    // 老内核兜底: 低清就绪后立即预载高清 (原 v0.23 行为)
     if (img.complete && img.naturalWidth > 0) {
-      preload(hi, done);
+      startHi();
     } else {
-      img.addEventListener('load', function () { preload(hi, done); }, { once: true });
+      img.addEventListener('load', startHi, { once: true });
     }
   }
+
+  /* 高清懒加载观察器: 图片进入视口外沿 600px 才预载 */
+  var lazyIO = ('IntersectionObserver' in window) ? (function () {
+    return new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (!entries[i].isIntersecting) continue;
+        var im = entries[i].target;
+        lazyIO.unobserve(im);
+        if (typeof im.__lqStart === 'function') {
+          var s = im.__lqStart;
+          im.__lqStart = null;
+          s();
+        }
+      }
+    }, { rootMargin: '600px' });
+  })() : null;
 
   var inflight = {};
   function preload(hi, done) {
@@ -146,7 +175,7 @@
   function boot() {
     mo.observe(document.body, { childList: true, subtree: true });
     scan(document);
-    fetch(MANIFEST_URL + '?v=' + Date.now())
+    fetch(MANIFEST_URL)                   // 允许浏览器缓存(304), 不再每次全量重拉
       .then(function (r) { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); })
       .then(function (j) {
         map = j;

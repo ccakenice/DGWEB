@@ -227,7 +227,7 @@
             const prtsDesc = d.prts_desc || '';
             const prtsTalents = d.prts_talents || '';
             let html = '<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">';
-            html += '<img src="' + iconUrl(id) + '" alt="" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this);this.onerror=null" style="width:96px;height:96px;object-fit:contain;background:var(--fog);border:1px solid var(--line);flex:none" />';
+            html += '<img src="' + iconUrl(id) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.__enemyIconFallback(this);this.onerror=null" style="width:96px;height:96px;object-fit:contain;background:var(--fog);border:1px solid var(--line);flex:none" />';
             html += '<div style="flex:1;min-width:240px">';
             html += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2 style="font-size:22px">' + esc((e.levels[0] || {}).name || id) + '</h2><span class="chip">' + esc(id) + '</span>';
             if (d.levelType) html += '<span class="chip" style="color:var(--acc)">' + esc(d.levelType) + '</span>';

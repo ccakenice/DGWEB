@@ -241,17 +241,40 @@ def main():
 
 def _main_inner():
     try:
-        v = fetch_latest_pv()
-        pages = []
+        prev_video = None
         try:
-            raw = http_get(f"https://api.bilibili.com/x/player/pagelist?bvid={v['bvid']}",
-                           {'User-Agent': UA, 'Referer': 'https://www.bilibili.com/'})
-            d = json.loads(raw)
-            if d.get('code') == 0:
-                pages = [{'page': p.get('page', 1), 'part': clean_html(p.get('part', '')),
-                          'duration': p.get('duration', 0), 'cid': p.get('cid', 0)} for p in (d.get('data') or [])]
+            prev_json = json.load(open(OUT, encoding='utf-8'))
+            prev_video = prev_json.get('video')
         except Exception:
             pass
+        v = None
+        search_failed = False
+        try:
+            v = fetch_latest_pv()
+        except Exception as e:
+            print('搜索失败，改用上次视频刷新直链:', e)
+            search_failed = True
+        if v is None:
+            if prev_video and prev_video.get('bvid'):
+                v = {'bvid': prev_video['bvid'], 'aid': prev_video.get('aid', 0),
+                     'title': prev_video.get('title', ''), 'link': prev_video.get('link', ''),
+                     'pubdate': prev_video.get('pubdate', 0), 'pic': (prev_video.get('media') or {}).get('thumbnail', ''),
+                     'duration': prev_video.get('duration', 0)}
+                pages = prev_video.get('pages') or []
+                print('fallback 视频:', v['bvid'], v['title'][:50])
+            else:
+                raise RuntimeError('搜索失败且本地无历史视频可用')
+        else:
+            pages = []
+            try:
+                raw = http_get(f"https://api.bilibili.com/x/player/pagelist?bvid={v['bvid']}",
+                               {'User-Agent': UA, 'Referer': 'https://www.bilibili.com/'})
+                d = json.loads(raw)
+                if d.get('code') == 0:
+                    pages = [{'page': p.get('page', 1), 'part': clean_html(p.get('part', '')),
+                              'duration': p.get('duration', 0), 'cid': p.get('cid', 0)} for p in (d.get('data') or [])]
+            except Exception:
+                pass
         # 抓直链（用第一个 P 的 cid）
         stream = None
         if pages:

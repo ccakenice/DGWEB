@@ -160,10 +160,14 @@
 5. **保留原始风格**: 灰度滤镜等是站点设计风格非 bug，不得随意修改，除非用户要求
 6. **中文交流**: 与用户交流一律简体中文
 7. **文档同步**: 每次重大改动后更新 `AI_PROGRESS.md` 和 `版本说明.txt`
+8. **git 保存点（版本管理统一入口，2026-08-22 起）**: 所有改动必须用 git 保存点记录——保存/定格/回退一律通过「版本管理 GUI」（`E:\SoftwareProjects\网站开发管理器\版本管理GUI\启动版本管理.bat`，桌面有快捷方式「DGWEB版本管理」）；「定格版本」= 打版本标签；「回到旧版」以新保存点方式完成，历史永不丢失；旧的全量复制快照（versions 目录）不再作为主流程，仅保留历史档案仓库 `E:\WebProjects\DGWEB-history`（31 个定格版本，只读）
+9. **AI 改动必记项目日志**: 每次 AI 修改完成后，必须执行 `powershell -File E:\SoftwareProjects\网站开发管理器\AiChangeLog.ps1 -Project DGWEB -Summary "一句话说明"`——它会自动完成：git add+commit（保存点）→ 追加项目日志条目（含日期/保存点 hash/涉及文件路径）→ 输出「交接卡」。项目日志位置：`E:\SoftwareProjects\网站开发管理器\logs\DGWEB.md`（管理器「项目日志」按钮同源）
+10. **AI 交接入口（供其他 AI 快速理解进度）**: 新 AI 接手时按序读：`AI_DOCS.md`（索引）→ `AI_PROGRESS.md`（进度与规范）→ 项目日志 `logs\DGWEB.md`（每次改动的流水，最近的在最上面）→ `版本管理GUI\VersionGui.log` / `Deploy.log`（操作与部署日志）。把这几个文件路径发给其他 AI 即可
 
 ## 当前进度 (2026-08-15)
 
 ### V0.31（草稿）
+- 【2026-08-22 图片懒加载优化】img-progressive.js 高清预载由「处理后立即全量预载」改为 **IntersectionObserver 懒加载**（图片进入视口外沿 600px 才预载高清，屏外/隐藏容器不再下载；无 IO 的老内核回退为原 v0.23 行为）；manifest.json 去掉 `?v=Date.now()` 强刷参数，允许浏览器缓存（省 252KB/次）；29 个页面 img-progressive.js 引用升级 `?v=lz1` 防旧缓存；enemy.html 详情卡图标补 loading="lazy" decoding="async"。实测（本地 8845 + 浏览器）：首页初始加载 **0 图片请求**（首屏在 hero 视频下方+512 张归档封面在隐藏容器）；点「展开全部」后仅视口内 15 张换高清、屏外 496 张保持低清待命，滚动渐进加载（2000px 后 15→47 张）；最小测试页验证屏外只载低清、滚入后 lo→hi 淡入替换正常；aliases 页 136 头像全部正常渲染；旧版行为对照：此前每次访问首页会立即预载全部 512 张隐藏封面高清版（数十 MB 流量）
 - 【2026-08-18 3D 地图页 UI/画面优化】接入 tailwind.css 统一站点样式；头部 hero-glow/hero-mark 装饰；地图容器圆角/阴影/暗角；侧栏页签下划线风格；焦点可见性优化；3D 场景增加冷色轮廓光并提升暖色轮廓光强度；已验证页面可正常加载、核心控件与导航 fixed 生效
 - 【2026-08-18 敌人头像加载优化】首选 gcore.jsdelivr CDN，并支持 cdn/fastly/raw 多级回退；头像图片增加 decoding=async
 - 【2026-08-18 敌人 Spine 模型加载优化】Spine 资源源首选 gcore.jsdelivr，并支持 cdn/fastly/raw 多级回退（修复圣堂保育员等模型加载慢/未加载问题）
